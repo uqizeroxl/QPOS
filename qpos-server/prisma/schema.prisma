@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RecordStatus {
+  ACTIVE   @map("Aktif")
+  INACTIVE @map("Nonaktif")
+}
+
+enum ActivityType {
+  PRODUCT_CREATE      @map("product-create")
+  PRODUCT_UPDATE      @map("product-update")
+  PRODUCT_DELETE      @map("product-delete")
+  CATEGORY_CREATE     @map("category-create")
+  CATEGORY_UPDATE     @map("category-update")
+  CATEGORY_DELETE     @map("category-delete")
+  SUPPLIER_CREATE     @map("supplier-create")
+  SUPPLIER_UPDATE     @map("supplier-update")
+  SUPPLIER_DELETE     @map("supplier-delete")
+  LOGIN               @map("login")
+  LOGOUT              @map("logout")
+  TRANSACTION_SUCCESS @map("transaction-success")
+  BARCODE_PRINT       @map("barcode-print")
+  RECEIPT_PRINT       @map("receipt-print")
+  STOCK_MINIMUM       @map("stock-minimum")
+}
+
+enum NotificationType {
+  SUCCESS @map("success")
+  ERROR   @map("error")
+  INFO    @map("info")
+  WARNING @map("warning")
+}
+
+enum NotificationCategory {
+  STOCK        @map("stock")
+  PRODUCT      @map("product")
+  CATEGORY     @map("category")
+  BARCODE      @map("barcode")
+  SUPPLIER     @map("supplier")
+  SALES        @map("sales")
+  ANNOUNCEMENT @map("announcement")
+}
+
+model Category {
+  id          String       @id @default(cuid())
+  name        String       @unique @db.VarChar(120)
+  description String       @default("") @db.Text
+  status      RecordStatus @default(ACTIVE)
+  products    Product[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([name])
+  @@map("categories")
+}
+
+model Supplier {
+  id        String    @id @default(cuid())
+  name      String    @db.VarChar(150)
+  phone     String?   @db.VarChar(30)
+  address   String?   @db.Text
+  notes     String?   @db.Text
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([name])
+  @@map("suppliers")
+}
+
+model Product {
+  id               String            @id @default(cuid())
+  barcode          String            @unique @db.VarChar(64)
+  name             String            @db.VarChar(180)
+  purchasePrice    Decimal           @default(0) @db.Decimal(14, 2)
+  sellingPrice     Decimal           @default(0) @db.Decimal(14, 2)
+  stock            Int               @default(0)
+  status           RecordStatus      @default(ACTIVE)
+  categoryId       String
+  supplierId       String?
+  category         Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  supplier         Supplier?         @relation(fields: [supplierId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  transactionItems TransactionItem[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([barcode])
+  @@index([name])
+  @@index([categoryId])
+  @@index([supplierId])
+  @@map("products")
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  invoiceNumber   String            @unique @db.VarChar(50)
+  subtotal        Decimal           @default(0) @db.Decimal(14, 2)
+  discountPercent Decimal           @default(0) @db.Decimal(5, 2)
+  discountAmount  Decimal           @default(0) @db.Decimal(14, 2)
+  grandTotal      Decimal           @default(0) @db.Decimal(14, 2)
+  paidAmount      Decimal           @default(0) @db.Decimal(14, 2)
+  change          Decimal           @default(0) @db.Decimal(14, 2)
+  cashierName     String?           @db.VarChar(120)
+  items           TransactionItem[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([invoiceNumber])
+  @@index([createdAt])
+  @@map("transactions")
+}
+
+model TransactionItem {
+  id             String      @id @default(cuid())
+  transactionId  String
+  productId      String?
+  productBarcode String      @db.VarChar(64)
+  productName    String      @db.VarChar(180)
+  unitPrice      Decimal     @db.Decimal(14, 2)
+  quantity       Int
+  subtotal       Decimal     @db.Decimal(14, 2)
+  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product        Product?    @relation(fields: [productId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([transactionId])
+  @@index([productId])
+  @@index([productBarcode])
+  @@map("transaction_items")
+}
+
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique @default("default") @db.VarChar(50)
+  storeName String   @default("Toko Saya") @db.VarChar(150)
+  phone     String   @default("") @db.VarChar(30)
+  address   String   @default("") @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model ActivityLog {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  title       String       @db.VarChar(150)
+  description String       @db.Text
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([type])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+model Notification {
+  id          String               @id @default(cuid())
+  title       String               @db.VarChar(150)
+  description String?              @db.Text
+  message     String?              @db.Text
+  type        NotificationType
+  category    NotificationCategory @default(ANNOUNCEMENT)
+  isRead      Boolean              @default(false)
+  readAt      DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([category])
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
