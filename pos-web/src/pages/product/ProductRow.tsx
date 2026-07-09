@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { History, Pencil, SlidersHorizontal, Trash2 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import { TableCell, TableRow } from "../../components/ui/Table";
 import { formatRupiah } from "../../utils/currency";
@@ -7,13 +7,17 @@ import type { Product } from "./ProductTypes";
 type ProductRowProps = {
   product: Product;
   onEdit: (product: Product) => void;
-  onDelete: (productId: number) => void;
+  onDelete: (productId: string) => void;
+  onAdjustStock: (product: Product) => void;
+  onShowStockHistory: (product: Product) => void;
 };
 
 export default function ProductRow({
   product,
   onEdit,
   onDelete,
+  onAdjustStock,
+  onShowStockHistory,
 }: ProductRowProps) {
   const isLowStock = product.stock < 5;
 
@@ -51,6 +55,22 @@ export default function ProductRow({
       </TableCell>
       <TableCell className="whitespace-nowrap text-right">
         <div className="inline-flex items-center gap-2">
+          <Button
+            variant="icon"
+            onClick={() => onAdjustStock(product)}
+            className="hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            aria-label={`Adjust stock ${product.name}`}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="icon"
+            onClick={() => onShowStockHistory(product)}
+            className="hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            aria-label={`Stock history ${product.name}`}
+          >
+            <History className="h-4 w-4" />
+          </Button>
           <Button
             variant="icon"
             onClick={() => onEdit(product)}

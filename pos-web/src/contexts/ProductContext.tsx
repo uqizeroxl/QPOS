@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { getStoredProducts, storeProducts } from "../utils/productStorage";
+import { ProductApiError, productService } from "../services/productService";
 import { ProductContext } from "./productContextValue";
 import type { Product, ProductFormValues } from "../pages/product/ProductTypes";
 import type { ProductStockAdjustment } from "./productContextValue";
@@ -9,71 +9,93 @@ type ProductProviderProps = {
   children: ReactNode;
 };
 
-function getInitialProducts() {
-  return getStoredProducts();
-}
-
 export function ProductProvider({ children }: ProductProviderProps) {
-  const [products, setProducts] = useState<Product[]>(getInitialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const commitProducts = useCallback((nextProducts: Product[]) => {
-    setProducts(nextProducts);
-    storeProducts(nextProducts);
+  const fetchProducts = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const nextProducts = await productService.getProducts();
+      setProducts(nextProducts);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof ProductApiError
+          ? error.message
+          : "Terjadi kesalahan pada server.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const addProduct = useCallback(
-    (values: ProductFormValues) => {
-      const product = { ...values, id: Date.now() };
+  const createProduct = useCallback(async (values: ProductFormValues) => {
+    setIsLoading(true);
+    setErrorMessage("");
 
-      setProducts((currentProducts) => {
-        const nextProducts = [product, ...currentProducts];
-        storeProducts(nextProducts);
-        return nextProducts;
-      });
+    try {
+      return await productService.createProduct(values);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-      return product;
+  const updateProduct = useCallback(
+    async (productId: string, values: ProductFormValues) => {
+      setIsLoading(true);
+      setErrorMessage("");
+
+      try {
+        return await productService.updateProduct(productId, values);
+      } finally {
+        setIsLoading(false);
+      }
     },
     [],
   );
 
-  const updateProduct = useCallback(
-    (productId: number, values: ProductFormValues) => {
-      const currentProduct = products.find((product) => product.id === productId);
-
-      if (!currentProduct) {
-        return null;
-      }
-
-      const updatedProduct = { ...values, id: currentProduct.id };
-      commitProducts(
-        products.map((product) =>
-          product.id === productId ? updatedProduct : product,
-        ),
-      );
-
-      return updatedProduct;
-    },
-    [commitProducts, products],
-  );
-
   const deleteProduct = useCallback(
-    (productId: number) => {
-      const deletedProduct = products.find((product) => product.id === productId);
+    async (productId: string) => {
+      setIsLoading(true);
+      setErrorMessage("");
 
-      if (!deletedProduct) {
-        return null;
+      try {
+        return await productService.deleteProduct(productId);
+      } finally {
+        setIsLoading(false);
       }
-
-      commitProducts(products.filter((product) => product.id !== productId));
-
-      return deletedProduct;
     },
-    [commitProducts, products],
+    [],
   );
+
+  const adjustStock = useCallback(
+    async (
+      productId: string,
+      payload: Parameters<typeof productService.adjustStock>[1],
+    ) => {
+      setIsLoading(true);
+      setErrorMessage("");
+
+      try {
+        const result = await productService.adjustStock(productId, payload);
+        return result.product;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
+  const getStockHistory = useCallback(async (productId: string) => {
+    return productService.getStockHistory(productId);
+  }, []);
 
   const decreaseProductStock = useCallback(
     (adjustments: ProductStockAdjustment[]) => {
-      const stockChangeByProductId = adjustments.reduce<Record<number, number>>(
+      const stockChangeByProductId = adjustments.reduce<Record<string, number>>(
         (changes, adjustment) => {
           changes[adjustment.productId] =
             (changes[adjustment.productId] ?? 0) + adjustment.quantity;
@@ -85,11 +107,11 @@ export function ProductProvider({ children }: ProductProviderProps) {
       for (const [productId, quantity] of Object.entries(
         stockChangeByProductId,
       )) {
-        const product = products.find(
-          (currentProduct) => currentProduct.id === Number(productId),
+        const currentProduct = products.find(
+          (product) => product.id === productId,
         );
 
-        if (!product) {
+        if (!currentProduct) {
           return { ok: false as const, message: "Produk tidak ditemukan." };
         }
 
@@ -100,25 +122,24 @@ export function ProductProvider({ children }: ProductProviderProps) {
           };
         }
 
-        if (product.stock < quantity) {
+        if (currentProduct.stock < quantity) {
           return {
             ok: false as const,
-            message: `Stok ${product.name} tidak mencukupi.`,
+            message: `Stok ${currentProduct.name} tidak mencukupi.`,
           };
         }
       }
 
-      commitProducts(
+      setProducts(
         products.map((product) => ({
           ...product,
-          stock:
-            product.stock - (stockChangeByProductId[product.id] ?? 0),
+          stock: product.stock - (stockChangeByProductId[product.id] ?? 0),
         })),
       );
 
       return { ok: true as const };
     },
-    [commitProducts, products],
+    [products],
   );
 
   const renameProductCategory = useCallback(
@@ -127,7 +148,7 @@ export function ProductProvider({ children }: ProductProviderProps) {
         return;
       }
 
-      commitProducts(
+      setProducts(
         products.map((product) =>
           product.category === oldCategory
             ? { ...product, category: newCategory }
@@ -135,23 +156,33 @@ export function ProductProvider({ children }: ProductProviderProps) {
         ),
       );
     },
-    [commitProducts, products],
+    [products],
   );
 
   const value = useMemo(
     () => ({
       products,
-      addProduct,
+      isLoading,
+      errorMessage,
+      fetchProducts,
+      createProduct,
       updateProduct,
       deleteProduct,
+      adjustStock,
+      getStockHistory,
       decreaseProductStock,
       renameProductCategory,
     }),
     [
       products,
-      addProduct,
+      isLoading,
+      errorMessage,
+      fetchProducts,
+      createProduct,
       updateProduct,
       deleteProduct,
+      adjustStock,
+      getStockHistory,
       decreaseProductStock,
       renameProductCategory,
     ],

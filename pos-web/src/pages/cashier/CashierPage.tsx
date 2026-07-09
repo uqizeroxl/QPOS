@@ -4,7 +4,12 @@ import Card from "../../components/ui/Card";
 import { useActivityLog } from "../../hooks/useActivityLog";
 import { useAuth } from "../../hooks/useAuth";
 import { useProducts } from "../../hooks/useProducts";
-import { useTransactions } from "../../hooks/useTransactions";
+import { useToast } from "../../hooks/useToast";
+import { useReceiptPrinter } from "../../hooks/useReceiptPrinter";
+import {
+  TransactionApiError,
+  transactionService,
+} from "../../services/transactionService";
 import { formatRupiah, parseRupiah } from "../../utils/currency";
 import MainLayout from "../../layouts/MainLayout";
 import BarcodeInput from "./BarcodeInput";
@@ -30,21 +35,11 @@ function normalizeDiscountPercentInput(value: string) {
   return Math.min(Number(numericValue), 100).toString();
 }
 
-function createTransactionNumber(createdAt: Date) {
-  const datePart = createdAt
-    .toISOString()
-    .slice(0, 10)
-    .replaceAll("-", "");
-  const timePart = createdAt.getTime().toString().slice(-6);
-
-  return `TRX-${datePart}-${timePart}`;
-}
-
 export default function CashierPage() {
-  const { products, decreaseProductStock } = useProducts();
+  const { products, fetchProducts } = useProducts();
   const { addActivity } = useActivityLog();
-  const { addTransaction } = useTransactions();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [productQuery, setProductQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [discountPercentInput, setDiscountPercentInput] = useState("0");
@@ -53,12 +48,15 @@ export default function CashierPage() {
   const [transactionMessage, setTransactionMessage] = useState("");
   const [paymentDialogTransaction, setPaymentDialogTransaction] =
     useState<SalesTransaction | null>(null);
-  const [receiptPrintTransaction, setReceiptPrintTransaction] =
-    useState<SalesTransaction | null>(null);
   const [lastSuccessfulTransaction, setLastSuccessfulTransaction] =
     useState<SalesTransaction | null>(null);
   const [focusRequestId, setFocusRequestId] = useState(0);
   const paidAmountInputRef = useRef<HTMLInputElement>(null);
+  const requestInputFocus = useCallback(() => {
+    setFocusRequestId((currentRequestId) => currentRequestId + 1);
+  }, []);
+  const { receiptPrintTransaction, printReceipt: printReceiptArea } =
+    useReceiptPrinter(requestInputFocus);
   const cashierProducts = useMemo<CashierProduct[]>(() => {
     return products
       .filter((product) => product.status === "Aktif")
@@ -91,22 +89,9 @@ export default function CashierPage() {
   const change = Math.max(paidAmount - total, 0);
   const canPay = cartItems.length > 0 && paidAmount >= total;
 
-  const requestInputFocus = useCallback(() => {
-    setFocusRequestId((currentRequestId) => currentRequestId + 1);
-  }, []);
-
   useEffect(() => {
-    const handleAfterPrint = () => {
-      setReceiptPrintTransaction(null);
-      requestInputFocus();
-    };
-
-    window.addEventListener("afterprint", handleAfterPrint);
-
-    return () => {
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
-  }, [requestInputFocus]);
+    void fetchProducts();
+  }, [fetchProducts]);
 
   useEffect(() => {
     const handleCashierShortcuts = (event: KeyboardEvent) => {
@@ -170,7 +155,7 @@ export default function CashierPage() {
     addProductToCart(product);
   };
 
-  const handleQuantityChange = (productId: number, quantity: number) => {
+  const handleQuantityChange = (productId: string, quantity: number) => {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
         item.id === productId
@@ -183,7 +168,7 @@ export default function CashierPage() {
     );
   };
 
-  const handleRemoveItem = (productId: number) => {
+  const handleRemoveItem = (productId: string) => {
     setCartItems((currentItems) =>
       currentItems.filter((item) => item.id !== productId),
     );
@@ -225,10 +210,7 @@ export default function CashierPage() {
   };
 
   const createTransactionPayload = () => {
-    const createdAt = new Date();
-
     return {
-      transactionNumber: createTransactionNumber(createdAt),
       items: cartItems.map((item) => ({
         productId: item.id,
         barcode: item.barcode,
@@ -244,11 +226,10 @@ export default function CashierPage() {
       paidAmount,
       change,
       cashierName: user?.name,
-      createdAt: createdAt.toISOString(),
     };
   };
 
-  const handlePay = () => {
+  const handlePay = async () => {
     const validationMessage = validatePayment();
 
     if (validationMessage) {
@@ -256,31 +237,33 @@ export default function CashierPage() {
       return;
     }
 
-    const stockResult = decreaseProductStock(
-      cartItems.map((item) => ({
-        productId: item.id,
-        quantity: item.quantity,
-      })),
-    );
+    try {
+      const transaction = await transactionService.createTransaction(
+        createTransactionPayload(),
+      );
 
-    if (!stockResult.ok) {
-      setTransactionMessage(stockResult.message);
-      return;
+      showToast("Transaksi berhasil.", "success");
+      addActivity({
+        type: "transaction-success",
+        title: "Transaksi berhasil",
+        description: `${transaction.transactionNumber}\n${formatRupiah(
+          transaction.grandTotal,
+          { prefix: true },
+        )}`,
+      });
+      setLastSuccessfulTransaction(transaction);
+      setPaymentDialogTransaction(transaction);
+      resetCashierState();
+      await fetchProducts();
+    } catch (error) {
+      const message =
+        error instanceof TransactionApiError
+          ? error.message
+          : "Terjadi kesalahan pada server.";
+
+      setTransactionMessage(message);
+      showToast(message, "error");
     }
-
-    const transaction = addTransaction(createTransactionPayload());
-
-    addActivity({
-      type: "transaction-success",
-      title: "Transaksi berhasil",
-      description: `${transaction.transactionNumber}\n${formatRupiah(
-        transaction.grandTotal,
-        { prefix: true },
-      )}`,
-    });
-    setLastSuccessfulTransaction(transaction);
-    setPaymentDialogTransaction(transaction);
-    resetCashierState();
   };
 
   const handleClosePaymentDialog = () => {
@@ -290,13 +273,12 @@ export default function CashierPage() {
 
   const printReceipt = (transaction: SalesTransaction) => {
     setPaymentDialogTransaction(null);
-    setReceiptPrintTransaction(transaction);
     addActivity({
       type: "receipt-print",
       title: "Struk dicetak",
       description: transaction.transactionNumber,
     });
-    window.setTimeout(() => window.print(), 100);
+    printReceiptArea(transaction);
   };
 
   const handlePrintReceipt = () => {

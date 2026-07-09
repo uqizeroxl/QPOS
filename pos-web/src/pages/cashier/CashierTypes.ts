@@ -1,5 +1,5 @@
 export type CashierProduct = {
-  id: number;
+  id: string;
   barcode: string;
   name: string;
   category: string;
@@ -12,7 +12,7 @@ export type CartItem = CashierProduct & {
 };
 
 export type TransactionItem = {
-  productId: number;
+  productId: string;
   barcode: string;
   name: string;
   price: number;

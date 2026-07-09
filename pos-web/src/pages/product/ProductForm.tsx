@@ -9,6 +9,7 @@ import { formatRupiah, parseRupiah } from "../../utils/currency";
 import BarcodePreview from "./BarcodePreview";
 import BarcodePrintArea from "./BarcodePrintArea";
 import BarcodePrintPanel from "./BarcodePrintPanel";
+import type { Category } from "../category/CategoryTypes";
 import type {
   BarcodePrintPayload,
   BarcodePrintSettings,
@@ -19,11 +20,12 @@ import type {
 
 type ProductFormProps = {
   isOpen: boolean;
-  categories: string[];
+  categories: Category[];
   existingBarcodes: string[];
+  isSubmitting?: boolean;
   product?: Product | null;
   onClose: () => void;
-  onSubmit: (values: ProductFormValues) => void;
+  onSubmit: (values: ProductFormValues) => Promise<boolean>;
 };
 
 const initialPrintSettings: BarcodePrintSettings = {
@@ -33,14 +35,17 @@ const initialPrintSettings: BarcodePrintSettings = {
 };
 
 const getInitialFormValues = (
-  categories: string[],
+  categories: Category[],
   product?: Product | null,
 ): ProductFormValues => {
   if (!product) {
+    const firstCategory = categories[0];
+
     return {
       barcode: "",
       name: "",
-      category: categories[0] ?? "",
+      categoryId: firstCategory?.id ?? "",
+      category: firstCategory?.name ?? "",
       purchasePrice: 0,
       sellingPrice: 0,
       stock: 0,
@@ -51,6 +56,7 @@ const getInitialFormValues = (
   return {
     barcode: product.barcode,
     name: product.name,
+    categoryId: product.categoryId ?? "",
     category: product.category,
     purchasePrice: product.purchasePrice,
     sellingPrice: product.sellingPrice,
@@ -63,6 +69,7 @@ export default function ProductForm({
   isOpen,
   categories,
   existingBarcodes,
+  isSubmitting = false,
   product,
   onClose,
   onSubmit,
@@ -88,6 +95,7 @@ export default function ProductForm({
     null,
   );
   const [closeAfterPrint, setCloseAfterPrint] = useState(false);
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -103,6 +111,14 @@ export default function ProductForm({
     };
   }, [closeAfterPrint, onClose]);
 
+  useEffect(() => {
+    if (formValues.categoryId || categories.length === 0) {
+      return;
+    }
+
+    updateCategory(categories[0].id);
+  }, [categories, formValues.categoryId]);
+
   if (!isOpen) {
     return null;
   }
@@ -114,6 +130,18 @@ export default function ProductForm({
     setFormValues((currentValues) => ({
       ...currentValues,
       [key]: value,
+    }));
+  };
+
+  const updateCategory = (categoryId: string) => {
+    const selectedCategory = categories.find(
+      (category) => category.id === categoryId,
+    );
+
+    setFormValues((currentValues) => ({
+      ...currentValues,
+      categoryId,
+      category: selectedCategory?.name ?? "",
     }));
   };
 
@@ -167,7 +195,7 @@ export default function ProductForm({
     }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const nextValues: ProductFormValues = {
@@ -177,11 +205,28 @@ export default function ProductForm({
         (autoGenerateWhenEmpty ? generateBarcode(existingBarcodes) : ""),
     };
 
-    if (!nextValues.barcode || !nextValues.category) {
+    if (!nextValues.barcode.trim()) {
+      setFormError("Barcode wajib diisi.");
       return;
     }
 
-    onSubmit(nextValues);
+    if (!nextValues.name.trim()) {
+      setFormError("Nama produk wajib diisi.");
+      return;
+    }
+
+    if (!nextValues.categoryId) {
+      setFormError("Kategori wajib dipilih.");
+      return;
+    }
+
+    setFormError("");
+
+    const isSaved = await onSubmit(nextValues);
+
+    if (!isSaved) {
+      return;
+    }
 
     if (printAfterSave) {
       const shouldPrint = window.confirm(
@@ -259,17 +304,15 @@ export default function ProductForm({
               </span>
               <Select
                 required
-                value={formValues.category}
-                onChange={(event) =>
-                  updateField("category", event.target.value)
-                }
+                value={formValues.categoryId ?? ""}
+                onChange={(event) => updateCategory(event.target.value)}
               >
                 {categories.length === 0 ? (
                   <option value="">Belum ada kategori</option>
                 ) : null}
                 {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                  <option key={category.id} value={category.id}>
+                    {category.name}
                   </option>
                 ))}
               </Select>
@@ -372,15 +415,18 @@ export default function ProductForm({
             />
           </div>
 
+          {formError ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+              {formError}
+            </p>
+          ) : null}
+
           <div className="flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
               Batal
             </Button>
-            <Button
-              type="submit"
-              disabled={categories.length === 0}
-            >
-              Simpan Produk
+            <Button type="submit" disabled={categories.length === 0 || isSubmitting}>
+              {isSubmitting ? "Menyimpan..." : "Simpan Produk"}
             </Button>
           </div>
         </form>

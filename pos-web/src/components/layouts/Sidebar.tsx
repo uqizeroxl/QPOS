@@ -1,6 +1,7 @@
 import {
   BarChart3,
   CircleHelp,
+  ClipboardList,
   LayoutDashboard,
   Package,
   ReceiptText,
@@ -14,27 +15,42 @@ import { NavLink } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import Button from "../ui/Button";
 import { ROUTES } from "../../constants/routes";
+import { useAuth } from "../../hooks/useAuth";
+import type { UserRole } from "../../services/authService";
 
 type SidebarMenuItem = {
   label: string;
   path: string;
   icon: LucideIcon;
+  roles: UserRole[];
 };
 
+const allRoles: UserRole[] = ["OWNER", "ADMIN", "CASHIER", "WAREHOUSE"];
+const ownerAdminRoles: UserRole[] = ["OWNER", "ADMIN"];
+const inventoryRoles: UserRole[] = ["OWNER", "ADMIN", "WAREHOUSE"];
+const salesRoles: UserRole[] = ["OWNER", "ADMIN", "CASHIER"];
+
 const menuItems: SidebarMenuItem[] = [
-  { label: "Dashboard", path: ROUTES.dashboard, icon: LayoutDashboard },
-  { label: "Produk", path: ROUTES.product, icon: Package },
-  { label: "Kategori", path: ROUTES.category, icon: Tags },
-  { label: "Supplier", path: ROUTES.supplier, icon: Truck },
-  { label: "Kasir", path: ROUTES.cashier, icon: ShoppingCart },
+  { label: "Dashboard", path: ROUTES.dashboard, icon: LayoutDashboard, roles: allRoles },
+  { label: "Produk", path: ROUTES.product, icon: Package, roles: inventoryRoles },
+  { label: "Kategori", path: ROUTES.category, icon: Tags, roles: inventoryRoles },
+  { label: "Supplier", path: ROUTES.supplier, icon: Truck, roles: inventoryRoles },
+  {
+    label: "Purchase Order",
+    path: ROUTES.purchaseOrder,
+    icon: ClipboardList,
+    roles: inventoryRoles,
+  },
+  { label: "Kasir", path: ROUTES.cashier, icon: ShoppingCart, roles: salesRoles },
   {
     label: "Riwayat Transaksi",
-    path: ROUTES.transactionHistory,
+    path: ROUTES.transactions,
     icon: ReceiptText,
+    roles: salesRoles,
   },
-  { label: "Laporan", path: ROUTES.report, icon: BarChart3 },
-  { label: "Pengaturan", path: ROUTES.setting, icon: Settings },
-  { label: "Bantuan & Shortcut", path: ROUTES.helpShortcut, icon: CircleHelp },
+  { label: "Laporan", path: ROUTES.report, icon: BarChart3, roles: ownerAdminRoles },
+  { label: "Pengaturan", path: ROUTES.setting, icon: Settings, roles: ownerAdminRoles },
+  { label: "Bantuan & Shortcut", path: ROUTES.helpShortcut, icon: CircleHelp, roles: allRoles },
 ];
 
 type SidebarProps = {
@@ -43,6 +59,11 @@ type SidebarProps = {
 };
 
 function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
+  const { user } = useAuth();
+  const visibleMenuItems = menuItems.filter(
+    (item) => user && item.roles.includes(user.role),
+  );
+
   return (
     <>
       <div className="mb-8 flex items-center gap-3 px-2">
@@ -71,7 +92,7 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
       </div>
 
       <nav className="space-y-1">
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const Icon = item.icon;
 
           return (

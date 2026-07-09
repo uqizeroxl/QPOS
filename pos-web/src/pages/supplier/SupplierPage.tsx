@@ -1,5 +1,5 @@
 import { Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
@@ -14,7 +14,7 @@ import type { Supplier, SupplierFormValues } from "./SupplierTypes";
 const rowsPerPage = 5;
 
 export default function SupplierPage() {
-  const { suppliers, addSupplier, updateSupplier, deleteSupplier } =
+  const { suppliers, fetchSuppliers, addSupplier, updateSupplier, deleteSupplier } =
     useSuppliers();
   const { addActivity } = useActivityLog();
   const { showToast } = useToast();
@@ -23,6 +23,10 @@ export default function SupplierPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    void fetchSuppliers();
+  }, [fetchSuppliers]);
 
   const filteredSuppliers = useMemo(() => {
     const normalizedSearch = searchTerm.toLowerCase().trim();
@@ -57,10 +61,10 @@ export default function SupplierPage() {
     setFormError("");
   };
 
-  const handleSubmitSupplier = (values: SupplierFormValues) => {
+  const handleSubmitSupplier = async (values: SupplierFormValues) => {
     const result = editingSupplier
-      ? updateSupplier(editingSupplier.id, values)
-      : addSupplier(values);
+      ? await updateSupplier(editingSupplier.id, values)
+      : await addSupplier(values);
 
     if (!result.ok) {
       setFormError(result.message);
@@ -84,7 +88,7 @@ export default function SupplierPage() {
     return true;
   };
 
-  const handleDeleteSupplier = (supplierId: number) => {
+  const handleDeleteSupplier = async (supplierId: string) => {
     const supplier = suppliers.find(
       (currentSupplier) => currentSupplier.id === supplierId,
     );
@@ -95,14 +99,14 @@ export default function SupplierPage() {
     }
 
     const isConfirmed = window.confirm(
-      `Hapus supplier "${supplier.name}"?`,
+      `Nonaktifkan supplier "${supplier.name}"?`,
     );
 
     if (!isConfirmed) {
       return;
     }
 
-    const result = deleteSupplier(supplierId);
+    const result = await deleteSupplier(supplierId);
 
     if (!result.ok) {
       showToast(result.message, "error");
@@ -111,10 +115,10 @@ export default function SupplierPage() {
 
     addActivity({
       type: "supplier-delete",
-      title: "Supplier berhasil dihapus",
+      title: "Supplier berhasil dinonaktifkan",
       description: result.supplier.name,
     });
-    showToast("Supplier berhasil dihapus");
+    showToast("Supplier berhasil dinonaktifkan");
   };
 
   const handleSearchChange = (value: string) => {

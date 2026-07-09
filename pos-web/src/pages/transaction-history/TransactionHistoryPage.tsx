@@ -8,7 +8,7 @@ import {
   Search,
   WalletCards,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import DatePicker from "../../components/ui/DatePicker";
@@ -24,6 +24,7 @@ import {
 } from "../../components/ui/Table";
 import { useTransactions } from "../../hooks/useTransactions";
 import { useSettings } from "../../hooks/useSettings";
+import { useReceiptPrinter } from "../../hooks/useReceiptPrinter";
 import MainLayout from "../../layouts/MainLayout";
 import ReceiptPrintArea from "../cashier/ReceiptPrintArea";
 import type { SalesTransaction } from "../cashier/CashierTypes";
@@ -227,20 +228,7 @@ export default function TransactionHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] =
     useState<SalesTransaction | null>(null);
-  const [receiptPrintTransaction, setReceiptPrintTransaction] =
-    useState<SalesTransaction | null>(null);
-
-  useEffect(() => {
-    const handleAfterPrint = () => {
-      setReceiptPrintTransaction(null);
-    };
-
-    window.addEventListener("afterprint", handleAfterPrint);
-
-    return () => {
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
-  }, []);
+  const { receiptPrintTransaction, printReceipt } = useReceiptPrinter();
 
   const filteredTransactions = useMemo(() => {
     const normalizedSearch = searchTerm.toLowerCase().trim();
@@ -359,8 +347,7 @@ export default function TransactionHistoryPage() {
   };
 
   const handlePrintReceipt = (transaction: SalesTransaction) => {
-    setReceiptPrintTransaction(transaction);
-    window.setTimeout(() => window.print(), 100);
+    printReceipt(transaction);
   };
 
   return (

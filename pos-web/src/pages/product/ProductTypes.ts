@@ -1,9 +1,10 @@
 export type ProductStatus = "Aktif" | "Nonaktif";
 
 export type Product = {
-  id: number;
+  id: string;
   barcode: string;
   name: string;
+  categoryId?: string;
   category: string;
   purchasePrice: number;
   sellingPrice: number;

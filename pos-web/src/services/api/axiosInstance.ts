@@ -21,4 +21,16 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem(STORAGE_KEYS.authToken);
+      localStorage.removeItem(STORAGE_KEYS.authUser);
+    }
+
+    return Promise.reject(error);
+  },
+);
+
 export default axiosInstance;

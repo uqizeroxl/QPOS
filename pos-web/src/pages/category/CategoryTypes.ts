@@ -1,7 +1,7 @@
 export type CategoryStatus = "Aktif" | "Nonaktif";
 
 export type Category = {
-  id: number;
+  id: string;
   name: string;
   description: string;
   status: CategoryStatus;

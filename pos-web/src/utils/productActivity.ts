@@ -29,7 +29,7 @@ function formatChangeValue(
   field: ProductChangeField,
   value: ProductFormValues[keyof ProductFormValues],
 ) {
-  return field.formatValue ? field.formatValue(value) : value.toString();
+  return field.formatValue ? field.formatValue(value) : String(value ?? "");
 }
 
 export function getProductUpdateDescription(

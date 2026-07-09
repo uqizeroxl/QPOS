@@ -5,9 +5,9 @@ import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { ROUTES } from "../../constants/routes";
-import { useActivityLog } from "../../hooks/useActivityLog";
 import { useAuth } from "../../hooks/useAuth";
 import { useSettings } from "../../hooks/useSettings";
+import { AuthApiError, authService } from "../../services/authService";
 
 type LocationState = {
   from?: {
@@ -17,13 +17,14 @@ type LocationState = {
 
 export default function LoginPage() {
   const { isAuthenticated, login } = useAuth();
-  const { addActivity } = useActivityLog();
   const { settings } = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
-  const [username, setUsername] = useState("manager");
-  const [password, setPassword] = useState("demo");
+  const [username, setUsername] = useState("owner");
+  const [password, setPassword] = useState("owner123");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const state = location.state as LocationState | null;
   const redirectPath = state?.from?.pathname ?? ROUTES.dashboard;
 
@@ -31,23 +32,24 @@ export default function LoginPage() {
     return <Navigate to={ROUTES.dashboard} replace />;
   }
 
-  const handleDemoLogin = () => {
-    login({
-      token: "demo-pos-token",
-      user: {
-        id: "user-1",
-        name: "Manager",
-        role: "manager",
-      },
-    });
+  const handleLogin = async () => {
+    setErrorMessage("");
+    setIsSubmitting(true);
 
-    addActivity({
-      type: "login",
-      title: "Login berhasil",
-      description: "Mode demo lokal aktif.",
-    });
+    try {
+      const auth = await authService.login(username, password);
 
-    navigate(redirectPath, { replace: true });
+      login(auth);
+      navigate(redirectPath, { replace: true });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof AuthApiError
+          ? error.message
+          : "Terjadi kesalahan pada server.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -94,8 +96,13 @@ export default function LoginPage() {
               </Button>
             </span>
           </label>
-          <Button onClick={handleDemoLogin} className="w-full">
-            Masuk Demo
+          {errorMessage ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+              {errorMessage}
+            </p>
+          ) : null}
+          <Button onClick={handleLogin} className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Memproses..." : "Masuk"}
           </Button>
         </div>
       </Card>

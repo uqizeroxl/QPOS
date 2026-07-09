@@ -18,7 +18,7 @@ type SupplierTableProps = {
   totalSuppliers: number;
   onPageChange: (page: number) => void;
   onEdit: (supplier: Supplier) => void;
-  onDelete: (supplierId: number) => void;
+  onDelete: (supplierId: string) => void;
 };
 
 function formatDate(value: string) {
@@ -63,8 +63,10 @@ export default function SupplierTable({
             <TableRow className="hover:bg-transparent">
               <TableHeadCell>Nama Supplier</TableHeadCell>
               <TableHeadCell>Telepon</TableHeadCell>
+              <TableHeadCell>Email</TableHeadCell>
               <TableHeadCell>Alamat</TableHeadCell>
               <TableHeadCell>Catatan</TableHeadCell>
+              <TableHeadCell>Status</TableHeadCell>
               <TableHeadCell>Dibuat</TableHeadCell>
               <TableHeadCell>Diubah</TableHeadCell>
               <TableHeadCell className="text-right">Aksi</TableHeadCell>
@@ -80,11 +82,25 @@ export default function SupplierTable({
                   <TableCell className="whitespace-nowrap text-sm text-gray-600">
                     {supplier.phone || "-"}
                   </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm text-gray-600">
+                    {supplier.email || "-"}
+                  </TableCell>
                   <TableCell className="min-w-80 text-sm text-gray-600">
                     {supplier.address || "-"}
                   </TableCell>
                   <TableCell className="min-w-64 text-sm text-gray-600">
                     {supplier.notes || "-"}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        supplier.isActive
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {supplier.isActive ? "Aktif" : "Nonaktif"}
+                    </span>
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm text-gray-600">
                     {formatDate(supplier.createdAt)}
@@ -105,7 +121,8 @@ export default function SupplierTable({
                       <Button
                         variant="dangerIcon"
                         onClick={() => onDelete(supplier.id)}
-                        aria-label={`Hapus ${supplier.name}`}
+                        aria-label={`Nonaktifkan ${supplier.name}`}
+                        disabled={!supplier.isActive}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -115,7 +132,7 @@ export default function SupplierTable({
               ))
             ) : (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={7} className="py-12 text-center">
+                <TableCell colSpan={9} className="py-12 text-center">
                   <p className="font-semibold text-gray-700">
                     Belum ada data.
                   </p>

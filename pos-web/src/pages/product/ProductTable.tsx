@@ -14,22 +14,28 @@ import type { Product } from "./ProductTypes";
 
 type ProductTableProps = {
   products: Product[];
+  isLoading?: boolean;
   currentPage: number;
   rowsPerPage: number;
   totalProducts: number;
   onPageChange: (page: number) => void;
   onEdit: (product: Product) => void;
-  onDelete: (productId: number) => void;
+  onDelete: (productId: string) => void;
+  onAdjustStock: (product: Product) => void;
+  onShowStockHistory: (product: Product) => void;
 };
 
 export default function ProductTable({
   products,
+  isLoading = false,
   currentPage,
   rowsPerPage,
   totalProducts,
   onPageChange,
   onEdit,
   onDelete,
+  onAdjustStock,
+  onShowStockHistory,
 }: ProductTableProps) {
   const totalPages = Math.max(1, Math.ceil(totalProducts / rowsPerPage));
   const startItem = totalProducts === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
@@ -53,13 +59,23 @@ export default function ProductTable({
           </TableHead>
 
           <TableBody className="bg-white">
-            {products.length > 0 ? (
+            {isLoading ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={8} className="py-12 text-center">
+                  <p className="font-semibold text-gray-700">
+                    Memuat data produk...
+                  </p>
+                </TableCell>
+              </TableRow>
+            ) : products.length > 0 ? (
               products.map((product) => (
                 <ProductRow
                   key={product.id}
                   product={product}
                   onEdit={onEdit}
                   onDelete={onDelete}
+                  onAdjustStock={onAdjustStock}
+                  onShowStockHistory={onShowStockHistory}
                 />
               ))
             ) : (

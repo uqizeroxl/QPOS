@@ -18,7 +18,7 @@ type CategoryTableProps = {
   totalCategories: number;
   onPageChange: (page: number) => void;
   onEdit: (category: Category) => void;
-  onDelete: (categoryId: number) => void;
+  onDelete: (categoryId: string) => void;
 };
 
 function formatDate(value: string) {

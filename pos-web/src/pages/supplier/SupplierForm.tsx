@@ -11,12 +11,13 @@ type SupplierFormProps = {
   supplier?: Supplier | null;
   errorMessage?: string;
   onClose: () => void;
-  onSubmit: (values: SupplierFormValues) => boolean;
+  onSubmit: (values: SupplierFormValues) => boolean | Promise<boolean>;
 };
 
 const emptyForm: SupplierFormValues = {
   name: "",
   phone: "",
+  email: "",
   address: "",
   notes: "",
 };
@@ -29,6 +30,7 @@ function getInitialFormValues(supplier?: Supplier | null): SupplierFormValues {
   return {
     name: supplier.name,
     phone: supplier.phone ?? "",
+    email: supplier.email ?? "",
     address: supplier.address ?? "",
     notes: supplier.notes ?? "",
   };
@@ -59,9 +61,9 @@ export default function SupplierForm({
     }));
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSubmit(formValues);
+    await onSubmit(formValues);
   };
 
   return (
@@ -103,6 +105,15 @@ export default function SupplierForm({
             <Input
               value={formValues.phone}
               onChange={(event) => updateField("phone", event.target.value)}
+            />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-gray-700">Email</span>
+            <Input
+              type="email"
+              value={formValues.email}
+              onChange={(event) => updateField("email", event.target.value)}
             />
           </label>
 

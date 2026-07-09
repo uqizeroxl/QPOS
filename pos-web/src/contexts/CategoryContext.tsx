@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useProducts } from "../hooks/useProducts";
-import { getStoredCategories, storeCategories } from "../utils/categoryStorage";
+import { categoryService } from "../services/categoryService";
 import { CategoryContext } from "./categoryContextValue";
 import type { Category, CategoryFormValues } from "../pages/category/CategoryTypes";
 import type { CategoryResult } from "./categoryContextValue";
@@ -17,7 +17,7 @@ function normalizeName(name: string) {
 function validateCategoryName(
   categories: Category[],
   values: CategoryFormValues,
-  editingCategoryId?: number,
+  editingCategoryId?: string,
 ) {
   const name = values.name.trim();
 
@@ -43,10 +43,19 @@ function validateCategoryName(
 }
 
 export function CategoryProvider({ children }: CategoryProviderProps) {
-  const { products, renameProductCategory } = useProducts();
-  const [baseCategories, setBaseCategories] = useState<Category[]>(() =>
-    getStoredCategories(),
-  );
+  const { products } = useProducts();
+  const [baseCategories, setBaseCategories] = useState<Category[]>([]);
+
+  const fetchCategories = useCallback(async () => {
+    const nextCategories = await categoryService.getCategories();
+    setBaseCategories(nextCategories);
+  }, []);
+
+  useEffect(() => {
+    void fetchCategories().catch((error) => {
+      console.error("Failed to fetch categories:", error);
+    });
+  }, [fetchCategories]);
 
   const productCountByCategory = useMemo(
     () =>
@@ -66,39 +75,41 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     [baseCategories, productCountByCategory],
   );
 
-  const commitCategories = useCallback((nextCategories: Category[]) => {
-    setBaseCategories(nextCategories);
-    storeCategories(nextCategories);
-  }, []);
-
   const addCategory = useCallback(
-    (values: CategoryFormValues): CategoryResult => {
+    async (values: CategoryFormValues): Promise<CategoryResult> => {
       const message = validateCategoryName(baseCategories, values);
 
       if (message) {
         return { ok: false, message };
       }
 
-      const now = new Date().toISOString();
-      const category: Category = {
-        ...values,
-        name: values.name.trim(),
-        description: values.description.trim(),
-        id: Date.now(),
-        productCount: 0,
-        createdAt: now,
-        updatedAt: now,
-      };
-      const nextCategories = [category, ...baseCategories];
+      try {
+        const category = await categoryService.createCategory({
+          ...values,
+          name: values.name.trim(),
+          description: values.description.trim(),
+        });
 
-      commitCategories(nextCategories);
-      return { ok: true, category };
+        await fetchCategories();
+
+        return { ok: true, category };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Kategori gagal ditambahkan.";
+
+        return { ok: false, message };
+      }
     },
-    [baseCategories, commitCategories],
+    [baseCategories, fetchCategories],
   );
 
   const updateCategory = useCallback(
-    (categoryId: number, values: CategoryFormValues): CategoryResult => {
+    async (
+      categoryId: string,
+      values: CategoryFormValues,
+    ): Promise<CategoryResult> => {
       const message = validateCategoryName(baseCategories, values, categoryId);
 
       if (message) {
@@ -113,28 +124,30 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
         return { ok: false, message: "Kategori tidak ditemukan." };
       }
 
-      const updatedCategory: Category = {
-        ...currentCategory,
-        ...values,
-        name: values.name.trim(),
-        description: values.description.trim(),
-        updatedAt: new Date().toISOString(),
-      };
+      try {
+        const category = await categoryService.updateCategory(categoryId, {
+          ...values,
+          name: values.name.trim(),
+          description: values.description.trim(),
+        });
 
-      commitCategories(
-        baseCategories.map((category) =>
-          category.id === categoryId ? updatedCategory : category,
-        ),
-      );
-      renameProductCategory(currentCategory.name, updatedCategory.name);
+        await fetchCategories();
 
-      return { ok: true, category: updatedCategory };
+        return { ok: true, category };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Kategori gagal diperbarui.";
+
+        return { ok: false, message };
+      }
     },
-    [baseCategories, commitCategories, renameProductCategory],
+    [baseCategories, fetchCategories],
   );
 
   const deleteCategory = useCallback(
-    (categoryId: number): CategoryResult => {
+    async (categoryId: string): Promise<CategoryResult> => {
       const currentCategory = categories.find(
         (category) => category.id === categoryId,
       );
@@ -143,20 +156,22 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
         return { ok: false, message: "Kategori tidak ditemukan." };
       }
 
-      if (currentCategory.productCount > 0) {
-        return {
-          ok: false,
-          message: "Kategori tidak dapat dihapus karena masih digunakan oleh produk.",
-        };
+      try {
+        const category = await categoryService.deleteCategory(categoryId);
+
+        await fetchCategories();
+
+        return { ok: true, category };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Kategori gagal dihapus.";
+
+        return { ok: false, message };
       }
-
-      commitCategories(
-        baseCategories.filter((category) => category.id !== categoryId),
-      );
-
-      return { ok: true, category: currentCategory };
     },
-    [baseCategories, categories, commitCategories],
+    [categories, fetchCategories],
   );
 
   const activeCategoryNames = useMemo(
@@ -167,16 +182,25 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     [categories],
   );
 
+  const activeCategories = useMemo(
+    () => categories.filter((category) => category.status === "Aktif"),
+    [categories],
+  );
+
   const value = useMemo(
     () => ({
       categories,
       activeCategoryNames,
+      activeCategories,
+      fetchCategories,
       addCategory,
       updateCategory,
       deleteCategory,
     }),
     [
       activeCategoryNames,
+      activeCategories,
+      fetchCategories,
       addCategory,
       categories,
       deleteCategory,

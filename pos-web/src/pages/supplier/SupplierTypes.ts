@@ -1,14 +1,16 @@
 export type Supplier = {
-  id: number;
+  id: string;
   name: string;
   phone?: string;
+  email?: string;
   address?: string;
   notes?: string;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 };
 
 export type SupplierFormValues = Pick<
   Supplier,
-  "name" | "phone" | "address" | "notes"
+  "name" | "phone" | "email" | "address" | "notes"
 >;

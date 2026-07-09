@@ -96,10 +96,10 @@ export default function CategoryPage() {
     setFormError("");
   };
 
-  const handleSubmitCategory = (values: CategoryFormValues) => {
+  const handleSubmitCategory = async (values: CategoryFormValues) => {
     const result = editingCategory
-      ? updateCategory(editingCategory.id, values)
-      : addCategory(values);
+      ? await updateCategory(editingCategory.id, values)
+      : await addCategory(values);
 
     if (!result.ok) {
       setFormError(result.message);
@@ -123,8 +123,8 @@ export default function CategoryPage() {
     return true;
   };
 
-  const handleDeleteCategory = (categoryId: number) => {
-    const result = deleteCategory(categoryId);
+  const handleDeleteCategory = async (categoryId: string) => {
+    const result = await deleteCategory(categoryId);
 
     if (!result.ok) {
       showToast(result.message, "error");
