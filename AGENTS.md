@@ -64,10 +64,14 @@
 ## Development Commands
 
 ```bash
-npm run dev      # Start dev server (HMR)
-npm run build    # Type-check + production build
-npm run lint     # ESLint on all source files
-npm run preview  # Preview production build
+npm run dev         # Start frontend dev server (Vite HMR)
+npm run build       # Type-check + production build
+npm run lint        # ESLint on all source files
+npm run preview     # Preview production build
+npm run dev:server  # Start backend dev server (Express + tsx watch)
+npm run seed        # Seed database with sample data
+npm run docker:up   # Start backend via Docker Compose
+npm run docker:down # Stop Docker Compose
 ```
 
 ## Conventions
@@ -80,6 +84,85 @@ npm run preview  # Preview production build
 - Services in `src/services/api/`
 - Constants in `src/constants/`
 - Utilities in `src/utils/`
+
+## Backend (`server/`)
+
+A lightweight **Express.js + SQLite** REST API (port 8000) matching the frontend data models.
+
+### Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Node.js 22 + TypeScript |
+| Framework | Express.js 4 |
+| Database | SQLite via better-sqlite3 |
+| Auth | JWT (jsonwebtoken + bcryptjs) |
+| Validation | Zod schemas |
+| Dev runner | tsx (watch mode) |
+
+### Structure
+
+```
+server/
+  src/
+    index.ts          # Entry point (loads dotenv, starts listening)
+    app.ts            # Express app (middleware + route mounting)
+    db.ts             # SQLite connection + auto-migration on startup
+    types.ts          # Shared type definitions
+    seed.ts           # Sample data seeder
+    middleware/
+      auth.ts         # JWT authenticate + role-based authorize
+      errorHandler.ts # Global AppError → JSON error response
+      validate.ts     # Zod request body/query/params validation
+    routes/
+      auth.ts         # POST /login, GET /me, POST /logout
+      products.ts     # Full CRUD + /barcode/:barcode lookup + low-stock
+      categories.ts   # Full CRUD + rename cascades to products
+      suppliers.ts    # Full CRUD + duplicate name check
+      transactions.ts # Create transaction (deducts stock in txn) + list/detail
+      settings.ts     # GET/PUT store info (upsert pattern)
+      dashboard.ts    # GET /stats (aggregated counts + recent activity)
+```
+
+### API Response Format
+
+All endpoints return:
+```json
+{ "status": "success"|"error", "data": ..., "message": "..." }
+```
+
+List endpoints support pagination via query params: `?page=1&limit=10&sort=name&order=asc&search=keyword`
+
+### Running
+
+```bash
+# Direct (dev mode with hot-reload)
+cd server && npm install && npm run seed && npm run dev
+
+# Or via Docker from project root
+docker compose up -d
+```
+
+### Auth (Demo Credentials — see seed.ts)
+
+| Username | Password | Role |
+|----------|----------|------|
+| admin    | demo     | admin |
+| manager  | demo     | manager |
+| cashier  | demo     | cashier |
+
+### Notes
+
+- `server/.env.example` documents available env vars; copy to `server/.env` for dev
+- Database file lives at `server/data/qpos.db` (auto-created)
+- All list endpoints are paginated; there is also an `/all` variant returning all records (no pagination)
+- Transactions use `db.transaction()` (SQLite txn) to atomically insert the order and deduct stock
+- Role-based auth: `admin` and `manager` can CUD; `cashier` is read-only + create transactions
+- Zod schemas at route level ensure type safety and meaningful 400 error messages
+
+## Frontend ↔ Backend Wiring
+
+The frontend Axios client (`src/services/api/`) already points at `http://localhost:8000/api`. To switch from localStorage to API mode, each context provider would call the corresponding API endpoints instead of reading/writing localStorage.
 
 ## Gotchas & Notes
 
