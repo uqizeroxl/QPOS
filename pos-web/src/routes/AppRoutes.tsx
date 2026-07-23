@@ -8,6 +8,9 @@ import ProtectedRoute from "./ProtectedRoute";
 const LoginPage = lazy(() => import("../pages/login/LoginPage"));
 const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"));
 const ProductPage = lazy(() => import("../pages/product/ProductPage"));
+const BarcodeLabelPage = lazy(
+  () => import("../pages/barcode-label/BarcodeLabelPage"),
+);
 const CashierPage = lazy(() => import("../pages/cashier/CashierPage"));
 const TransactionDetailPage = lazy(
   () => import("../pages/transactions/TransactionDetailPage"),
@@ -18,8 +21,9 @@ const TransactionHistoryPage = lazy(
 );
 const CategoryPage = lazy(() => import("../pages/category/CategoryPage"));
 const SupplierPage = lazy(() => import("../pages/supplier/SupplierPage"));
-const PurchaseOrderPage = lazy(
-  () => import("../pages/purchase-order/PurchaseOrderPage"),
+const RestockPage = lazy(() => import("../pages/restock/RestockPage"));
+const StockHistoryPage = lazy(
+  () => import("../pages/stock-history/StockHistoryPage"),
 );
 const ReportPage = lazy(() => import("../pages/report/ReportPage"));
 const SettingPage = lazy(() => import("../pages/setting/SettingPage"));
@@ -39,12 +43,11 @@ export default function AppRoutes() {
           <Route element={<ProtectedRoute />}>
             <Route path={ROUTES.dashboard} element={<DashboardPage />} />
             <Route path={ROUTES.product} element={<ProductPage />} />
+            <Route path={ROUTES.barcodeLabels} element={<BarcodeLabelPage />} />
             <Route path={ROUTES.category} element={<CategoryPage />} />
             <Route path={ROUTES.supplier} element={<SupplierPage />} />
-            <Route
-              path={ROUTES.purchaseOrder}
-              element={<PurchaseOrderPage />}
-            />
+            <Route path={ROUTES.restock} element={<RestockPage />} />
+            <Route path={ROUTES.stockHistory} element={<StockHistoryPage />} />
             <Route path={ROUTES.cashier} element={<CashierPage />} />
             <Route path={ROUTES.transactions} element={<TransactionsPage />} />
             <Route

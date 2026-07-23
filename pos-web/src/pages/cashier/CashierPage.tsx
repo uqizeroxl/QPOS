@@ -10,6 +10,7 @@ import {
   TransactionApiError,
   transactionService,
 } from "../../services/transactionService";
+import { ProductApiError, productService } from "../../services/productService";
 import { formatRupiah, parseRupiah } from "../../utils/currency";
 import MainLayout from "../../layouts/MainLayout";
 import BarcodeInput from "./BarcodeInput";
@@ -36,7 +37,7 @@ function normalizeDiscountPercentInput(value: string) {
 }
 
 export default function CashierPage() {
-  const { products, fetchProducts } = useProducts();
+  const { fetchProducts } = useProducts();
   const { addActivity } = useActivityLog();
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -45,31 +46,25 @@ export default function CashierPage() {
   const [discountPercentInput, setDiscountPercentInput] = useState("0");
   const [paidAmountInput, setPaidAmountInput] = useState("0");
   const [barcodeMessage, setBarcodeMessage] = useState("");
+  const [isPaying, setIsPaying] = useState(false);
   const [transactionMessage, setTransactionMessage] = useState("");
   const [paymentDialogTransaction, setPaymentDialogTransaction] =
     useState<SalesTransaction | null>(null);
   const [lastSuccessfulTransaction, setLastSuccessfulTransaction] =
     useState<SalesTransaction | null>(null);
   const [focusRequestId, setFocusRequestId] = useState(0);
+  const [cashierSearchResults, setCashierSearchResults] = useState<CashierProduct[]>([]);
   const paidAmountInputRef = useRef<HTMLInputElement>(null);
+  const productSearchRequestRef = useRef(0);
+  const checkoutRequestRef = useRef<{
+    key: string;
+    payload: string;
+  } | null>(null);
   const requestInputFocus = useCallback(() => {
     setFocusRequestId((currentRequestId) => currentRequestId + 1);
   }, []);
   const { receiptPrintTransaction, printReceipt: printReceiptArea } =
     useReceiptPrinter(requestInputFocus);
-  const cashierProducts = useMemo<CashierProduct[]>(() => {
-    return products
-      .filter((product) => product.status === "Aktif")
-      .map((product) => ({
-        id: product.id,
-        barcode: product.barcode,
-        name: product.name,
-        category: product.category,
-        price: product.sellingPrice,
-        stock: product.stock,
-      }));
-  }, [products]);
-
   const subtotal = useMemo(
     () =>
       cartItems.reduce(
@@ -113,7 +108,8 @@ export default function CashierPage() {
     };
   }, [paymentDialogTransaction]);
 
-  const addProductToCart = (product: CashierProduct) => {
+  const addProductToCart = useCallback((product: CashierProduct) => {
+    productSearchRequestRef.current += 1;
     setCartItems((currentItems) => {
       const existingItem = currentItems.find((item) => item.id === product.id);
 
@@ -132,27 +128,97 @@ export default function CashierPage() {
     });
 
     setProductQuery("");
+    setCashierSearchResults([]);
     setBarcodeMessage("");
     setTransactionMessage("");
     return true;
-  };
+  }, []);
 
-  const handleAddByQuery = () => {
-    const normalizedQuery = productQuery.trim().toLowerCase();
-    const product = cashierProducts.find(
-      (currentProduct) =>
-        currentProduct.barcode.toLowerCase() === normalizedQuery ||
-        currentProduct.name.toLowerCase() === normalizedQuery,
-    );
+  useEffect(() => {
+    const keyword = productQuery.trim();
 
-    setTransactionMessage("");
-
-    if (!product) {
-      setBarcodeMessage("Produk tidak ditemukan.");
+    if (!keyword) {
+      productSearchRequestRef.current += 1;
+      setCashierSearchResults([]);
       return;
     }
 
-    addProductToCart(product);
+    const requestId = ++productSearchRequestRef.current;
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const products = await productService.searchCashierProducts(keyword);
+
+        if (requestId !== productSearchRequestRef.current) return;
+
+        const results = products.map((product) => ({
+          id: product.id,
+          barcode: product.barcode,
+          name: product.name,
+          category: product.category,
+          price: product.sellingPrice,
+          stock: product.stock,
+        }));
+        setCashierSearchResults(results);
+
+        const normalizedKeyword = keyword.toLowerCase();
+        const barcodeProduct = results.find(
+          (product) => product.barcode.toLowerCase() === normalizedKeyword,
+        );
+
+        if (barcodeProduct) addProductToCart(barcodeProduct);
+      } catch (error) {
+        if (requestId !== productSearchRequestRef.current) return;
+        setCashierSearchResults([]);
+        setBarcodeMessage(
+          error instanceof ProductApiError
+            ? error.message
+            : "Terjadi kesalahan pada server.",
+        );
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [addProductToCart, productQuery]);
+
+  const handleAddByQuery = async () => {
+    const keyword = productQuery.trim();
+    setTransactionMessage("");
+
+    if (!keyword) return;
+
+    const requestId = ++productSearchRequestRef.current;
+
+    try {
+      const products = await productService.searchCashierProducts(keyword);
+
+      if (requestId !== productSearchRequestRef.current) return;
+
+      const results = products.map((product) => ({
+        id: product.id,
+        barcode: product.barcode,
+        name: product.name,
+        category: product.category,
+        price: product.sellingPrice,
+        stock: product.stock,
+      }));
+      setCashierSearchResults(results);
+
+      if (results.length === 1) {
+        addProductToCart(results[0]);
+        return;
+      }
+
+      if (results.length === 0) {
+        setBarcodeMessage("Produk tidak ditemukan.");
+      }
+    } catch (error) {
+      if (requestId !== productSearchRequestRef.current) return;
+      setBarcodeMessage(
+        error instanceof ProductApiError
+          ? error.message
+          : "Terjadi kesalahan pada server.",
+      );
+    }
   };
 
   const handleQuantityChange = (productId: string, quantity: number) => {
@@ -184,15 +250,7 @@ export default function CashierPage() {
     }
 
     for (const item of cartItems) {
-      const product = products.find(
-        (currentProduct) => currentProduct.id === item.id,
-      );
-
-      if (!product || product.status !== "Aktif") {
-        return `${item.name} tidak tersedia.`;
-      }
-
-      if (product.stock < item.quantity) {
+      if (item.stock < item.quantity) {
         return `Stok ${item.name} tidak mencukupi.`;
       }
     }
@@ -230,6 +288,7 @@ export default function CashierPage() {
   };
 
   const handlePay = async () => {
+    if (isPaying) return;
     const validationMessage = validatePayment();
 
     if (validationMessage) {
@@ -237,10 +296,24 @@ export default function CashierPage() {
       return;
     }
 
+    setIsPaying(true);
     try {
+      const payload = createTransactionPayload();
+      const serializedPayload = JSON.stringify(payload);
+
+      if (checkoutRequestRef.current?.payload !== serializedPayload) {
+        checkoutRequestRef.current = {
+          key: crypto.randomUUID(),
+          payload: serializedPayload,
+        };
+      }
+
       const transaction = await transactionService.createTransaction(
-        createTransactionPayload(),
+        payload,
+        checkoutRequestRef.current.key,
       );
+
+      checkoutRequestRef.current = null;
 
       showToast("Transaksi berhasil.", "success");
       addActivity({
@@ -263,6 +336,8 @@ export default function CashierPage() {
 
       setTransactionMessage(message);
       showToast(message, "error");
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -319,7 +394,7 @@ export default function CashierPage() {
           query={productQuery}
           message={barcodeMessage}
           focusRequestId={focusRequestId}
-          products={cashierProducts}
+          products={cashierSearchResults}
           onProductSelect={addProductToCart}
           onQueryChange={(value) => {
             setProductQuery(value);
@@ -344,6 +419,7 @@ export default function CashierPage() {
             paidAmount={paidAmountInput}
             change={change}
             canPay={canPay}
+            isPaying={isPaying}
             transactionMessage={transactionMessage}
             onDiscountChange={(value) =>
               setDiscountPercentInput(normalizeDiscountPercentInput(value))

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Truck } from "lucide-react";
+import { Ban, ChevronLeft, ChevronRight, Pencil, Trash2, Truck } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import {
@@ -18,7 +18,8 @@ type SupplierTableProps = {
   totalSuppliers: number;
   onPageChange: (page: number) => void;
   onEdit: (supplier: Supplier) => void;
-  onDelete: (supplierId: string) => void;
+  onToggleStatus: (supplier: Supplier) => void;
+  onDelete: (supplier: Supplier) => void;
 };
 
 function formatDate(value: string) {
@@ -36,6 +37,7 @@ export default function SupplierTable({
   totalSuppliers,
   onPageChange,
   onEdit,
+  onToggleStatus,
   onDelete,
 }: SupplierTableProps) {
   const totalPages = Math.max(1, Math.ceil(totalSuppliers / rowsPerPage));
@@ -69,13 +71,15 @@ export default function SupplierTable({
               <TableHeadCell>Status</TableHeadCell>
               <TableHeadCell>Dibuat</TableHeadCell>
               <TableHeadCell>Diubah</TableHeadCell>
-              <TableHeadCell className="text-right">Aksi</TableHeadCell>
+              <TableHeadCell className="sticky right-0 z-20 whitespace-nowrap bg-gray-50 text-right shadow-[-4px_0_8px_-6px_rgba(15,23,42,0.35)] dark:bg-slate-900">
+                Aksi
+              </TableHeadCell>
             </TableRow>
           </TableHead>
           <TableBody className="bg-white">
             {suppliers.length > 0 ? (
               suppliers.map((supplier) => (
-                <TableRow key={supplier.id}>
+                <TableRow key={supplier.id} className="group">
                   <TableCell className="whitespace-nowrap font-semibold text-gray-900">
                     {supplier.name}
                   </TableCell>
@@ -108,23 +112,33 @@ export default function SupplierTable({
                   <TableCell className="whitespace-nowrap text-sm text-gray-600">
                     {formatDate(supplier.updatedAt)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-right">
+                  <TableCell className="sticky right-0 z-10 whitespace-nowrap bg-white text-right shadow-[-4px_0_8px_-6px_rgba(15,23,42,0.35)] group-hover:bg-gray-50 dark:bg-slate-900 dark:group-hover:bg-slate-700">
                     <div className="inline-flex items-center gap-2">
                       <Button
-                        variant="icon"
+                        variant="compactSecondary"
                         onClick={() => onEdit(supplier)}
                         className="hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                         aria-label={`Edit ${supplier.name}`}
                       >
                         <Pencil className="h-4 w-4" />
+                        Edit
                       </Button>
                       <Button
-                        variant="dangerIcon"
-                        onClick={() => onDelete(supplier.id)}
-                        aria-label={`Nonaktifkan ${supplier.name}`}
-                        disabled={!supplier.isActive}
+                        variant="compactSecondary"
+                        onClick={() => onToggleStatus(supplier)}
+                        aria-label={`${supplier.isActive ? "Nonaktifkan" : "Aktifkan"} ${supplier.name}`}
+                      >
+                        <Ban className="h-4 w-4" />
+                        {supplier.isActive ? "Nonaktifkan" : "Aktifkan"}
+                      </Button>
+                      <Button
+                        variant="compactSecondary"
+                        onClick={() => onDelete(supplier)}
+                        className="border-red-200 text-red-700 hover:bg-red-50"
+                        aria-label={`Hapus permanen ${supplier.name}`}
                       >
                         <Trash2 className="h-4 w-4" />
+                        Hapus Permanen
                       </Button>
                     </div>
                   </TableCell>

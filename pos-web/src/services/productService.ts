@@ -1,4 +1,5 @@
 import axios from "axios";
+import axiosInstance from "./api/axiosInstance";
 import { apiService } from "./api/apiService";
 import type { Product, ProductFormValues } from "../pages/product/ProductTypes";
 
@@ -9,21 +10,36 @@ type ProductApiCategory = {
 
 type ProductApiItem = {
   id: string;
-  barcode: string;
+  barcode: string | null;
   name: string;
   categoryId: string;
   category?: ProductApiCategory | null;
-  purchasePrice: string | number;
+  purchasePrice: string | number | null;
   sellingPrice: string | number;
   stock: number;
   status: "ACTIVE" | "INACTIVE" | "Aktif" | "Nonaktif";
+};
+
+type ProductListApiResponse = {
+  data: ProductApiItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export type ProductListParams = {
+  page: number;
+  limit: number;
+  search?: string;
+  category?: string;
 };
 
 type CreateProductPayload = {
   barcode: string;
   name: string;
   categoryId: string;
-  purchasePrice: number;
+  purchasePrice: number | null;
   sellingPrice: number;
   stock: number;
   status: "Aktif" | "Nonaktif";
@@ -50,9 +66,69 @@ export type StockHistoryItem = {
   createdAt: string;
 };
 
+export type StockReferenceType =
+  | "SALE"
+  | "RESTOCK"
+  | "ADJUSTMENT"
+  | "PURCHASE_ORDER";
+
+export type StockHistoryListItem = StockHistoryItem & {
+  referenceType: StockReferenceType | null;
+  referenceId: string | null;
+  userName: string | null;
+  product: {
+    id: string;
+    name: string;
+    barcode: string | null;
+  };
+};
+
+export type StockHistoryListParams = {
+  page: number;
+  limit: number;
+  productId?: string;
+  type?: StockReferenceType;
+  startDate?: string;
+  endDate?: string;
+};
+
+export type StockHistoryPagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
+export type RestockProductPayload = {
+  items: Array<{
+    productId: string;
+    quantity: number;
+    purchasePrice: number;
+    sellingPrice: number;
+  }>;
+};
+
+export type RestockProductResult = {
+  products: ProductApiItem[];
+  histories: StockHistoryItem[];
+};
+
 type StockAdjustmentApiResponse = {
   product: ProductApiItem;
   history: StockHistoryItem;
+};
+
+export type ProductDatasetPreview = {
+  totalData: number;
+  newProducts: number;
+  duplicateBarcodes: number;
+};
+
+export type ProductDatasetImportResult = {
+  inserted: number;
+  updated: number;
+  skippedDuplicateRows: number;
+  failed: number;
 };
 
 function buildProductPayload(values: ProductFormValues): CreateProductPayload {
@@ -86,11 +162,12 @@ function normalizeStatus(status: ProductApiItem["status"]) {
 function mapProduct(product: ProductApiItem): Product {
   return {
     id: product.id,
-    barcode: product.barcode,
+    barcode: product.barcode ?? "",
     name: product.name,
     categoryId: product.category?.id ?? product.categoryId,
     category: product.category?.name ?? product.categoryId,
-    purchasePrice: Number(product.purchasePrice),
+    purchasePrice:
+      product.purchasePrice === null ? null : Number(product.purchasePrice),
     sellingPrice: Number(product.sellingPrice),
     stock: product.stock,
     status: normalizeStatus(product.status),
@@ -112,11 +189,37 @@ function handleProductError(error: unknown): never {
   throw error;
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export const productService = {
-  getProducts: async () => {
+  getProducts: async ({
+    page = 1,
+    limit = 100,
+    search,
+    category,
+  }: Partial<ProductListParams> = {}) => {
     try {
-      const response = await apiService.get<ProductApiItem[]>("/products");
-      return response.data.map(mapProduct);
+      const response = await axiosInstance.get<ProductListApiResponse>(
+        "/products",
+        {
+          params: { page, limit, search, category },
+        },
+      );
+
+      return {
+        products: response.data.data.map(mapProduct),
+        total: response.data.total,
+        page: response.data.page,
+        limit: response.data.limit,
+        totalPages: response.data.totalPages,
+      };
     } catch (error) {
       handleProductError(error);
     }
@@ -161,6 +264,16 @@ export const productService = {
       handleProductError(error);
     }
   },
+  generateBarcode: async (productId: string) => {
+    try {
+      const response = await apiService.post<ProductApiItem>(
+        `/products/${productId}/barcode`,
+      );
+      return mapProduct(response.data);
+    } catch (error) {
+      handleProductError(error);
+    }
+  },
   adjustStock: async (
     productId: string,
     payload: StockAdjustmentPayload,
@@ -183,6 +296,110 @@ export const productService = {
     try {
       const response = await apiService.get<StockHistoryItem[]>(
         `/products/${productId}/stock-history`,
+      );
+
+      return response.data;
+    } catch (error) {
+      handleProductError(error);
+    }
+  },
+  getStockHistories: async (params: StockHistoryListParams) => {
+    try {
+      return await apiService.get<StockHistoryListItem[]>(
+        "/products/stock-history",
+        { params },
+      ) as {
+        data: StockHistoryListItem[];
+        pagination: StockHistoryPagination;
+      };
+    } catch (error) {
+      handleProductError(error);
+    }
+  },
+  restockProducts: async (payload: RestockProductPayload) => {
+    try {
+      const response = await apiService.post<
+        RestockProductResult,
+        RestockProductPayload
+      >("/products/restocks", payload);
+
+      return {
+        products: response.data.products.map(mapProduct),
+        histories: response.data.histories,
+      };
+    } catch (error) {
+      handleProductError(error);
+    }
+  },
+  searchRestockProducts: async (keyword: string) => {
+    try {
+      const response = await apiService.get<ProductApiItem[]>(
+        "/products/restocks/search",
+        { params: { keyword } },
+      );
+
+      return response.data.map(mapProduct);
+    } catch (error) {
+      handleProductError(error);
+    }
+  },
+  searchCashierProducts: async (keyword: string) => {
+    try {
+      const response = await apiService.get<ProductApiItem[]>(
+        "/products/cashier/search",
+        { params: { keyword } },
+      );
+
+      return response.data.map(mapProduct);
+    } catch (error) {
+      handleProductError(error);
+    }
+  },
+  exportDataset: async () => {
+    try {
+      const response = await axiosInstance.get<Blob>("/products/dataset/export", {
+        responseType: "blob",
+      });
+      const today = new Date().toISOString().slice(0, 10);
+
+      downloadBlob(response.data, `dataset_produk_${today}.xlsx`);
+    } catch (error) {
+      handleProductError(error);
+    }
+  },
+  previewDatasetImport: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await apiService.post<ProductDatasetPreview, FormData>(
+        "/products/dataset/preview",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      return response.data;
+    } catch (error) {
+      handleProductError(error);
+    }
+  },
+  importDataset: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await apiService.post<ProductDatasetImportResult, FormData>(
+        "/products/dataset/import",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
       );
 
       return response.data;

@@ -19,12 +19,23 @@ import ProductToolbar from "./ProductToolbar";
 import type { Product, ProductFormValues } from "./ProductTypes";
 import { getProductUpdateDescription } from "../../utils/productActivity";
 
-const rowsPerPage = 5;
+const pageSizeOptions = [25, 50, 100, 250, 500] as const;
+const productPageSizeKey = "product-page-size";
 const lowStockThreshold = 5;
+
+const getInitialPageSize = () => {
+  const storedPageSize = Number(sessionStorage.getItem(productPageSizeKey));
+  return pageSizeOptions.includes(
+    storedPageSize as (typeof pageSizeOptions)[number],
+  )
+    ? storedPageSize
+    : 100;
+};
 
 export default function ProductPage() {
   const {
     products,
+    totalProducts,
     isLoading,
     errorMessage,
     fetchProducts,
@@ -40,6 +51,7 @@ export default function ProductPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(getInitialPageSize);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -49,8 +61,19 @@ export default function ProductPage() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   useEffect(() => {
-    void fetchProducts();
-  }, [fetchProducts]);
+    void fetchProducts({
+      page: currentPage,
+      limit: rowsPerPage,
+      search: searchTerm.trim() || undefined,
+      category: selectedCategory === "Semua" ? undefined : selectedCategory,
+    });
+  }, [
+    currentPage,
+    fetchProducts,
+    rowsPerPage,
+    searchTerm,
+    selectedCategory,
+  ]);
 
   useEffect(() => {
     if (errorMessage) {
@@ -58,26 +81,12 @@ export default function ProductPage() {
     }
   }, [errorMessage, showToast]);
 
-  const filteredProducts = useMemo(() => {
-    const normalizedSearch = searchTerm.toLowerCase().trim();
+  const totalPages = Math.ceil(totalProducts / rowsPerPage);
+  const normalizedPage = Math.max(1, Math.min(currentPage, totalPages || 1));
 
-    return products.filter((product) => {
-      const matchesSearch =
-        product.name.toLowerCase().includes(normalizedSearch) ||
-        product.barcode.includes(normalizedSearch);
-      const matchesCategory =
-        selectedCategory === "Semua" || product.category === selectedCategory;
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, searchTerm, selectedCategory]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / rowsPerPage));
-  const normalizedPage = Math.min(currentPage, totalPages);
-  const paginatedProducts = filteredProducts.slice(
-    (normalizedPage - 1) * rowsPerPage,
-    normalizedPage * rowsPerPage,
-  );
+  useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
   const formCategories = useMemo(() => {
     const categoryOptions = activeCategories;
 
@@ -103,7 +112,8 @@ export default function ProductPage() {
   }, [activeCategories, editingProduct]);
   const existingBarcodes = products
     .filter((currentProduct) => currentProduct.id !== editingProduct?.id)
-    .map((currentProduct) => currentProduct.barcode);
+    .map((currentProduct) => currentProduct.barcode)
+    .filter(Boolean);
 
   const handleAddProduct = () => {
     setEditingProduct(null);
@@ -125,7 +135,12 @@ export default function ProductPage() {
         title: "Produk berhasil dihapus",
         description: deletedProduct.name,
       });
-      await fetchProducts();
+      await fetchProducts({
+        page: currentPage,
+        limit: rowsPerPage,
+        search: searchTerm.trim() || undefined,
+        category: selectedCategory === "Semua" ? undefined : selectedCategory,
+      });
     } catch (error) {
       const message =
         error instanceof ProductApiError
@@ -152,7 +167,12 @@ export default function ProductPage() {
         addLowStockActivity(updatedProduct);
       }
 
-      await fetchProducts();
+      await fetchProducts({
+        page: currentPage,
+        limit: rowsPerPage,
+        search: searchTerm.trim() || undefined,
+        category: selectedCategory === "Semua" ? undefined : selectedCategory,
+      });
       return true;
     } catch (error) {
       const message =
@@ -224,7 +244,12 @@ export default function ProductPage() {
           addLowStockActivity(updatedProduct);
         }
 
-        await fetchProducts();
+        await fetchProducts({
+          page: currentPage,
+          limit: rowsPerPage,
+          search: searchTerm.trim() || undefined,
+          category: selectedCategory === "Semua" ? undefined : selectedCategory,
+        });
 
         return true;
       } catch (error) {
@@ -251,7 +276,12 @@ export default function ProductPage() {
           description: newProduct.name,
         });
         addLowStockActivity(newProduct);
-        await fetchProducts();
+        await fetchProducts({
+          page: currentPage,
+          limit: rowsPerPage,
+          search: searchTerm.trim() || undefined,
+          category: selectedCategory === "Semua" ? undefined : selectedCategory,
+        });
 
         return true;
       } catch (error) {
@@ -278,6 +308,12 @@ export default function ProductPage() {
     setCurrentPage(1);
   };
 
+  const handlePageSizeChange = (value: number) => {
+    setRowsPerPage(value);
+    setCurrentPage(1);
+    sessionStorage.setItem(productPageSizeKey, value.toString());
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -297,7 +333,7 @@ export default function ProductPage() {
           <div className="flex items-center gap-3 rounded-lg bg-blue-50 px-4 py-3 text-blue-700">
             <Package className="h-5 w-5" />
             <div>
-              <p className="text-sm font-semibold">{products.length} Produk</p>
+              <p className="text-sm font-semibold">{totalProducts} Produk</p>
               <p className="text-xs">Data produk backend</p>
             </div>
           </div>
@@ -313,12 +349,14 @@ export default function ProductPage() {
         />
 
         <ProductTable
-          products={paginatedProducts}
+          products={products}
           isLoading={isLoading}
           currentPage={normalizedPage}
           rowsPerPage={rowsPerPage}
-          totalProducts={filteredProducts.length}
+          totalProducts={totalProducts}
           onPageChange={setCurrentPage}
+          pageSizeOptions={pageSizeOptions}
+          onPageSizeChange={handlePageSizeChange}
           onEdit={handleEditProduct}
           onDelete={handleDeleteProduct}
           onAdjustStock={setStockProduct}

@@ -1,5 +1,5 @@
 import { Plus, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
@@ -14,8 +14,14 @@ import type { Supplier, SupplierFormValues } from "./SupplierTypes";
 const rowsPerPage = 5;
 
 export default function SupplierPage() {
-  const { suppliers, fetchSuppliers, addSupplier, updateSupplier, deleteSupplier } =
-    useSuppliers();
+  const {
+    suppliers,
+    fetchSuppliers,
+    addSupplier,
+    updateSupplier,
+    setSupplierActive,
+    deleteSupplier,
+  } = useSuppliers();
   const { addActivity } = useActivityLog();
   const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,6 +29,7 @@ export default function SupplierPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formError, setFormError] = useState("");
+  const addSupplierButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     void fetchSuppliers();
@@ -85,28 +92,22 @@ export default function SupplierPage() {
     });
     showToast(activityTitle);
     closeForm();
+    requestAnimationFrame(() => addSupplierButtonRef.current?.focus());
     return true;
   };
 
-  const handleDeleteSupplier = async (supplierId: string) => {
-    const supplier = suppliers.find(
-      (currentSupplier) => currentSupplier.id === supplierId,
-    );
-
-    if (!supplier) {
-      showToast("Supplier tidak ditemukan.", "error");
-      return;
-    }
-
+  const handleToggleSupplierStatus = async (supplier: Supplier) => {
+    const nextIsActive = !supplier.isActive;
+    const actionLabel = nextIsActive ? "Aktifkan" : "Nonaktifkan";
     const isConfirmed = window.confirm(
-      `Nonaktifkan supplier "${supplier.name}"?`,
+      `${actionLabel} supplier "${supplier.name}"?`,
     );
 
     if (!isConfirmed) {
       return;
     }
 
-    const result = await deleteSupplier(supplierId);
+    const result = await setSupplierActive(supplier, nextIsActive);
 
     if (!result.ok) {
       showToast(result.message, "error");
@@ -114,11 +115,40 @@ export default function SupplierPage() {
     }
 
     addActivity({
-      type: "supplier-delete",
-      title: "Supplier berhasil dinonaktifkan",
+      type: "supplier-update",
+      title: `Supplier berhasil ${nextIsActive ? "diaktifkan" : "dinonaktifkan"}`,
       description: result.supplier.name,
     });
-    showToast("Supplier berhasil dinonaktifkan");
+    showToast(
+      `Supplier berhasil ${nextIsActive ? "diaktifkan" : "dinonaktifkan"}`,
+    );
+  };
+
+  const handleDeleteSupplier = async (supplier: Supplier) => {
+    const isConfirmed = window.confirm(
+      `Hapus permanen supplier "${supplier.name}"? Tindakan ini tidak dapat dibatalkan.`,
+    );
+
+    if (!isConfirmed) return;
+
+    const result = await deleteSupplier(supplier.id);
+
+    if (!result.ok) {
+      const message =
+        result.productCount !== undefined
+          ? `Supplier masih digunakan oleh ${result.productCount} produk. Hapus atau pindahkan produk tersebut terlebih dahulu.`
+          : result.message;
+
+      showToast(message, "error");
+      return;
+    }
+
+    addActivity({
+      type: "supplier-delete",
+      title: "Supplier berhasil dihapus permanen",
+      description: result.supplier.name,
+    });
+    showToast("Supplier berhasil dihapus permanen");
   };
 
   const handleSearchChange = (value: string) => {
@@ -140,7 +170,7 @@ export default function SupplierPage() {
             </p>
           </div>
 
-          <Button onClick={openAddForm}>
+          <Button ref={addSupplierButtonRef} onClick={openAddForm}>
             <Plus className="h-4 w-4" />
             Tambah Supplier
           </Button>
@@ -167,6 +197,7 @@ export default function SupplierPage() {
           totalSuppliers={filteredSuppliers.length}
           onPageChange={setCurrentPage}
           onEdit={openEditForm}
+          onToggleStatus={handleToggleSupplierStatus}
           onDelete={handleDeleteSupplier}
         />
 

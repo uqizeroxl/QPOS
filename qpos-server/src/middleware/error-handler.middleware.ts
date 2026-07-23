@@ -4,12 +4,25 @@ import { appConfig } from "../config/app.config";
 
 export const errorHandler = (
   err: Error,
-  _req: Request,
+  req: Request,
   res: Response,
-  _next: NextFunction
+  next: NextFunction
 ) => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+
+  console.error("Unhandled server error:", {
+    method: req.method,
+    path: req.originalUrl,
+    message: err.message,
+    stack: appConfig.nodeEnv === "production" ? undefined : err.stack
+  });
+
   res.status(500).json({
-    message: "Internal server error",
+    success: false,
+    message: "Terjadi kesalahan pada server.",
     ...(appConfig.nodeEnv !== "production" && { error: err.message })
   });
 };

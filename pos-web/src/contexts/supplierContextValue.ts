@@ -6,7 +6,7 @@ import type {
 
 export type SupplierResult =
   | { ok: true; supplier: Supplier }
-  | { ok: false; message: string };
+  | { ok: false; message: string; productCount?: number };
 
 export type SupplierContextValue = {
   suppliers: Supplier[];
@@ -15,6 +15,10 @@ export type SupplierContextValue = {
   updateSupplier: (
     supplierId: string,
     values: SupplierFormValues,
+  ) => Promise<SupplierResult>;
+  setSupplierActive: (
+    supplier: Supplier,
+    isActive: boolean,
   ) => Promise<SupplierResult>;
   deleteSupplier: (supplierId: string) => Promise<SupplierResult>;
 };

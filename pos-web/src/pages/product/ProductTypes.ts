@@ -6,7 +6,7 @@ export type Product = {
   name: string;
   categoryId?: string;
   category: string;
-  purchasePrice: number;
+  purchasePrice: number | null;
   sellingPrice: number;
   stock: number;
   status: ProductStatus;

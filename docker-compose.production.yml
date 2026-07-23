@@ -1,0 +1,99 @@
+name: qpos
+
+x-backend-environment: &backend-environment
+  NODE_ENV: production
+  PORT: 3000
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_TENANT_DB}
+  MASTER_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_MASTER_DB}
+  JWT_SECRET: ${JWT_SECRET}
+  JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+  DEFAULT_OWNER_USERNAME: ${DEFAULT_OWNER_USERNAME:-owner}
+  DEFAULT_OWNER_PASSWORD: ${DEFAULT_OWNER_PASSWORD}
+  DEFAULT_OWNER_NAME: ${DEFAULT_OWNER_NAME:-Owner}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_MASTER_DB}
+      POSTGRES_TENANT_DB: ${POSTGRES_TENANT_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/01-init-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_MASTER_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate-master:
+    build:
+      context: ./qpos-server
+    environment: *backend-environment
+    command: ["./node_modules/.bin/prisma", "migrate", "deploy", "--config", "prisma.master.config.ts"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  migrate-tenant:
+    build:
+      context: ./qpos-server
+    environment: *backend-environment
+    command: ["./node_modules/.bin/prisma", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  bootstrap:
+    build:
+      context: ./qpos-server
+    environment: *backend-environment
+    command: ["node", "dist/scripts/bootstrap-master-default-store.js"]
+    depends_on:
+      migrate-master:
+        condition: service_completed_successfully
+      migrate-tenant:
+        condition: service_completed_successfully
+    restart: "no"
+
+  backend:
+    build:
+      context: ./qpos-server
+    restart: unless-stopped
+    environment: *backend-environment
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./pos-web
+      args:
+        VITE_API_URL: /api
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+
+volumes:
+  postgres-data:

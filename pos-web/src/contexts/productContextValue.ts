@@ -1,6 +1,7 @@
 import { createContext } from "react";
 import type { Product, ProductFormValues } from "../pages/product/ProductTypes";
 import type {
+  ProductListParams,
   StockAdjustmentPayload,
   StockHistoryItem,
 } from "../services/productService";
@@ -16,9 +17,10 @@ export type ProductStockAdjustmentResult =
 
 export type ProductContextValue = {
   products: Product[];
+  totalProducts: number;
   isLoading: boolean;
   errorMessage: string;
-  fetchProducts: () => Promise<void>;
+  fetchProducts: (params?: Partial<ProductListParams>) => Promise<void>;
   createProduct: (values: ProductFormValues) => Promise<Product>;
   updateProduct: (productId: string, values: ProductFormValues) => Promise<Product>;
   deleteProduct: (productId: string) => Promise<Product>;

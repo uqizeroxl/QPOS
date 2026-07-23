@@ -78,13 +78,17 @@ export default function NotificationDropdown({
         {notifications.length > 0 ? (
           notifications.map((notification) => {
             const Icon = notificationIcon[notification.category];
+            const itemTone = notification.isRead
+              ? "bg-white dark:bg-slate-800"
+              : "bg-blue-50/60 dark:border-l-2 dark:border-cyan-400/70 dark:bg-slate-700/70";
+            const titleTone = notification.isRead
+              ? "font-medium text-gray-600 dark:text-slate-300"
+              : "font-semibold text-gray-900 dark:text-slate-50";
 
             return (
               <div
                 key={notification.id}
-                className={`flex gap-3 border-b border-gray-100 px-4 py-3 transition ${
-                  notification.isRead ? "bg-white" : "bg-blue-50/60"
-                }`}
+                className={`flex gap-3 border-b border-gray-100 px-4 py-3 transition dark:border-slate-700 ${itemTone}`}
               >
                 <div
                   className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
@@ -94,21 +98,15 @@ export default function NotificationDropdown({
                   <Icon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p
-                    className={`text-sm ${
-                      notification.isRead
-                        ? "font-medium text-gray-600"
-                        : "font-semibold text-gray-900"
-                    }`}
-                  >
+                  <p className={`text-sm ${titleTone}`}>
                     {notification.title}
                   </p>
                   {notification.description ? (
-                    <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+                    <p className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-slate-300">
                       {notification.description}
                     </p>
                   ) : null}
-                  <p className="mt-2 text-xs font-medium text-gray-400">
+                  <p className="mt-2 text-xs font-medium text-gray-400 dark:text-slate-400">
                     {notification.time}
                   </p>
                 </div>

@@ -11,16 +11,20 @@ type ProductProviderProps = {
 
 export function ProductProvider({ children }: ProductProviderProps) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (
+    params: Parameters<typeof productService.getProducts>[0] = {},
+  ) => {
     setIsLoading(true);
     setErrorMessage("");
 
     try {
-      const nextProducts = await productService.getProducts();
-      setProducts(nextProducts);
+      const result = await productService.getProducts(params);
+      setProducts(result.products);
+      setTotalProducts(result.total);
     } catch (error) {
       setErrorMessage(
         error instanceof ProductApiError
@@ -162,6 +166,7 @@ export function ProductProvider({ children }: ProductProviderProps) {
   const value = useMemo(
     () => ({
       products,
+      totalProducts,
       isLoading,
       errorMessage,
       fetchProducts,
@@ -175,6 +180,7 @@ export function ProductProvider({ children }: ProductProviderProps) {
     }),
     [
       products,
+      totalProducts,
       isLoading,
       errorMessage,
       fetchProducts,

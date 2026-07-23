@@ -2,7 +2,12 @@ import axios from "axios";
 import axiosInstance from "./api/axiosInstance";
 import { apiService } from "./api/apiService";
 
-export type SalesReportPeriod = "today" | "thisWeek" | "thisMonth" | "customDate";
+export type SalesReportPeriod =
+  | "DAILY"
+  | "WEEKLY"
+  | "MONTHLY"
+  | "YEARLY"
+  | "CUSTOM";
 
 export type SalesReportFilters = {
   period: SalesReportPeriod;
@@ -15,6 +20,12 @@ export type SalesReportData = {
   startDate: string;
   endDate: string;
   summary: {
+    totalSales: number;
+    totalCost: number;
+    totalProfit: number;
+    totalTransactions: number;
+    totalItemsSold: number;
+    averageTransaction: number;
     revenue: number;
     transactions: number;
     itemsSold: number;
@@ -31,6 +42,12 @@ export type SalesReportData = {
 
 type SalesReportApiData = Omit<SalesReportData, "summary" | "transactions"> & {
   summary: {
+    totalSales: number | string;
+    totalCost: number | string;
+    totalProfit: number | string;
+    totalTransactions: number;
+    totalItemsSold: number;
+    averageTransaction: number | string;
     revenue: number | string;
     transactions: number;
     itemsSold: number;
@@ -52,6 +69,10 @@ const mapSalesReport = (data: SalesReportApiData): SalesReportData => ({
   ...data,
   summary: {
     ...data.summary,
+    totalSales: Number(data.summary.totalSales),
+    totalCost: Number(data.summary.totalCost),
+    totalProfit: Number(data.summary.totalProfit),
+    averageTransaction: Number(data.summary.averageTransaction),
     revenue: Number(data.summary.revenue),
   },
   transactions: data.transactions.map((transaction) => ({
@@ -62,7 +83,7 @@ const mapSalesReport = (data: SalesReportApiData): SalesReportData => ({
 
 const getParams = (filters: SalesReportFilters) => ({
   period: filters.period,
-  ...(filters.period === "customDate"
+  ...(filters.period === "CUSTOM"
     ? {
         startDate: filters.startDate,
         endDate: filters.endDate,

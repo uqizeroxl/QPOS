@@ -123,11 +123,22 @@ export default function CategoryPage() {
     return true;
   };
 
-  const handleDeleteCategory = async (categoryId: string) => {
-    const result = await deleteCategory(categoryId);
+  const handleDeleteCategory = async (category: Category) => {
+    const isConfirmed = window.confirm(
+      `Hapus permanen kategori "${category.name}"? Tindakan ini tidak dapat dibatalkan.`,
+    );
+
+    if (!isConfirmed) return;
+
+    const result = await deleteCategory(category.id);
 
     if (!result.ok) {
-      showToast(result.message, "error");
+      const message =
+        result.productCount !== undefined
+          ? `Kategori masih digunakan oleh ${result.productCount} produk. Hapus atau pindahkan produk tersebut terlebih dahulu.`
+          : result.message;
+
+      showToast(message, "error");
       return;
     }
 
@@ -136,7 +147,7 @@ export default function CategoryPage() {
       title: "Kategori berhasil dihapus",
       description: result.category.name,
     });
-    showToast("Kategori berhasil dihapus");
+    showToast("Kategori berhasil dihapus permanen");
   };
 
   const handleSearchChange = (value: string) => {

@@ -19,6 +19,8 @@ type ProductTableProps = {
   rowsPerPage: number;
   totalProducts: number;
   onPageChange: (page: number) => void;
+  pageSizeOptions: readonly number[];
+  onPageSizeChange: (pageSize: number) => void;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
   onAdjustStock: (product: Product) => void;
@@ -32,6 +34,8 @@ export default function ProductTable({
   rowsPerPage,
   totalProducts,
   onPageChange,
+  pageSizeOptions,
+  onPageSizeChange,
   onEdit,
   onDelete,
   onAdjustStock,
@@ -99,7 +103,21 @@ export default function ProductTable({
           Menampilkan {startItem}-{endItem} dari {totalProducts} produk
         </p>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            Baris
+            <select
+              value={rowsPerPage}
+              onChange={(event) => onPageSizeChange(Number(event.target.value))}
+              className="rounded-lg border border-gray-300 bg-white px-2 py-2 text-sm text-gray-700"
+            >
+              {pageSizeOptions.map((pageSize) => (
+                <option key={pageSize} value={pageSize}>
+                  {pageSize}
+                </option>
+              ))}
+            </select>
+          </label>
           <Button
             variant="compactSecondary"
             onClick={() => onPageChange(currentPage - 1)}

@@ -16,10 +16,12 @@ type SupplierApiItem = {
 
 export class SupplierApiError extends Error {
   public readonly status?: number;
+  public readonly productCount?: number;
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, productCount?: number) {
     super(message);
     this.status = status;
+    this.productCount = productCount;
   }
 }
 
@@ -38,7 +40,7 @@ function mapSupplier(supplier: SupplierApiItem): Supplier {
 }
 
 function handleSupplierError(error: unknown): never {
-  if (axios.isAxiosError<{ message?: string }>(error)) {
+  if (axios.isAxiosError<{ message?: string; productCount?: number }>(error)) {
     if (!error.response) {
       throw new SupplierApiError("Backend tidak dapat diakses.");
     }
@@ -46,6 +48,7 @@ function handleSupplierError(error: unknown): never {
     throw new SupplierApiError(
       error.response.data?.message ?? "Terjadi kesalahan pada server.",
       error.response.status,
+      error.response.data?.productCount,
     );
   }
 
@@ -83,6 +86,25 @@ export const supplierService = {
         `/suppliers/${supplierId}`,
         values,
       );
+
+      return mapSupplier(response.data);
+    } catch (error) {
+      handleSupplierError(error);
+    }
+  },
+  setSupplierActive: async (
+    supplierId: string,
+    values: SupplierFormValues,
+    isActive: boolean,
+  ) => {
+    try {
+      const response = await apiService.put<
+        SupplierApiItem,
+        SupplierFormValues & { isActive: boolean }
+      >(`/suppliers/${supplierId}`, {
+        ...values,
+        isActive,
+      });
 
       return mapSupplier(response.data);
     } catch (error) {

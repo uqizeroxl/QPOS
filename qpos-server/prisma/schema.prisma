@@ -27,7 +27,28 @@ enum ActivityType {
   TRANSACTION_SUCCESS @map("transaction-success")
   BARCODE_PRINT       @map("barcode-print")
   RECEIPT_PRINT       @map("receipt-print")
+  STOCK_RESTOCK       @map("stock-restock")
   STOCK_MINIMUM       @map("stock-minimum")
+}
+
+enum StockAdjustmentType {
+  ADD
+  REDUCE
+  SET
+}
+
+enum StockReferenceType {
+  SALE
+  RESTOCK
+  ADJUSTMENT
+  PURCHASE_ORDER
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  RECEIVED
+  CANCELLED
 }
 
 enum NotificationType {
@@ -47,6 +68,13 @@ enum NotificationCategory {
   ANNOUNCEMENT @map("announcement")
 }
 
+enum UserRole {
+  OWNER
+  ADMIN
+  CASHIER
+  WAREHOUSE
+}
+
 model Category {
   id          String       @id @default(cuid())
   name        String       @unique @db.VarChar(120)
@@ -62,11 +90,14 @@ model Category {
 
 model Supplier {
   id        String    @id @default(cuid())
-  name      String    @db.VarChar(150)
+  name      String    @unique @db.VarChar(150)
   phone     String?   @db.VarChar(30)
+  email     String?   @db.VarChar(150)
   address   String?   @db.Text
   notes     String?   @db.Text
+  isActive  Boolean   @default(true)
   products  Product[]
+  purchaseOrders PurchaseOrder[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -76,9 +107,9 @@ model Supplier {
 
 model Product {
   id               String            @id @default(cuid())
-  barcode          String            @unique @db.VarChar(64)
+  barcode          String?           @unique @db.VarChar(64)
   name             String            @db.VarChar(180)
-  purchasePrice    Decimal           @default(0) @db.Decimal(14, 2)
+  purchasePrice    Decimal?          @db.Decimal(14, 2)
   sellingPrice     Decimal           @default(0) @db.Decimal(14, 2)
   stock            Int               @default(0)
   status           RecordStatus      @default(ACTIVE)
@@ -87,6 +118,8 @@ model Product {
   category         Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   supplier         Supplier?         @relation(fields: [supplierId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   transactionItems TransactionItem[]
+  stockHistories   StockHistory[]
+  purchaseOrderItems PurchaseOrderItem[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
@@ -97,9 +130,66 @@ model Product {
   @@map("products")
 }
 
+model PurchaseOrder {
+  id          String              @id @default(cuid())
+  poNumber    String              @unique @db.VarChar(50)
+  supplierId  String
+  status      PurchaseOrderStatus @default(DRAFT)
+  note        String              @default("") @db.Text
+  supplier    Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  items       PurchaseOrderItem[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([poNumber])
+  @@index([supplierId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  cost            Decimal       @db.Decimal(14, 2)
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@map("purchase_order_items")
+}
+
+model StockHistory {
+  id            String              @id @default(cuid())
+  productId     String
+  type          StockAdjustmentType
+  quantity      Int
+  previousStock Int
+  currentStock  Int
+  referenceType StockReferenceType?
+  referenceId   String?             @db.VarChar(191)
+  userName      String?             @db.VarChar(120)
+  note          String              @default("") @db.Text
+  product       Product             @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt     DateTime            @default(now())
+
+  @@index([productId])
+  @@index([referenceType])
+  @@index([referenceId])
+  @@index([createdAt])
+  @@map("stock_histories")
+}
+
 model Transaction {
   id              String            @id @default(cuid())
   invoiceNumber   String            @unique @db.VarChar(50)
+  idempotencyKey  String?           @unique @db.VarChar(191)
+  requestHash     String?           @db.VarChar(64)
   subtotal        Decimal           @default(0) @db.Decimal(14, 2)
   discountPercent Decimal           @default(0) @db.Decimal(5, 2)
   discountAmount  Decimal           @default(0) @db.Decimal(14, 2)
@@ -122,6 +212,8 @@ model TransactionItem {
   productId      String?
   productBarcode String      @db.VarChar(64)
   productName    String      @db.VarChar(180)
+  categoryName   String      @default("") @db.VarChar(120)
+  supplierName   String?     @db.VarChar(150)
   unitPrice      Decimal     @db.Decimal(14, 2)
   quantity       Int
   subtotal       Decimal     @db.Decimal(14, 2)
@@ -178,4 +270,19 @@ model Notification {
   @@index([isRead])
   @@index([createdAt])
   @@map("notifications")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique @db.VarChar(80)
+  name         String   @db.VarChar(120)
+  passwordHash String   @db.VarChar(255)
+  role         UserRole @default(CASHIER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([username])
+  @@index([role])
+  @@map("users")
 }

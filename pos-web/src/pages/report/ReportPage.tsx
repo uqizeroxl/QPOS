@@ -1,11 +1,15 @@
 import {
+  Calculator,
+  CircleDollarSign,
   Download,
   FileSpreadsheet,
+  PackageCheck,
   ReceiptText,
   ShoppingBag,
   TrendingUp,
+  WalletCards,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import MainLayout from "../../layouts/MainLayout";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -29,10 +33,16 @@ import {
 import { formatRupiah } from "../../utils/currency";
 
 const emptyReport: SalesReportData = {
-  period: "today",
+  period: "DAILY",
   startDate: "",
   endDate: "",
   summary: {
+    totalSales: 0,
+    totalCost: 0,
+    totalProfit: 0,
+    totalTransactions: 0,
+    totalItemsSold: 0,
+    averageTransaction: 0,
     revenue: 0,
     transactions: 0,
     itemsSold: 0,
@@ -52,7 +62,7 @@ const formatDateTime = (value: string) =>
 const todayInputValue = () => new Date().toISOString().slice(0, 10);
 
 export default function ReportPage() {
-  const [period, setPeriod] = useState<SalesReportPeriod>("today");
+  const [period, setPeriod] = useState<SalesReportPeriod>("DAILY");
   const [startDate, setStartDate] = useState(todayInputValue);
   const [endDate, setEndDate] = useState(todayInputValue);
   const [report, setReport] = useState<SalesReportData>(emptyReport);
@@ -62,7 +72,7 @@ export default function ReportPage() {
 
   const filters: SalesReportFilters = {
     period,
-    ...(period === "customDate" ? { startDate, endDate } : {}),
+    ...(period === "CUSTOM" ? { startDate, endDate } : {}),
   };
 
   const fetchReport = async () => {
@@ -85,6 +95,8 @@ export default function ReportPage() {
 
   useEffect(() => {
     void fetchReport();
+    // Fetch otomatis hanya saat preset periode berubah; tanggal custom diterapkan via tombol.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
   const handleApplyCustomDate = () => {
@@ -114,27 +126,62 @@ export default function ReportPage() {
 
   const stats = [
     {
-      title: "Revenue",
-      value: formatRupiah(report.summary.revenue, { prefix: true }),
+      title: "Total Penjualan",
+      value: formatRupiah(report.summary.totalSales, { prefix: true }),
       description: "Pendapatan sesuai filter",
       icon: TrendingUp,
       tone: "blue" as const,
     },
     {
-      title: "Transaksi",
-      value: report.summary.transactions.toString(),
-      description: "Jumlah invoice",
-      icon: ReceiptText,
+      title: "Total Keuntungan",
+      value: formatRupiah(report.summary.totalProfit, { prefix: true }),
+      description: "Harga jual dikurangi harga beli",
+      icon: CircleDollarSign,
       tone: "green" as const,
     },
     {
-      title: "Items Sold",
-      value: report.summary.itemsSold.toString(),
+      title: "Total Modal",
+      value: formatRupiah(report.summary.totalCost, { prefix: true }),
+      description: "Total biaya barang terjual",
+      icon: WalletCards,
+      tone: "red" as const,
+    },
+    {
+      title: "Jumlah Transaksi",
+      value: report.summary.totalTransactions.toString(),
+      description: "Jumlah invoice",
+      icon: ReceiptText,
+      tone: "blue" as const,
+    },
+    {
+      title: "Barang Terjual",
+      value: report.summary.totalItemsSold.toString(),
       description: "Total kuantitas terjual",
-      icon: ShoppingBag,
+      icon: PackageCheck,
+      tone: "amber" as const,
+    },
+    {
+      title: "Rata-rata Transaksi",
+      value: formatRupiah(report.summary.averageTransaction, { prefix: true }),
+      description: "Rata-rata nilai per transaksi",
+      icon: Calculator,
       tone: "amber" as const,
     },
   ];
+
+  const chartData = useMemo(() => {
+    const dailySales = new Map<string, number>();
+
+    report.transactions.forEach((transaction) => {
+      const date = transaction.createdAt.slice(0, 10);
+      dailySales.set(date, (dailySales.get(date) ?? 0) + transaction.total);
+    });
+
+    return [...dailySales.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([date, sales]) => ({ date, sales }));
+  }, [report.transactions]);
+  const maxChartSales = Math.max(...chartData.map((item) => item.sales), 1);
 
   return (
     <MainLayout>
@@ -145,10 +192,10 @@ export default function ReportPage() {
               Analitik Penjualan
             </p>
             <h1 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
-              Sales Report
+              Laporan Penjualan
             </h1>
             <p className="mt-1 text-gray-500">
-              Semua summary dan daftar transaksi dihitung dari backend.
+              Ringkasan dan daftar transaksi dihitung berdasarkan periode terpilih.
             </p>
           </div>
 
@@ -161,18 +208,19 @@ export default function ReportPage() {
                   setPeriod(event.target.value as SalesReportPeriod)
                 }
               >
-                <option value="today">Today</option>
-                <option value="thisWeek">This Week</option>
-                <option value="thisMonth">This Month</option>
-                <option value="customDate">Custom Date</option>
+                <option value="DAILY">Harian</option>
+                <option value="WEEKLY">Mingguan</option>
+                <option value="MONTHLY">Bulanan</option>
+                <option value="YEARLY">Tahunan</option>
+                <option value="CUSTOM">Rentang Tanggal</option>
               </Select>
             </label>
 
-            {period === "customDate" ? (
+            {period === "CUSTOM" ? (
               <>
                 <label className="space-y-2">
                   <span className="text-sm font-medium text-gray-700">
-                    Start Date
+                    Tanggal Mulai
                   </span>
                   <Input
                     type="date"
@@ -182,7 +230,7 @@ export default function ReportPage() {
                 </label>
                 <label className="space-y-2">
                   <span className="text-sm font-medium text-gray-700">
-                    End Date
+                    Tanggal Akhir
                   </span>
                   <Input
                     type="date"
@@ -209,7 +257,7 @@ export default function ReportPage() {
               disabled={isExporting}
             >
               <Download className="h-4 w-4" />
-              Export PDF
+              Cetak PDF
             </Button>
           </div>
         </Card>
@@ -232,6 +280,46 @@ export default function ReportPage() {
             />
           ))}
         </div>
+
+        <Card as="section" className="p-5">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="h-5 w-5 text-blue-600" />
+            <h2 className="text-lg font-semibold text-gray-900">
+              Grafik Penjualan
+            </h2>
+          </div>
+          {chartData.length > 0 ? (
+            <div className="mt-6 flex h-64 min-w-full items-end gap-3 overflow-x-auto border-b border-gray-200 pb-2">
+              {chartData.map((item) => (
+                <div
+                  key={item.date}
+                  className="flex min-w-16 flex-1 flex-col items-center justify-end gap-2"
+                >
+                  <span className="text-xs font-medium text-gray-500">
+                    {formatRupiah(item.sales)}
+                  </span>
+                  <div
+                    className="w-full max-w-16 rounded-t bg-blue-500"
+                    style={{
+                      height: `${Math.max((item.sales / maxChartSales) * 180, 4)}px`,
+                    }}
+                    title={`${item.date}: ${formatRupiah(item.sales, { prefix: true })}`}
+                  />
+                  <span className="whitespace-nowrap text-xs text-gray-500">
+                    {new Intl.DateTimeFormat("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                    }).format(new Date(`${item.date}T00:00:00`))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-6 py-12 text-center text-sm text-gray-500">
+              Tidak Ada Data
+            </p>
+          )}
+        </Card>
 
         <Card as="section" className="overflow-hidden">
           <div className="flex flex-col justify-between gap-2 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center">
@@ -256,10 +344,10 @@ export default function ReportPage() {
             <Table>
               <TableHead>
                 <TableRow className="hover:bg-transparent">
-                  <TableHeadCell>Invoice</TableHeadCell>
+                  <TableHeadCell>Nomor Invoice</TableHeadCell>
                   <TableHeadCell>Tanggal</TableHeadCell>
                   <TableHeadCell>Kasir</TableHeadCell>
-                  <TableHeadCell className="text-right">Items</TableHeadCell>
+                  <TableHeadCell className="text-right">Jumlah Item</TableHeadCell>
                   <TableHeadCell className="text-right">Total</TableHeadCell>
                 </TableRow>
               </TableHead>
@@ -286,7 +374,7 @@ export default function ReportPage() {
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={5} className="py-12 text-center">
                       <p className="font-semibold text-gray-700">
-                        Tidak ada transaksi pada periode ini.
+                        Tidak Ada Data
                       </p>
                     </TableCell>
                   </TableRow>

@@ -33,6 +33,7 @@ const activityIcons: Record<ActivityType, LucideIcon> = {
   "transaction-success": ShoppingCart,
   "barcode-print": Printer,
   "receipt-print": ReceiptText,
+  "stock-restock": Package,
   "stock-minimum": Package,
 };
 

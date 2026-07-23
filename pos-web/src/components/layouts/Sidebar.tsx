@@ -1,10 +1,12 @@
 import {
   BarChart3,
+  Barcode,
   CircleHelp,
-  ClipboardList,
   LayoutDashboard,
   Package,
+  PackagePlus,
   ReceiptText,
+  ScrollText,
   Settings,
   ShoppingCart,
   Tags,
@@ -33,14 +35,11 @@ const salesRoles: UserRole[] = ["OWNER", "ADMIN", "CASHIER"];
 const menuItems: SidebarMenuItem[] = [
   { label: "Dashboard", path: ROUTES.dashboard, icon: LayoutDashboard, roles: allRoles },
   { label: "Produk", path: ROUTES.product, icon: Package, roles: inventoryRoles },
+  { label: "Label Barcode", path: ROUTES.barcodeLabels, icon: Barcode, roles: inventoryRoles },
   { label: "Kategori", path: ROUTES.category, icon: Tags, roles: inventoryRoles },
   { label: "Supplier", path: ROUTES.supplier, icon: Truck, roles: inventoryRoles },
-  {
-    label: "Purchase Order",
-    path: ROUTES.purchaseOrder,
-    icon: ClipboardList,
-    roles: inventoryRoles,
-  },
+  { label: "Restok Barang", path: ROUTES.restock, icon: PackagePlus, roles: inventoryRoles },
+  { label: "Riwayat Stok", path: ROUTES.stockHistory, icon: ScrollText, roles: inventoryRoles },
   { label: "Kasir", path: ROUTES.cashier, icon: ShoppingCart, roles: salesRoles },
   {
     label: "Riwayat Transaksi",

@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { useProducts } from "../hooks/useProducts";
-import { categoryService } from "../services/categoryService";
+import {
+  CategoryApiError,
+  categoryService,
+} from "../services/categoryService";
 import { CategoryContext } from "./categoryContextValue";
 import type { Category, CategoryFormValues } from "../pages/category/CategoryTypes";
 import type { CategoryResult } from "./categoryContextValue";
@@ -60,7 +63,11 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
   const productCountByCategory = useMemo(
     () =>
       products.reduce<Record<string, number>>((counts, product) => {
-        counts[product.category] = (counts[product.category] ?? 0) + 1;
+        if (!product.categoryId) {
+          return counts;
+        }
+
+        counts[product.categoryId] = (counts[product.categoryId] ?? 0) + 1;
         return counts;
       }, {}),
     [products],
@@ -70,7 +77,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     () =>
       baseCategories.map((category) => ({
         ...category,
-        productCount: productCountByCategory[category.name] ?? 0,
+        productCount: productCountByCategory[category.id] ?? 0,
       })),
     [baseCategories, productCountByCategory],
   );
@@ -168,7 +175,14 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
             ? error.message
             : "Kategori gagal dihapus.";
 
-        return { ok: false, message };
+        return {
+          ok: false,
+          message,
+          productCount:
+            error instanceof CategoryApiError
+              ? error.productCount
+              : undefined,
+        };
       }
     },
     [categories, fetchCategories],

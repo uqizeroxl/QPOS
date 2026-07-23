@@ -45,6 +45,8 @@ type TransactionApiItem = {
     id: string | null;
     name: string;
     barcode: string;
+    categoryName?: string;
+    supplierName?: string | null;
   };
 };
 
@@ -52,11 +54,13 @@ type TransactionApiResponse = {
   id: string;
   invoiceNumber: string;
   subtotal: string | number;
-  discountPercent: string | number;
+  discountPercent?: string | number;
   discountAmount: string | number;
-  grandTotal: string | number;
+  grandTotal?: string | number;
+  total?: string | number;
   paidAmount: string | number;
-  change: string | number;
+  change?: string | number;
+  changeAmount?: string | number;
   cashierName?: string | null;
   createdAt: string;
   items: TransactionApiItem[];
@@ -120,11 +124,11 @@ function mapTransaction(transaction: TransactionApiResponse): SalesTransaction {
       subtotal: Number(item.subtotal),
     })),
     subtotal: Number(transaction.subtotal),
-    discountPercent: Number(transaction.discountPercent),
+    discountPercent: Number(transaction.discountPercent ?? 0),
     discountAmount: Number(transaction.discountAmount),
-    grandTotal: Number(transaction.grandTotal),
+    grandTotal: Number(transaction.grandTotal ?? transaction.total),
     paidAmount: Number(transaction.paidAmount),
-    change: Number(transaction.change),
+    change: Number(transaction.change ?? transaction.changeAmount),
     cashierName: transaction.cashierName ?? undefined,
     createdAt: transaction.createdAt,
   };
@@ -198,12 +202,19 @@ export const transactionService = {
       handleTransactionError(error);
     }
   },
-  createTransaction: async (payload: CreateTransactionPayload) => {
+  createTransaction: async (
+    payload: CreateTransactionPayload,
+    idempotencyKey?: string,
+  ) => {
     try {
       const response = await apiService.post<
         TransactionApiResponse,
         CreateTransactionPayload
-      >("/transactions", payload);
+      >("/transactions", payload, {
+        headers: idempotencyKey
+          ? { "Idempotency-Key": idempotencyKey }
+          : undefined,
+      });
 
       return mapTransaction(response.data);
     } catch (error) {

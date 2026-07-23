@@ -1,0 +1,4 @@
+ALTER TABLE "products"
+  ALTER COLUMN "barcode" DROP NOT NULL,
+  ALTER COLUMN "purchasePrice" DROP DEFAULT,
+  ALTER COLUMN "purchasePrice" DROP NOT NULL;

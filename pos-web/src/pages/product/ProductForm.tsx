@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input, Select } from "../../components/ui/Input";
@@ -46,7 +46,7 @@ const getInitialFormValues = (
       name: "",
       categoryId: firstCategory?.id ?? "",
       category: firstCategory?.name ?? "",
-      purchasePrice: 0,
+      purchasePrice: null,
       sellingPrice: 0,
       stock: 0,
       status: "Aktif",
@@ -80,7 +80,9 @@ export default function ProductForm({
   );
   const initialFormValues = getInitialFormValues(categories, product);
   const [purchasePriceInput, setPurchasePriceInput] = useState(() =>
-    formatRupiah(initialFormValues.purchasePrice),
+    initialFormValues.purchasePrice === null
+      ? ""
+      : formatRupiah(initialFormValues.purchasePrice),
   );
   const [sellingPriceInput, setSellingPriceInput] = useState(() =>
     formatRupiah(initialFormValues.sellingPrice),
@@ -111,18 +113,6 @@ export default function ProductForm({
     };
   }, [closeAfterPrint, onClose]);
 
-  useEffect(() => {
-    if (formValues.categoryId || categories.length === 0) {
-      return;
-    }
-
-    updateCategory(categories[0].id);
-  }, [categories, formValues.categoryId]);
-
-  if (!isOpen) {
-    return null;
-  }
-
   const updateField = <Key extends keyof ProductFormValues>(
     key: Key,
     value: ProductFormValues[Key],
@@ -133,7 +123,7 @@ export default function ProductForm({
     }));
   };
 
-  const updateCategory = (categoryId: string) => {
+  const updateCategory = useCallback((categoryId: string) => {
     const selectedCategory = categories.find(
       (category) => category.id === categoryId,
     );
@@ -143,11 +133,25 @@ export default function ProductForm({
       categoryId,
       category: selectedCategory?.name ?? "",
     }));
-  };
+  }, [categories]);
+
+  useEffect(() => {
+    if (formValues.categoryId || categories.length === 0) {
+      return;
+    }
+
+    updateCategory(categories[0].id);
+  }, [categories, formValues.categoryId, updateCategory]);
+
+  if (!isOpen) {
+    return null;
+  }
 
   const getPreparedFormValues = (): ProductFormValues => ({
     ...formValues,
-    purchasePrice: parseRupiah(purchasePriceInput),
+    purchasePrice: purchasePriceInput
+      ? parseRupiah(purchasePriceInput)
+      : null,
     sellingPrice: parseRupiah(sellingPriceInput),
     stock: Number(stockInput || 0),
   });
@@ -204,11 +208,6 @@ export default function ProductForm({
         formValues.barcode.trim() ||
         (autoGenerateWhenEmpty ? generateBarcode(existingBarcodes) : ""),
     };
-
-    if (!nextValues.barcode.trim()) {
-      setFormError("Barcode wajib diisi.");
-      return;
-    }
 
     if (!nextValues.name.trim()) {
       setFormError("Nama produk wajib diisi.");
@@ -268,22 +267,25 @@ export default function ProductForm({
         <form onSubmit={handleSubmit} className="space-y-5 p-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">Barcode</span>
+              <span className="text-sm font-medium text-gray-700">
+                Barcode (Opsional)
+              </span>
               <div className="flex gap-2">
                 <Input
-                  required={!autoGenerateWhenEmpty}
                   value={formValues.barcode}
                   onChange={(event) =>
                     updateField("barcode", event.target.value)
                   }
                 />
-                <Button
-                  variant="secondary"
-                  onClick={handleGenerateBarcode}
-                  className="shrink-0"
-                >
-                  Generate
-                </Button>
+                {!formValues.barcode.trim() ? (
+                  <Button
+                    variant="secondary"
+                    onClick={handleGenerateBarcode}
+                    className="shrink-0"
+                  >
+                    Generate Barcode
+                  </Button>
+                ) : null}
               </div>
             </label>
 
@@ -333,7 +335,7 @@ export default function ProductForm({
 
             <label className="space-y-2">
               <span className="text-sm font-medium text-gray-700">
-                Harga Beli
+                Harga Beli (Opsional)
               </span>
               <Input
                 inputMode="numeric"

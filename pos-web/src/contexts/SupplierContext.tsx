@@ -1,6 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { supplierService } from "../services/supplierService";
+import {
+  SupplierApiError,
+  supplierService,
+} from "../services/supplierService";
 import { SupplierContext } from "./supplierContextValue";
 import type { Supplier, SupplierFormValues } from "../pages/supplier/SupplierTypes";
 import type { SupplierResult } from "./supplierContextValue";
@@ -71,7 +74,44 @@ export function SupplierProvider({ children }: SupplierProviderProps) {
         return {
           ok: false,
           message:
-            error instanceof Error ? error.message : "Supplier gagal dinonaktifkan.",
+            error instanceof Error ? error.message : "Supplier gagal dihapus.",
+          productCount:
+            error instanceof SupplierApiError
+              ? error.productCount
+              : undefined,
+        };
+      }
+    },
+    [fetchSuppliers],
+  );
+
+  const setSupplierActive = useCallback(
+    async (
+      supplier: Supplier,
+      isActive: boolean,
+    ): Promise<SupplierResult> => {
+      try {
+        const updatedSupplier = await supplierService.setSupplierActive(
+          supplier.id,
+          {
+            name: supplier.name,
+            phone: supplier.phone,
+            email: supplier.email,
+            address: supplier.address,
+            notes: supplier.notes,
+          },
+          isActive,
+        );
+        await fetchSuppliers();
+
+        return { ok: true, supplier: updatedSupplier };
+      } catch (error) {
+        return {
+          ok: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : `Supplier gagal ${isActive ? "diaktifkan" : "dinonaktifkan"}.`,
         };
       }
     },
@@ -84,9 +124,17 @@ export function SupplierProvider({ children }: SupplierProviderProps) {
       fetchSuppliers,
       addSupplier,
       updateSupplier,
+      setSupplierActive,
       deleteSupplier,
     }),
-    [addSupplier, deleteSupplier, fetchSuppliers, suppliers, updateSupplier],
+    [
+      addSupplier,
+      setSupplierActive,
+      deleteSupplier,
+      fetchSuppliers,
+      suppliers,
+      updateSupplier,
+    ],
   );
 
   return (

@@ -15,6 +15,7 @@ export type ActivityType =
   | "transaction-success"
   | "barcode-print"
   | "receipt-print"
+  | "stock-restock"
   | "stock-minimum";
 
 export type ActivityLogItem = {

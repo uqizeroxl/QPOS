@@ -6,7 +6,7 @@ import type {
 
 export type CategoryResult =
   | { ok: true; category: Category }
-  | { ok: false; message: string };
+  | { ok: false; message: string; productCount?: number };
 
 export type CategoryContextValue = {
   categories: Category[];

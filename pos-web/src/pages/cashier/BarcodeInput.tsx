@@ -1,5 +1,5 @@
 import { Package, Search } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -14,7 +14,7 @@ type BarcodeInputProps = {
   products: CashierProduct[];
   onQueryChange: (value: string) => void;
   onProductSelect: (product: CashierProduct) => boolean;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
 };
 
 export default function BarcodeInput({
@@ -39,19 +39,7 @@ export default function BarcodeInput({
     inputRef.current?.focus();
   }, [focusRequestId]);
 
-  const matchedProducts = useMemo(() => {
-    if (!normalizedQuery) {
-      return [];
-    }
-
-    return products
-      .filter(
-        (product) =>
-          product.name.toLowerCase().includes(normalizedQuery) ||
-          product.barcode.toLowerCase().includes(normalizedQuery),
-      )
-      .slice(0, 8);
-  }, [normalizedQuery, products]);
+  const matchedProducts = normalizedQuery ? products : [];
 
   const safeActiveIndex =
     matchedProducts.length === 0
@@ -59,8 +47,6 @@ export default function BarcodeInput({
       : Math.min(activeIndex, matchedProducts.length - 1);
   const shouldShowDropdown =
     isDropdownOpen && normalizedQuery.length > 0 && matchedProducts.length > 0;
-  const shouldShowNotFound =
-    normalizedQuery.length > 0 && matchedProducts.length === 0;
 
   const focusInput = () => {
     window.setTimeout(() => inputRef.current?.focus(), 0);
@@ -78,19 +64,8 @@ export default function BarcodeInput({
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextQuery = event.target.value;
-    const nextNormalizedQuery = nextQuery.trim().toLowerCase();
-    const exactBarcodeProduct = products.find(
-      (product) => product.barcode.toLowerCase() === nextNormalizedQuery,
-    );
-
     onQueryChange(nextQuery);
     setActiveIndex(0);
-
-    if (exactBarcodeProduct) {
-      selectProduct(exactBarcodeProduct);
-      return;
-    }
-
     setIsDropdownOpen(true);
   };
 
@@ -187,7 +162,7 @@ export default function BarcodeInput({
                         {product.name}
                       </span>
                       <span className="mt-1 block text-xs font-medium text-gray-400">
-                        {product.barcode}
+                        {product.barcode || "-"}
                       </span>
                     </span>
                     <span className="shrink-0 text-right">
@@ -210,9 +185,9 @@ export default function BarcodeInput({
         </Button>
       </form>
 
-      {message || shouldShowNotFound ? (
+      {message ? (
         <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-          {message || "Produk tidak ditemukan."}
+          {message}
         </p>
       ) : null}
     </Card>

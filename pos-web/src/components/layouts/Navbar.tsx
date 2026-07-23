@@ -16,7 +16,6 @@ const pageTitles: Record<string, string> = {
   [ROUTES.product]: "Produk",
   [ROUTES.category]: "Kategori",
   [ROUTES.supplier]: "Supplier",
-  [ROUTES.purchaseOrder]: "Purchase Order",
   [ROUTES.cashier]: "Kasir",
   [ROUTES.transactions]: "Riwayat Transaksi",
   [ROUTES.transactionHistory]: "Riwayat Transaksi",

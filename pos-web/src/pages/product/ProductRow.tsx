@@ -24,7 +24,7 @@ export default function ProductRow({
   return (
     <TableRow className="border-b border-gray-100 last:border-0">
       <TableCell className="whitespace-nowrap text-sm font-medium text-gray-700">
-        {product.barcode}
+        {product.barcode || "-"}
       </TableCell>
       <TableCell className="min-w-56">
         <p className="font-semibold text-gray-900">{product.name}</p>
@@ -34,7 +34,9 @@ export default function ProductRow({
         {product.category}
       </TableCell>
       <TableCell className="whitespace-nowrap text-sm text-gray-600">
-        {formatRupiah(product.purchasePrice, { prefix: true })}
+        {product.purchasePrice === null
+          ? "-"
+          : formatRupiah(product.purchasePrice, { prefix: true })}
       </TableCell>
       <TableCell className="whitespace-nowrap text-sm font-semibold text-gray-900">
         {formatRupiah(product.sellingPrice, { prefix: true })}

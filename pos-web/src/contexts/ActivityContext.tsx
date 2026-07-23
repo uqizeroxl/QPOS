@@ -96,6 +96,11 @@ const activityNotificationMap: Record<
     type: "info",
     category: "sales",
   },
+  "stock-restock": {
+    title: "Restok Barang",
+    type: "success",
+    category: "stock",
+  },
   "stock-minimum": {
     title: "Stok Minimum",
     type: "warning",

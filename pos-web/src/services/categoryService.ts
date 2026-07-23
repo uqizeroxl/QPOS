@@ -21,10 +21,12 @@ type UpdateCategoryPayload = CreateCategoryPayload;
 
 export class CategoryApiError extends Error {
   public readonly status?: number;
+  public readonly productCount?: number;
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, productCount?: number) {
     super(message);
     this.status = status;
+    this.productCount = productCount;
   }
 }
 
@@ -45,7 +47,7 @@ function mapCategory(category: CategoryApiItem): Category {
 }
 
 function handleCategoryError(error: unknown): never {
-  if (axios.isAxiosError<{ message?: string }>(error)) {
+  if (axios.isAxiosError<{ message?: string; productCount?: number }>(error)) {
     if (!error.response) {
       throw new CategoryApiError("Backend tidak dapat diakses.");
     }
@@ -53,6 +55,7 @@ function handleCategoryError(error: unknown): never {
     throw new CategoryApiError(
       error.response.data?.message ?? "Terjadi kesalahan pada server.",
       error.response.status,
+      error.response.data?.productCount,
     );
   }
 
