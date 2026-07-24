@@ -10,8 +10,9 @@ import MainLayout from "../../layouts/MainLayout";
 import SupplierForm from "./SupplierForm";
 import SupplierTable from "./SupplierTable";
 import type { Supplier, SupplierFormValues } from "./SupplierTypes";
+import { DEFAULT_PAGE_SIZE } from "../../constants/pagination";
 
-const rowsPerPage = 5;
+const rowsPerPage = DEFAULT_PAGE_SIZE;
 
 export default function SupplierPage() {
   const {

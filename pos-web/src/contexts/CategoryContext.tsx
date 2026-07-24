@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { useProducts } from "../hooks/useProducts";
 import {
   CategoryApiError,
   categoryService,
@@ -46,7 +45,6 @@ function validateCategoryName(
 }
 
 export function CategoryProvider({ children }: CategoryProviderProps) {
-  const { products } = useProducts();
   const [baseCategories, setBaseCategories] = useState<Category[]>([]);
 
   const fetchCategories = useCallback(async () => {
@@ -58,29 +56,17 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     void fetchCategories().catch((error) => {
       console.error("Failed to fetch categories:", error);
     });
+
+    const refreshCounts = () => {
+      void fetchCategories().catch((error) => {
+        console.error("Failed to refresh category product counts:", error);
+      });
+    };
+    window.addEventListener("qpos:products-changed", refreshCounts);
+    return () => window.removeEventListener("qpos:products-changed", refreshCounts);
   }, [fetchCategories]);
 
-  const productCountByCategory = useMemo(
-    () =>
-      products.reduce<Record<string, number>>((counts, product) => {
-        if (!product.categoryId) {
-          return counts;
-        }
-
-        counts[product.categoryId] = (counts[product.categoryId] ?? 0) + 1;
-        return counts;
-      }, {}),
-    [products],
-  );
-
-  const categories = useMemo(
-    () =>
-      baseCategories.map((category) => ({
-        ...category,
-        productCount: productCountByCategory[category.id] ?? 0,
-      })),
-    [baseCategories, productCountByCategory],
-  );
+  const categories = baseCategories;
 
   const addCategory = useCallback(
     async (values: CategoryFormValues): Promise<CategoryResult> => {
@@ -93,7 +79,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       try {
         const category = await categoryService.createCategory({
           ...values,
-          name: values.name.trim(),
+          name: values.name.trim().toUpperCase(),
           description: values.description.trim(),
         });
 
@@ -134,7 +120,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       try {
         const category = await categoryService.updateCategory(categoryId, {
           ...values,
-          name: values.name.trim(),
+          name: values.name.trim().toUpperCase(),
           description: values.description.trim(),
         });
 

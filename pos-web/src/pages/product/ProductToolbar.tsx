@@ -1,15 +1,21 @@
-import { Plus, Search } from "lucide-react";
+import { PencilLine, Plus, Search, Trash2 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
-import { Input, Select } from "../../components/ui/Input";
+import { Input } from "../../components/ui/Input";
+import CategoryCombobox from "./CategoryCombobox";
+import type { Category } from "../category/CategoryTypes";
 
 type ProductToolbarProps = {
   searchTerm: string;
   selectedCategory: string;
-  categories: string[];
+  categories: Category[];
   onSearchChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
   onAddProduct: () => void;
+  onBulkEdit: () => void;
+  isBulkEditMode: boolean;
+  onDeleteMode: () => void;
+  isDeleteMode: boolean;
 };
 
 export default function ProductToolbar({
@@ -19,6 +25,10 @@ export default function ProductToolbar({
   onSearchChange,
   onCategoryChange,
   onAddProduct,
+  onBulkEdit,
+  isBulkEditMode,
+  onDeleteMode,
+  isDeleteMode,
 }: ProductToolbarProps) {
   return (
     <Card className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
@@ -35,27 +45,39 @@ export default function ProductToolbar({
           />
         </label>
 
-        <label>
+        <label className="sm:w-56">
           <span className="sr-only">Filter kategori</span>
-          <Select
-            value={selectedCategory}
-            onChange={(event) => onCategoryChange(event.target.value)}
-            className="font-medium text-gray-700 sm:w-48"
-          >
-            <option value="Semua">Semua Kategori</option>
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </Select>
+          <CategoryCombobox
+            categories={categories}
+            selectedCategoryName={selectedCategory === "Semua" ? "Semua Kategori" : selectedCategory}
+            onSelect={(category) => onCategoryChange(category.name)}
+            allOptionLabel="Semua Kategori"
+            onSelectAll={() => onCategoryChange("Semua")}
+            onClearSelection={() => undefined}
+            emptyMessage="Kategori tidak ditemukan"
+          />
         </label>
       </div>
 
-      <Button onClick={onAddProduct}>
-        <Plus className="h-4 w-4" />
-        Tambah Produk
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          onClick={onDeleteMode}
+          disabled={isDeleteMode || isBulkEditMode}
+          className="text-red-700 hover:border-red-200 hover:bg-red-50"
+        >
+          <Trash2 className="h-4 w-4" />
+          Hapus
+        </Button>
+        <Button variant="secondary" onClick={onBulkEdit} disabled={isBulkEditMode || isDeleteMode}>
+          <PencilLine className="h-4 w-4" />
+          Ubah Massal
+        </Button>
+        <Button onClick={onAddProduct}>
+          <Plus className="h-4 w-4" />
+          Tambah Produk
+        </Button>
+      </div>
     </Card>
   );
 }

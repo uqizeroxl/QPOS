@@ -25,6 +25,8 @@ enum ActivityType {
   LOGIN               @map("login")
   LOGOUT              @map("logout")
   TRANSACTION_SUCCESS @map("transaction-success")
+  TRANSACTION_HISTORY_RESET @map("transaction-history-reset")
+  TRANSACTION_RETENTION @map("transaction-retention")
   BARCODE_PRINT       @map("barcode-print")
   RECEIPT_PRINT       @map("receipt-print")
   STOCK_RESTOCK       @map("stock-restock")
@@ -229,13 +231,14 @@ model TransactionItem {
 }
 
 model Settings {
-  id        String   @id @default(cuid())
-  key       String   @unique @default("default") @db.VarChar(50)
-  storeName String   @default("Toko Saya") @db.VarChar(150)
-  phone     String   @default("") @db.VarChar(30)
-  address   String   @default("") @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  key           String   @unique @default("default") @db.VarChar(50)
+  storeName     String   @default("Toko Saya") @db.VarChar(150)
+  phone         String   @default("") @db.VarChar(30)
+  address       String   @default("") @db.Text
+  receiptFooter String   @default("Terima kasih") @db.VarChar(250)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@map("settings")
 }

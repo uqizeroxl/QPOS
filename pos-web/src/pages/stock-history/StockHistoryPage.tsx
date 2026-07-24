@@ -14,6 +14,7 @@ import {
 } from "../../components/ui/Table";
 import { useProducts } from "../../hooks/useProducts";
 import MainLayout from "../../layouts/MainLayout";
+import { DEFAULT_PAGE_SIZE } from "../../constants/pagination";
 import {
   productService,
   type StockHistoryListItem,
@@ -30,7 +31,7 @@ const referenceLabels: Record<StockReferenceType, string> = {
 
 const initialPagination: StockHistoryPagination = {
   page: 1,
-  limit: 10,
+  limit: DEFAULT_PAGE_SIZE,
   total: 0,
   totalPages: 1,
 };
@@ -60,7 +61,7 @@ export default function StockHistoryPage() {
     try {
       const response = await productService.getStockHistories({
         page,
-        limit: 10,
+        limit: DEFAULT_PAGE_SIZE,
         productId: productId || undefined,
         type: type || undefined,
         startDate: startDate || undefined,

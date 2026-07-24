@@ -14,6 +14,11 @@ export type Product = {
 
 export type ProductFormValues = Omit<Product, "id">;
 
+export type BulkProductDraft = Pick<
+  Product,
+  "id" | "name" | "barcode" | "purchasePrice" | "sellingPrice"
+>;
+
 export type BarcodeLabelSize = "small" | "medium" | "large";
 
 export type BarcodePrintSettings = {

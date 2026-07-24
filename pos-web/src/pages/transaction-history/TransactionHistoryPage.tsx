@@ -6,9 +6,10 @@ import {
   Printer,
   ReceiptText,
   Search,
+  Trash2,
   WalletCards,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import DatePicker from "../../components/ui/DatePicker";
@@ -23,6 +24,8 @@ import {
   TableRow,
 } from "../../components/ui/Table";
 import { useTransactions } from "../../hooks/useTransactions";
+import { useAuth } from "../../hooks/useAuth";
+import { useToast } from "../../hooks/useToast";
 import { useSettings } from "../../hooks/useSettings";
 import { useReceiptPrinter } from "../../hooks/useReceiptPrinter";
 import MainLayout from "../../layouts/MainLayout";
@@ -30,10 +33,16 @@ import ReceiptPrintArea from "../cashier/ReceiptPrintArea";
 import type { SalesTransaction } from "../cashier/CashierTypes";
 import { formatRupiah } from "../../utils/currency";
 import { createSalesReportPdf, downloadPdf } from "../../utils/reportPdf";
+import {
+  TransactionApiError,
+  transactionService,
+} from "../../services/transactionService";
+import ResetTransactionHistoryDialog from "./ResetTransactionHistoryDialog";
+import { DEFAULT_PAGE_SIZE } from "../../constants/pagination";
 
 type TransactionStatusFilter = "Semua" | "Selesai";
 
-const rowsPerPage = 5;
+const rowsPerPage = DEFAULT_PAGE_SIZE;
 
 function getFirstDayOfCurrentMonth() {
   const today = new Date();
@@ -218,7 +227,9 @@ function TransactionDetailModal({
 }
 
 export default function TransactionHistoryPage() {
-  const { transactions } = useTransactions();
+  const { transactions, clearTransactions } = useTransactions();
+  const { user } = useAuth();
+  const { showToast } = useToast();
   const { settings } = useSettings();
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState(getFirstDayOfCurrentMonth);
@@ -228,6 +239,8 @@ export default function TransactionHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] =
     useState<SalesTransaction | null>(null);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const { receiptPrintTransaction, printReceipt } = useReceiptPrinter();
 
   const filteredTransactions = useMemo(() => {
@@ -350,6 +363,34 @@ export default function TransactionHistoryPage() {
     printReceipt(transaction);
   };
 
+  const closeResetDialog = useCallback(() => {
+    setIsResetDialogOpen(false);
+  }, []);
+
+  const handleResetTransactionHistory = async () => {
+    setIsResetting(true);
+
+    try {
+      const result = await transactionService.resetTransactionHistory();
+      clearTransactions();
+      setSelectedTransaction(null);
+      setIsResetDialogOpen(false);
+      showToast(
+        `${result.deletedTransactionCount} transaksi berhasil dihapus.`,
+        "success",
+      );
+    } catch (error) {
+      showToast(
+        error instanceof TransactionApiError
+          ? error.message
+          : "Gagal menghapus riwayat transaksi.",
+        "error",
+      );
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -366,10 +407,22 @@ export default function TransactionHistoryPage() {
             </p>
           </div>
 
-          <Button onClick={handleExportPdf}>
-            <Download className="h-4 w-4" />
-            Export PDF
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            {user?.role === "OWNER" ? (
+              <Button
+                variant="secondary"
+                onClick={() => setIsResetDialogOpen(true)}
+                className="border-red-200 text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Reset Seluruh Riwayat
+              </Button>
+            ) : null}
+            <Button onClick={handleExportPdf}>
+              <Download className="h-4 w-4" />
+              Export PDF
+            </Button>
+          </div>
         </Card>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -529,6 +582,12 @@ export default function TransactionHistoryPage() {
           onPrint={handlePrintReceipt}
         />
         <ReceiptPrintArea transaction={receiptPrintTransaction} />
+        <ResetTransactionHistoryDialog
+          isOpen={isResetDialogOpen}
+          isSubmitting={isResetting}
+          onClose={closeResetDialog}
+          onConfirm={handleResetTransactionHistory}
+        />
       </div>
     </MainLayout>
   );

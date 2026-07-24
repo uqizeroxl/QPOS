@@ -32,9 +32,14 @@ export function TransactionProvider({ children }: TransactionProviderProps) {
     return transaction;
   }, []);
 
+  const clearTransactions = useCallback(() => {
+    setTransactions([]);
+    storeTransactions([]);
+  }, []);
+
   const value = useMemo(
-    () => ({ transactions, addTransaction }),
-    [addTransaction, transactions],
+    () => ({ transactions, addTransaction, clearTransactions }),
+    [addTransaction, clearTransactions, transactions],
   );
 
   return (

@@ -10,5 +10,9 @@ export const appConfig = {
   masterDatabaseUrl: process.env.MASTER_DATABASE_URL || "",
   defaultOwnerUsername: process.env.DEFAULT_OWNER_USERNAME || "owner",
   defaultOwnerPassword: process.env.DEFAULT_OWNER_PASSWORD || "owner123",
-  defaultOwnerName: process.env.DEFAULT_OWNER_NAME || "Owner"
+  defaultOwnerName: process.env.DEFAULT_OWNER_NAME || "Owner",
+  transactionRetentionDays: Math.max(
+    1,
+    Number(process.env.TRANSACTION_RETENTION_DAYS) || 14
+  )
 };

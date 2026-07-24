@@ -10,6 +10,7 @@ import BarcodePreview from "./BarcodePreview";
 import BarcodePrintArea from "./BarcodePrintArea";
 import BarcodePrintPanel from "./BarcodePrintPanel";
 import type { Category } from "../category/CategoryTypes";
+import CategoryCombobox from "./CategoryCombobox";
 import type {
   BarcodePrintPayload,
   BarcodePrintSettings,
@@ -26,6 +27,7 @@ type ProductFormProps = {
   product?: Product | null;
   onClose: () => void;
   onSubmit: (values: ProductFormValues) => Promise<boolean>;
+  onCreateCategory: (name: string) => Promise<Category>;
 };
 
 const initialPrintSettings: BarcodePrintSettings = {
@@ -73,6 +75,7 @@ export default function ProductForm({
   product,
   onClose,
   onSubmit,
+  onCreateCategory,
 }: ProductFormProps) {
   const { addActivity } = useActivityLog();
   const [formValues, setFormValues] = useState<ProductFormValues>(() =>
@@ -123,25 +126,13 @@ export default function ProductForm({
     }));
   };
 
-  const updateCategory = useCallback((categoryId: string) => {
-    const selectedCategory = categories.find(
-      (category) => category.id === categoryId,
-    );
-
+  const updateCategory = useCallback((selectedCategory: Category) => {
     setFormValues((currentValues) => ({
       ...currentValues,
-      categoryId,
-      category: selectedCategory?.name ?? "",
+      categoryId: selectedCategory.id,
+      category: selectedCategory.name,
     }));
-  }, [categories]);
-
-  useEffect(() => {
-    if (formValues.categoryId || categories.length === 0) {
-      return;
-    }
-
-    updateCategory(categories[0].id);
-  }, [categories, formValues.categoryId, updateCategory]);
+  }, []);
 
   if (!isOpen) {
     return null;
@@ -304,20 +295,19 @@ export default function ProductForm({
               <span className="text-sm font-medium text-gray-700">
                 Kategori
               </span>
-              <Select
-                required
-                value={formValues.categoryId ?? ""}
-                onChange={(event) => updateCategory(event.target.value)}
-              >
-                {categories.length === 0 ? (
-                  <option value="">Belum ada kategori</option>
-                ) : null}
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </Select>
+              <CategoryCombobox
+                categories={categories}
+                selectedCategoryId={formValues.categoryId ?? ""}
+                onSelect={updateCategory}
+                onCreate={onCreateCategory}
+                onClearSelection={() =>
+                  setFormValues((currentValues) => ({
+                    ...currentValues,
+                    categoryId: "",
+                    category: "",
+                  }))
+                }
+              />
             </label>
 
             <label className="space-y-2">

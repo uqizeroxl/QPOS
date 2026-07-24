@@ -5,6 +5,8 @@ import { UserRole } from "../generated/prisma/client";
 import { authorize } from "../middleware/auth.middleware";
 import {
   adjustProductStock,
+  bulkDeleteProducts,
+  bulkUpdateProducts,
   createProduct,
   deleteProduct,
   exportProductDataset,
@@ -44,6 +46,8 @@ router.post("/restocks", authorize(ownerAdminWarehouse), restockProducts);
 router.get("/restocks/search", authorize(ownerAdminWarehouse), searchRestockProducts);
 router.get("/cashier/search", authorize(allRoles), searchCashierProducts);
 router.post("/", authorize(ownerAdminWarehouse), createProduct);
+router.post("/bulk-delete", authorize(ownerAdminWarehouse), bulkDeleteProducts);
+router.put("/bulk-update", authorize(ownerAdminWarehouse), bulkUpdateProducts);
 router.put("/:id", authorize(ownerAdminWarehouse), updateProduct);
 router.delete("/:id", authorize(ownerAdminWarehouse), deleteProduct);
 router.post("/:id/barcode", authorize(ownerAdminWarehouse), generateProductBarcode);

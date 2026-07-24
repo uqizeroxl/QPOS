@@ -1,5 +1,6 @@
-import { Package } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Package, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { useActivityLog } from "../../hooks/useActivityLog";
 import { useCategories } from "../../hooks/useCategories";
@@ -16,20 +17,30 @@ import StockAdjustmentModal from "./StockAdjustmentModal";
 import StockHistoryModal from "./StockHistoryModal";
 import ProductTable from "./ProductTable";
 import ProductToolbar from "./ProductToolbar";
-import type { Product, ProductFormValues } from "./ProductTypes";
+import type { BulkProductDraft, Product, ProductFormValues } from "./ProductTypes";
 import { getProductUpdateDescription } from "../../utils/productActivity";
+import DeleteProductsDialog from "./DeleteProductsDialog";
+import BulkUpdateConfirmationDialog from "./BulkUpdateConfirmationDialog";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../constants/pagination";
 
-const pageSizeOptions = [25, 50, 100, 250, 500] as const;
 const productPageSizeKey = "product-page-size";
 const lowStockThreshold = 5;
 
+const toBulkDraft = (product: Product): BulkProductDraft => ({
+  id: product.id,
+  name: product.name,
+  barcode: product.barcode,
+  purchasePrice: product.purchasePrice,
+  sellingPrice: product.sellingPrice,
+});
+
 const getInitialPageSize = () => {
   const storedPageSize = Number(sessionStorage.getItem(productPageSizeKey));
-  return pageSizeOptions.includes(
-    storedPageSize as (typeof pageSizeOptions)[number],
+  return PAGE_SIZE_OPTIONS.includes(
+    storedPageSize as (typeof PAGE_SIZE_OPTIONS)[number],
   )
     ? storedPageSize
-    : 100;
+    : DEFAULT_PAGE_SIZE;
 };
 
 export default function ProductPage() {
@@ -41,11 +52,12 @@ export default function ProductPage() {
     fetchProducts,
     createProduct,
     updateProduct,
-    deleteProduct,
+    bulkDeleteProducts,
+    bulkUpdateProducts,
     adjustStock,
     getStockHistory,
   } = useProducts();
-  const { activeCategories, activeCategoryNames } = useCategories();
+  const { activeCategories, addCategory } = useCategories();
   const { addActivity } = useActivityLog();
   const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,6 +71,15 @@ export default function ProductPage() {
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
   const [stockHistory, setStockHistory] = useState<StockHistoryItem[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [isBulkEditMode, setIsBulkEditMode] = useState(false);
+  const [bulkDrafts, setBulkDrafts] = useState<Map<string, BulkProductDraft>>(new Map());
+  const [bulkOriginals, setBulkOriginals] = useState<Map<string, BulkProductDraft>>(new Map());
+  const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
 
   useEffect(() => {
     void fetchProducts({
@@ -120,21 +141,170 @@ export default function ProductPage() {
     setIsFormOpen(true);
   };
 
+  const handleCreateCategory = async (name: string) => {
+    const result = await addCategory({
+      name,
+      description: "",
+      status: "Aktif",
+    });
+
+    if (!result.ok) throw new Error(result.message);
+    showToast("Kategori berhasil ditambahkan.", "success");
+    return result.category;
+  };
+
+  const startBulkEdit = () => {
+    const entries = products.map((product) => [product.id, toBulkDraft(product)] as const);
+    setBulkOriginals(new Map(entries));
+    setBulkDrafts(new Map(entries));
+    setIsBulkEditMode(true);
+  };
+
+  useEffect(() => {
+    if (!isBulkEditMode) return;
+
+    setBulkOriginals((current) => {
+      const next = new Map(current);
+      products.forEach((product) => {
+        if (!next.has(product.id)) next.set(product.id, toBulkDraft(product));
+      });
+      return next;
+    });
+    setBulkDrafts((current) => {
+      const next = new Map(current);
+      products.forEach((product) => {
+        if (!next.has(product.id)) next.set(product.id, toBulkDraft(product));
+      });
+      return next;
+    });
+  }, [isBulkEditMode, products]);
+
+  const cancelBulkEdit = () => {
+    setIsBulkEditMode(false);
+    setBulkDrafts(new Map());
+    setBulkOriginals(new Map());
+    setIsBulkConfirmOpen(false);
+  };
+
+  const updateBulkDraft = (productId: string, changes: Partial<BulkProductDraft>) => {
+    setBulkDrafts((current) => {
+      const next = new Map(current);
+      const draft = next.get(productId);
+      if (draft) next.set(productId, { ...draft, ...changes });
+      return next;
+    });
+  };
+
+  const changedBulkDrafts = useMemo(
+    () => [...bulkDrafts.values()].map((draft) => ({
+      ...draft,
+      name: draft.name.trim(),
+      barcode: draft.barcode.trim(),
+    })).filter((draft) => {
+      const original = bulkOriginals.get(draft.id);
+      return original && (
+        draft.name !== original.name.trim() || draft.barcode !== original.barcode.trim() ||
+        draft.purchasePrice !== original.purchasePrice || draft.sellingPrice !== original.sellingPrice
+      );
+    }),
+    [bulkDrafts, bulkOriginals],
+  );
+
+  const openBulkConfirmation = () => {
+    const invalid = changedBulkDrafts.find((draft) =>
+      !draft.name.trim() ||
+      draft.purchasePrice === null || !Number.isFinite(draft.purchasePrice) || draft.purchasePrice < 0 ||
+      !Number.isFinite(draft.sellingPrice) || draft.sellingPrice < 0,
+    );
+    if (invalid) {
+      showToast("Nama wajib diisi dan harga harus lebih besar atau sama dengan 0.", "error");
+      return;
+    }
+    setIsBulkConfirmOpen(true);
+  };
+
+  const saveBulkChanges = async () => {
+    setIsBulkSaving(true);
+    try {
+      const updatedCount = await bulkUpdateProducts(changedBulkDrafts);
+      cancelBulkEdit();
+      await fetchProducts({
+        page: currentPage,
+        limit: rowsPerPage,
+        search: searchTerm.trim() || undefined,
+        category: selectedCategory === "Semua" ? undefined : selectedCategory,
+      });
+      showToast(`${updatedCount} produk berhasil diperbarui.`, "success");
+    } catch (error) {
+      showToast(error instanceof ProductApiError ? error.message : error instanceof Error ? error.message : "Produk gagal diperbarui.", "error");
+    } finally {
+      setIsBulkSaving(false);
+    }
+  };
+
   const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setIsFormOpen(true);
   };
 
-  const handleDeleteProduct = async (productId: string) => {
-    try {
-      const deletedProduct = await deleteProduct(productId);
+  const selectedProductIds = useMemo(
+    () => new Set(selectedProducts.map((product) => product.id)),
+    [selectedProducts],
+  );
 
-      showToast("Produk berhasil dihapus.", "success");
+  const handleSelectionChange = (product: Product, selected: boolean) => {
+    setSelectedProducts((current) =>
+      selected
+        ? current.some((item) => item.id === product.id)
+          ? current
+          : [...current, product]
+        : current.filter((item) => item.id !== product.id),
+    );
+  };
+
+  const handleSelectPage = (pageProducts: Product[], selected: boolean) => {
+    const pageIds = new Set(pageProducts.map((product) => product.id));
+    setSelectedProducts((current) =>
+      selected
+        ? [...current.filter((product) => !pageIds.has(product.id)), ...pageProducts]
+        : current.filter((product) => !pageIds.has(product.id)),
+    );
+  };
+
+  const closeDeleteDialog = useCallback(() => {
+    if (!isDeleting) setIsDeleteDialogOpen(false);
+  }, [isDeleting]);
+
+  const startDeleteMode = () => {
+    setSelectedProducts([]);
+    setIsDeleteMode(true);
+  };
+
+  const cancelDeleteMode = () => {
+    setSelectedProducts([]);
+    setIsDeleteDialogOpen(false);
+    setIsDeleteMode(false);
+  };
+
+  const handleDeleteProducts = async () => {
+    const productsToDelete = selectedProducts;
+    if (productsToDelete.length === 0) return;
+
+    setIsDeleting(true);
+    try {
+      const deletedCount = await bulkDeleteProducts(
+        productsToDelete.map((product) => product.id),
+      );
+
+      showToast(`${deletedCount} produk berhasil dihapus.`, "success");
       addActivity({
         type: "product-delete",
-        title: "Produk berhasil dihapus",
-        description: deletedProduct.name,
+        title: `${deletedCount} produk berhasil dihapus`,
+        description: productsToDelete.map((product) => product.name).join(", "),
       });
+      setSelectedProducts([]);
+      setIsDeleteDialogOpen(false);
+      setIsDeleteMode(false);
       await fetchProducts({
         page: currentPage,
         limit: rowsPerPage,
@@ -145,9 +315,13 @@ export default function ProductPage() {
       const message =
         error instanceof ProductApiError
           ? error.message
-          : "Terjadi kesalahan pada server.";
+          : error instanceof Error
+            ? error.message
+            : "Produk gagal dihapus.";
 
       showToast(message, "error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -342,11 +516,48 @@ export default function ProductPage() {
         <ProductToolbar
           searchTerm={searchTerm}
           selectedCategory={selectedCategory}
-          categories={activeCategoryNames}
+          categories={activeCategories}
           onSearchChange={handleSearchChange}
           onCategoryChange={handleCategoryChange}
           onAddProduct={handleAddProduct}
+          onBulkEdit={startBulkEdit}
+          isBulkEditMode={isBulkEditMode}
+          onDeleteMode={startDeleteMode}
+          isDeleteMode={isDeleteMode}
         />
+
+        {isBulkEditMode ? (
+          <Card className="flex flex-col justify-between gap-3 border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center">
+            <p className="text-sm font-semibold text-blue-800">Mode Ubah Massal</p>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={cancelBulkEdit}>Batal</Button>
+              <Button onClick={openBulkConfirmation}>Simpan Perubahan Massal</Button>
+            </div>
+          </Card>
+        ) : null}
+
+        {isDeleteMode ? (
+          <Card className="flex flex-col justify-between gap-3 border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center">
+            <p className="text-sm font-semibold text-blue-800">
+              {selectedProducts.length} produk dipilih
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                disabled={selectedProducts.length === 0}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Hapus Produk
+              </button>
+              <Button variant="secondary" onClick={cancelDeleteMode}>
+                <X className="h-4 w-4" />
+                Batal
+              </Button>
+            </div>
+          </Card>
+        ) : null}
 
         <ProductTable
           products={products}
@@ -355,12 +566,17 @@ export default function ProductPage() {
           rowsPerPage={rowsPerPage}
           totalProducts={totalProducts}
           onPageChange={setCurrentPage}
-          pageSizeOptions={pageSizeOptions}
+          pageSizeOptions={PAGE_SIZE_OPTIONS}
           onPageSizeChange={handlePageSizeChange}
           onEdit={handleEditProduct}
-          onDelete={handleDeleteProduct}
+          selectedProductIds={selectedProductIds}
+          isDeleteMode={isDeleteMode}
+          onSelectionChange={handleSelectionChange}
+          onSelectPage={handleSelectPage}
           onAdjustStock={setStockProduct}
           onShowStockHistory={handleShowStockHistory}
+          editDrafts={isBulkEditMode ? bulkDrafts : new Map()}
+          onDraftChange={updateBulkDraft}
         />
 
         {isFormOpen ? (
@@ -375,6 +591,7 @@ export default function ProductPage() {
               setEditingProduct(null);
             }}
             onSubmit={handleSubmitProduct}
+            onCreateCategory={handleCreateCategory}
           />
         ) : null}
         <StockAdjustmentModal
@@ -392,6 +609,23 @@ export default function ProductPage() {
             setStockHistory([]);
           }}
         />
+        {isDeleteDialogOpen ? (
+          <DeleteProductsDialog
+            products={selectedProducts}
+            isSubmitting={isDeleting}
+            onClose={closeDeleteDialog}
+            onConfirm={() => void handleDeleteProducts()}
+          />
+        ) : null}
+        {isBulkConfirmOpen ? (
+          <BulkUpdateConfirmationDialog
+            changedCount={changedBulkDrafts.length}
+            unchangedCount={bulkDrafts.size - changedBulkDrafts.length}
+            isSubmitting={isBulkSaving}
+            onClose={() => setIsBulkConfirmOpen(false)}
+            onConfirm={() => void saveBulkChanges()}
+          />
+        ) : null}
       </div>
     </MainLayout>
   );

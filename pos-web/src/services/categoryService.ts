@@ -7,6 +7,7 @@ type CategoryApiItem = {
   name: string;
   description: string;
   status: "ACTIVE" | "INACTIVE" | "Aktif" | "Nonaktif";
+  productCount?: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -37,10 +38,10 @@ function normalizeStatus(status: CategoryApiItem["status"]): CategoryStatus {
 function mapCategory(category: CategoryApiItem): Category {
   return {
     id: category.id,
-    name: category.name,
+    name: category.name.toUpperCase(),
     description: category.description,
     status: normalizeStatus(category.status),
-    productCount: 0,
+    productCount: category.productCount ?? 0,
     createdAt: category.createdAt,
     updatedAt: category.updatedAt,
   };
@@ -73,9 +74,13 @@ export const categoryService = {
   },
   createCategory: async (payload: CreateCategoryPayload) => {
     try {
+      const normalizedPayload = {
+        ...payload,
+        name: payload.name.trim().toUpperCase(),
+      };
       const response = await apiService.post<CategoryApiItem, CreateCategoryPayload>(
         "/categories",
-        payload,
+        normalizedPayload,
       );
 
       return mapCategory(response.data);
@@ -85,9 +90,13 @@ export const categoryService = {
   },
   updateCategory: async (categoryId: string, payload: UpdateCategoryPayload) => {
     try {
+      const normalizedPayload = {
+        ...payload,
+        name: payload.name.trim().toUpperCase(),
+      };
       const response = await apiService.put<CategoryApiItem, UpdateCategoryPayload>(
         `/categories/${categoryId}`,
-        payload,
+        normalizedPayload,
       );
 
       return mapCategory(response.data);

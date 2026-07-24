@@ -17,11 +17,18 @@ export type CreateProductInput = {
   stock?: number;
   status?: RecordStatus;
   categoryId?: string;
-  category?: string;
   supplierId?: string | null;
 };
 
 export type UpdateProductInput = CreateProductInput;
+
+export type BulkUpdateProductInput = {
+  id: string;
+  name: string;
+  barcode: string | null;
+  purchasePrice: number | null;
+  sellingPrice: number;
+};
 
 export type AdjustStockInput = {
   type: StockAdjustmentType;
@@ -56,6 +63,10 @@ export class ProductNotFoundError extends Error {
     super("Product not found");
   }
 }
+
+export class ProductDeleteConflictError extends Error {}
+
+export class InvalidProductSelectionError extends Error {}
 
 export class CategoryRequiredError extends Error {
   constructor() {
@@ -133,24 +144,6 @@ const getCategoryId = async (
     const category = await prisma.category.findFirst({
       where: {
         id: data.categoryId,
-        status: RecordStatus.ACTIVE
-      },
-      select: {
-        id: true
-      }
-    });
-
-    if (!category) {
-      throw new CategoryNotFoundError();
-    }
-
-    return category.id;
-  }
-
-  if (data.category) {
-    const category = await prisma.category.findFirst({
-      where: {
-        name: data.category,
         status: RecordStatus.ACTIVE
       },
       select: {
@@ -508,6 +501,106 @@ export const deleteProduct = async (
 
     throw error;
   }
+};
+
+export const bulkDeleteProducts = async (
+  prisma: PrismaClient,
+  productIds: string[]
+) => {
+  const uniqueProductIds = [...new Set(productIds)];
+
+  if (uniqueProductIds.length === 0) {
+    throw new InvalidProductSelectionError("Pilih minimal satu produk.");
+  }
+
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const products = await tx.product.findMany({
+        where: { id: { in: uniqueProductIds } },
+        select: { id: true, name: true }
+      });
+
+      if (products.length !== uniqueProductIds.length) {
+        throw new ProductNotFoundError();
+      }
+
+      const deleted = await tx.product.deleteMany({
+        where: { id: { in: uniqueProductIds } }
+      });
+
+      return { deletedCount: deleted.count, products };
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+      throw new ProductDeleteConflictError(
+        "Produk tidak dapat dihapus karena masih digunakan pada purchase order."
+      );
+    }
+
+    throw error;
+  }
+};
+
+export const bulkUpdateProducts = async (
+  prisma: PrismaClient,
+  updates: BulkUpdateProductInput[]
+) => {
+  if (updates.length === 0) {
+    throw new InvalidProductDataError("Tidak ada perubahan produk untuk disimpan.");
+  }
+
+  const ids = updates.map((item) => item.id);
+  if (new Set(ids).size !== ids.length) {
+    throw new InvalidProductDataError("ID produk duplikat pada permintaan.");
+  }
+
+  for (const item of updates) {
+    if (!item.name.trim()) throw new InvalidProductDataError("Nama produk tidak boleh kosong.");
+    if (item.purchasePrice === null || !Number.isFinite(item.purchasePrice) || item.purchasePrice < 0) {
+      throw new InvalidProductDataError("Harga beli harus lebih besar atau sama dengan 0.");
+    }
+    if (!Number.isFinite(item.sellingPrice) || item.sellingPrice < 0) {
+      throw new InvalidProductDataError("Harga jual harus lebih besar atau sama dengan 0.");
+    }
+  }
+
+  const barcodes = updates.map((item) => item.barcode?.trim()).filter((value): value is string => Boolean(value));
+  if (new Set(barcodes).size !== barcodes.length) throw new BarcodeAlreadyExistsError();
+
+  return prisma.$transaction(async (tx) => {
+    const existingCount = await tx.product.count({ where: { id: { in: ids } } });
+    if (existingCount !== ids.length) throw new ProductNotFoundError();
+
+    if (barcodes.length) {
+      const conflict = await tx.product.findFirst({
+        where: { barcode: { in: barcodes }, id: { notIn: ids } },
+        select: { id: true }
+      });
+      if (conflict) throw new BarcodeAlreadyExistsError();
+    }
+
+    // Clear barcodes first so valid swaps between products do not hit the
+    // unique constraint midway through the atomic batch.
+    await tx.product.updateMany({
+      where: { id: { in: ids } },
+      data: { barcode: null }
+    });
+
+    const products = await Promise.all(updates.map((item) =>
+      tx.product.update({
+        where: { id: item.id },
+        data: {
+          name: item.name.trim(),
+          barcode: item.barcode?.trim() || null,
+          purchasePrice: item.purchasePrice,
+          sellingPrice: item.sellingPrice
+        },
+        include: { category: true }
+      })
+    ));
+
+    return { updatedCount: products.length, products };
+  });
 };
 
 export const adjustProductStock = async (
@@ -1020,9 +1113,10 @@ const findOrCreateCategory = async (
   tx: Prisma.TransactionClient,
   name: string
 ) => {
+  const normalizedName = name.trim().toUpperCase();
   const category = await tx.category.findFirst({
     where: {
-      name
+      name: { equals: normalizedName, mode: "insensitive" }
     },
     select: {
       id: true
@@ -1035,7 +1129,7 @@ const findOrCreateCategory = async (
 
   const newCategory = await tx.category.create({
     data: {
-      name,
+      name: normalizedName,
       status: RecordStatus.ACTIVE
     },
     select: {

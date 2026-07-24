@@ -131,6 +131,21 @@ export type ProductDatasetImportResult = {
   failed: number;
 };
 
+export type BulkDeleteProductsResult = {
+  deletedCount: number;
+  products: Array<{ id: string; name: string }>;
+};
+
+export type BulkProductUpdate = Pick<
+  Product,
+  "id" | "name" | "barcode" | "purchasePrice" | "sellingPrice"
+>;
+
+export type BulkUpdateProductsResult = {
+  updatedCount: number;
+  products: ProductApiItem[];
+};
+
 function buildProductPayload(values: ProductFormValues): CreateProductPayload {
   return {
     barcode: values.barcode,
@@ -165,7 +180,7 @@ function mapProduct(product: ProductApiItem): Product {
     barcode: product.barcode ?? "",
     name: product.name,
     categoryId: product.category?.id ?? product.categoryId,
-    category: product.category?.name ?? product.categoryId,
+    category: (product.category?.name ?? product.categoryId).toUpperCase(),
     purchasePrice:
       product.purchasePrice === null ? null : Number(product.purchasePrice),
     sellingPrice: Number(product.sellingPrice),
@@ -196,6 +211,10 @@ function downloadBlob(blob: Blob, filename: string) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function notifyProductsChanged() {
+  window.dispatchEvent(new Event("qpos:products-changed"));
 }
 
 export const productService = {
@@ -233,7 +252,7 @@ export const productService = {
         "/products",
         payload,
       );
-
+      notifyProductsChanged();
       return mapProduct(response.data);
     } catch (error) {
       handleProductError(error);
@@ -247,7 +266,7 @@ export const productService = {
         `/products/${productId}`,
         payload,
       );
-
+      notifyProductsChanged();
       return mapProduct(response.data);
     } catch (error) {
       handleProductError(error);
@@ -258,8 +277,34 @@ export const productService = {
       const response = await apiService.delete<ProductApiItem>(
         `/products/${productId}`,
       );
-
+      notifyProductsChanged();
       return mapProduct(response.data);
+    } catch (error) {
+      handleProductError(error);
+    }
+  },
+  bulkDeleteProducts: async (productIds: string[]) => {
+    try {
+      const response = await apiService.post<
+        BulkDeleteProductsResult,
+        { productIds: string[] }
+      >("/products/bulk-delete", { productIds });
+      notifyProductsChanged();
+      return response.data;
+    } catch (error) {
+      handleProductError(error);
+    }
+  },
+  bulkUpdateProducts: async (products: BulkProductUpdate[]) => {
+    try {
+      const response = await apiService.put<
+        BulkUpdateProductsResult,
+        { products: BulkProductUpdate[] }
+      >("/products/bulk-update", { products });
+      return {
+        updatedCount: response.data.updatedCount,
+        products: response.data.products.map(mapProduct),
+      };
     } catch (error) {
       handleProductError(error);
     }
@@ -401,7 +446,7 @@ export const productService = {
           },
         },
       );
-
+      notifyProductsChanged();
       return response.data;
     } catch (error) {
       handleProductError(error);

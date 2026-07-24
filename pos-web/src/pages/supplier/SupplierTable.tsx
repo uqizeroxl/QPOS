@@ -59,9 +59,9 @@ export default function SupplierTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="app-scrollbar max-h-[480px] overflow-auto scroll-smooth">
         <Table>
-          <TableHead>
+          <TableHead className="sticky top-0 z-[1]">
             <TableRow className="hover:bg-transparent">
               <TableHeadCell>Nama Supplier</TableHeadCell>
               <TableHeadCell>Telepon</TableHeadCell>

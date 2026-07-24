@@ -40,6 +40,10 @@ type TransactionParams = {
   id: string;
 };
 
+type ResetTransactionHistoryRequestBody = {
+  confirmation?: string;
+};
+
 const toNumber = (value: number | string | undefined, fallback = 0) => {
   if (value === undefined || value === "") {
     return fallback;
@@ -275,6 +279,45 @@ export const createTransaction = async (
     }
 
     console.error("Unexpected error while creating transaction:", error);
+    next(error);
+  }
+};
+
+export const resetTransactionHistory = async (
+  req: AuthenticatedRequest & Request<unknown, unknown, ResetTransactionHistoryRequestBody>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (req.body.confirmation !== "RESET") {
+      res.status(400).json({
+        success: false,
+        message: 'Ketik "RESET" untuk mengonfirmasi penghapusan.'
+      });
+      return;
+    }
+
+    const result = await transactionService.resetTransactionHistory(
+      req.tenant.prisma,
+      req.user.name
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Seluruh riwayat transaksi berhasil dihapus.",
+      data: result
+    });
+  } catch (error) {
+    console.error("[transaction-history-reset] Request failed", {
+      storeId: req.tenant?.storeId,
+      userId: req.user?.id,
+      userName: req.user?.name,
+      role: req.user?.role,
+      name: error instanceof Error ? error.name : "UnknownError",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      error
+    });
     next(error);
   }
 };

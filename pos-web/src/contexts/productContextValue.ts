@@ -24,6 +24,10 @@ export type ProductContextValue = {
   createProduct: (values: ProductFormValues) => Promise<Product>;
   updateProduct: (productId: string, values: ProductFormValues) => Promise<Product>;
   deleteProduct: (productId: string) => Promise<Product>;
+  bulkDeleteProducts: (productIds: string[]) => Promise<number>;
+  bulkUpdateProducts: (
+    products: Parameters<typeof import("../services/productService").productService.bulkUpdateProducts>[0],
+  ) => Promise<number>;
   adjustStock: (
     productId: string,
     payload: StockAdjustmentPayload,

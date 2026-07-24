@@ -27,6 +27,8 @@ export default function BarcodeInput({
   onSubmit,
 }: BarcodeInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLLabelElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const normalizedQuery = query.trim().toLowerCase();
@@ -45,8 +47,23 @@ export default function BarcodeInput({
     matchedProducts.length === 0
       ? 0
       : Math.min(activeIndex, matchedProducts.length - 1);
-  const shouldShowDropdown =
-    isDropdownOpen && normalizedQuery.length > 0 && matchedProducts.length > 0;
+  const shouldShowDropdown = isDropdownOpen && normalizedQuery.length > 0;
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  useEffect(() => {
+    if (!shouldShowDropdown || matchedProducts.length === 0) return;
+    optionRefs.current[safeActiveIndex]?.scrollIntoView({ block: "nearest" });
+  }, [matchedProducts.length, normalizedQuery, safeActiveIndex, shouldShowDropdown]);
 
   const focusInput = () => {
     window.setTimeout(() => inputRef.current?.focus(), 0);
@@ -77,7 +94,7 @@ export default function BarcodeInput({
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "ArrowDown") {
-      if (!shouldShowDropdown) {
+      if (!shouldShowDropdown || matchedProducts.length === 0) {
         return;
       }
 
@@ -89,7 +106,7 @@ export default function BarcodeInput({
     }
 
     if (event.key === "ArrowUp") {
-      if (!shouldShowDropdown) {
+      if (!shouldShowDropdown || matchedProducts.length === 0) {
         return;
       }
 
@@ -98,7 +115,7 @@ export default function BarcodeInput({
       return;
     }
 
-    if (event.key === "Enter" && shouldShowDropdown) {
+    if (event.key === "Enter" && shouldShowDropdown && matchedProducts.length > 0) {
       event.preventDefault();
       selectProduct(matchedProducts[safeActiveIndex]);
       return;
@@ -126,13 +143,12 @@ export default function BarcodeInput({
       </div>
 
       <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-3 sm:flex-row">
-        <label className="relative flex-1">
+        <label ref={containerRef} className="relative flex-1">
           <span className="sr-only">Cari barang</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
           <Input
             ref={inputRef}
             value={query}
-            onBlur={() => setIsDropdownOpen(false)}
             onChange={handleChange}
             onFocus={() => setIsDropdownOpen(true)}
             onKeyDown={handleKeyDown}
@@ -141,12 +157,15 @@ export default function BarcodeInput({
           />
 
           {shouldShowDropdown ? (
-            <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
-              {matchedProducts.map((product, index) => {
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[320px] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl">
+              {matchedProducts.length > 0 ? matchedProducts.map((product, index) => {
                 const isActive = index === safeActiveIndex;
 
                 return (
                   <button
+                    ref={(element) => {
+                      optionRefs.current[index] = element;
+                    }}
                     key={product.id}
                     type="button"
                     onMouseDown={(event) => {
@@ -175,7 +194,11 @@ export default function BarcodeInput({
                     </span>
                   </button>
                 );
-              })}
+              }) : (
+                <p className="px-4 py-4 text-center text-sm font-medium text-gray-500">
+                  Produk tidak ditemukan
+                </p>
+              )}
             </div>
           ) : null}
         </label>

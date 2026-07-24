@@ -167,15 +167,18 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-2">
-          <Card as="section" className="overflow-hidden">
-            <div className="border-b border-gray-200 px-5 py-4">
+          <Card as="section" className="flex max-h-[420px] flex-col overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-gray-200 bg-white px-5 py-4 dark:bg-slate-800">
               <h2 className="text-lg font-semibold text-gray-900">
                 Produk Stok Menipis
               </h2>
+              <span className="shrink-0 rounded-full bg-red-50 px-3 py-1 text-sm font-semibold text-red-700">
+                {dashboard.lowStockProducts.length} produk
+              </span>
             </div>
-            <div className="overflow-x-auto">
+            <div className="app-scrollbar min-h-0 overflow-auto scroll-smooth">
               <Table>
-                <TableHead>
+                <TableHead className="sticky top-0 z-[1]">
                   <TableRow className="hover:bg-transparent">
                     <TableHeadCell>Produk</TableHeadCell>
                     <TableHeadCell>Kategori</TableHeadCell>

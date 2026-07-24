@@ -30,7 +30,7 @@ function getInitialFormValues(category?: Category | null): CategoryFormValues {
   }
 
   return {
-    name: category.name,
+    name: category.name.toUpperCase(),
     description: category.description,
     status: category.status,
   };
@@ -110,7 +110,9 @@ export default function CategoryForm({
               required
               maxLength={50}
               value={formValues.name}
-              onChange={(event) => updateField("name", event.target.value)}
+              onChange={(event) =>
+                updateField("name", event.target.value.toUpperCase())
+              }
             />
             <span className="block text-xs font-medium text-gray-400">
               {formValues.name.length}/50 karakter

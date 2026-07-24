@@ -25,6 +25,20 @@ type ProductParams = {
   id: string;
 };
 
+type BulkDeleteProductsRequestBody = {
+  productIds?: unknown;
+};
+
+type BulkUpdateProductsRequestBody = {
+  products?: Array<{
+    id?: unknown;
+    name?: unknown;
+    barcode?: unknown;
+    purchasePrice?: unknown;
+    sellingPrice?: unknown;
+  }>;
+};
+
 type AdjustStockRequestBody = {
   type?: string;
   quantity?: number | string;
@@ -545,6 +559,82 @@ export const deleteProduct = async (
     }
 
     console.error("Unexpected error while deleting product:", error);
+    next(error);
+  }
+};
+
+export const bulkDeleteProducts = async (
+  req: AuthenticatedRequest & Request<unknown, unknown, BulkDeleteProductsRequestBody>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const productIds = Array.isArray(req.body.productIds)
+      ? req.body.productIds.filter(
+          (id: unknown): id is string => typeof id === "string"
+        )
+      : [];
+    const result = await productService.bulkDeleteProducts(
+      req.tenant.prisma,
+      productIds
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `${result.deletedCount} produk berhasil dihapus.`,
+      data: result
+    });
+  } catch (error) {
+    if (error instanceof productService.InvalidProductSelectionError) {
+      res.status(400).json({ success: false, message: error.message });
+      return;
+    }
+    if (error instanceof productService.ProductNotFoundError) {
+      res.status(404).json({
+        success: false,
+        message: "Satu atau lebih produk tidak ditemukan. Tidak ada produk yang dihapus."
+      });
+      return;
+    }
+    if (error instanceof productService.ProductDeleteConflictError) {
+      res.status(409).json({ success: false, message: error.message });
+      return;
+    }
+
+    console.error("Unexpected error while bulk deleting products:", error);
+    next(error);
+  }
+};
+
+export const bulkUpdateProducts = async (
+  req: AuthenticatedRequest & Request<unknown, unknown, BulkUpdateProductsRequestBody>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const products = (req.body.products ?? []).map((item: NonNullable<BulkUpdateProductsRequestBody["products"]>[number]) => ({
+      id: typeof item.id === "string" ? item.id : "",
+      name: typeof item.name === "string" ? item.name : "",
+      barcode: typeof item.barcode === "string" ? item.barcode : null,
+      purchasePrice: item.purchasePrice === null || item.purchasePrice === "" ? null : Number(item.purchasePrice),
+      sellingPrice: Number(item.sellingPrice)
+    }));
+    const result = await productService.bulkUpdateProducts(req.tenant.prisma, products);
+    res.status(200).json({ success: true, message: `${result.updatedCount} produk berhasil diperbarui.`, data: result });
+  } catch (error) {
+    if (error instanceof productService.InvalidProductDataError) {
+      res.status(400).json({ success: false, message: error.message });
+      return;
+    }
+    if (error instanceof productService.BarcodeAlreadyExistsError) {
+      res.status(409).json({ success: false, message: "Barcode tidak boleh duplikat." });
+      return;
+    }
+    if (error instanceof productService.ProductNotFoundError) {
+      res.status(404).json({ success: false, message: "Satu atau lebih produk tidak ditemukan. Tidak ada produk yang diperbarui." });
+      return;
+    }
+    console.error("Unexpected error while bulk updating products:", error);
     next(error);
   }
 };

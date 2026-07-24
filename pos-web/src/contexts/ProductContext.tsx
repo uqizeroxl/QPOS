@@ -75,6 +75,32 @@ export function ProductProvider({ children }: ProductProviderProps) {
     [],
   );
 
+  const bulkDeleteProducts = useCallback(async (productIds: string[]) => {
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const result = await productService.bulkDeleteProducts(productIds);
+      return result.deletedCount;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const bulkUpdateProducts = useCallback(
+    async (updates: Parameters<typeof productService.bulkUpdateProducts>[0]) => {
+      setIsLoading(true);
+      setErrorMessage("");
+      try {
+        const result = await productService.bulkUpdateProducts(updates);
+        return result.updatedCount;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+  );
+
   const adjustStock = useCallback(
     async (
       productId: string,
@@ -173,6 +199,8 @@ export function ProductProvider({ children }: ProductProviderProps) {
       createProduct,
       updateProduct,
       deleteProduct,
+      bulkDeleteProducts,
+      bulkUpdateProducts,
       adjustStock,
       getStockHistory,
       decreaseProductStock,
@@ -187,6 +215,8 @@ export function ProductProvider({ children }: ProductProviderProps) {
       createProduct,
       updateProduct,
       deleteProduct,
+      bulkDeleteProducts,
+      bulkUpdateProducts,
       adjustStock,
       getStockHistory,
       decreaseProductStock,

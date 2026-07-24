@@ -34,25 +34,41 @@ export class CategoryInUseError extends Error {
 
 export const getAllCategories = async (prisma: PrismaClient) => {
   return prisma.category.findMany({
+    include: {
+      _count: {
+        select: {
+          products: {
+            where: {
+              status: RecordStatus.ACTIVE
+            }
+          }
+        }
+      }
+    },
     orderBy: {
       name: "asc"
     }
-  });
+  }).then((categories) =>
+    categories.map(({ _count, ...category }) => ({
+      ...category,
+      productCount: _count.products
+    }))
+  );
 };
 
 export const createCategory = async (
   prisma: PrismaClient,
   data: CreateCategoryInput
 ) => {
-  const name = data.name.trim();
+  const name = data.name.trim().toUpperCase();
 
   if (!name) {
     throw new CategoryNameRequiredError();
   }
 
-  const existingCategory = await prisma.category.findUnique({
+  const existingCategory = await prisma.category.findFirst({
     where: {
-      name
+      name: { equals: name, mode: "insensitive" }
     }
   });
 
@@ -85,7 +101,7 @@ export const updateCategory = async (
   categoryId: string,
   data: UpdateCategoryInput
 ) => {
-  const name = data.name.trim();
+  const name = data.name.trim().toUpperCase();
 
   if (!name) {
     throw new CategoryNameRequiredError();
@@ -103,7 +119,7 @@ export const updateCategory = async (
 
   const existingCategory = await prisma.category.findFirst({
     where: {
-      name,
+      name: { equals: name, mode: "insensitive" },
       id: {
         not: categoryId
       }

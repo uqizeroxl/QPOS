@@ -14,8 +14,9 @@ import type {
   CategorySortKey,
   SortDirection,
 } from "./CategoryTypes";
+import { DEFAULT_PAGE_SIZE } from "../../constants/pagination";
 
-const rowsPerPage = 5;
+const rowsPerPage = DEFAULT_PAGE_SIZE;
 
 function compareText(firstValue: string, secondValue: string) {
   return firstValue.localeCompare(secondValue, "id-ID", {

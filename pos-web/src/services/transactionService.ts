@@ -102,6 +102,10 @@ export type CreateTransactionPayload = {
   cashierName?: string;
 };
 
+export type ResetTransactionHistoryResult = {
+  deletedTransactionCount: number;
+};
+
 export class TransactionApiError extends Error {
   public readonly status?: number;
 
@@ -217,6 +221,18 @@ export const transactionService = {
       });
 
       return mapTransaction(response.data);
+    } catch (error) {
+      handleTransactionError(error);
+    }
+  },
+  resetTransactionHistory: async () => {
+    try {
+      const response = await apiService.post<
+        ResetTransactionHistoryResult,
+        { confirmation: string }
+      >("/transactions/history/reset", { confirmation: "RESET" });
+
+      return response.data;
     } catch (error) {
       handleTransactionError(error);
     }

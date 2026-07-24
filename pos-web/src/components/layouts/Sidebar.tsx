@@ -65,15 +65,17 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
 
   return (
     <>
-      <div className="mb-8 flex items-center gap-3 px-2">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 text-lg font-extrabold tracking-wide text-white shadow-sm transition duration-200">
-          Q
-        </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate bg-gradient-to-r from-white to-cyan-100 bg-clip-text text-2xl font-extrabold tracking-wide text-transparent transition duration-200 dark:from-blue-300 dark:to-cyan-300">
+      <div className="mb-8 flex min-h-12 items-center gap-[14px] px-2">
+        <img
+          src="/qpos-logo.png"
+          alt="Logo QPOS"
+          className="h-12 w-12 shrink-0 object-contain"
+        />
+        <div className="qpos-brand-type min-w-0 flex-1 overflow-hidden text-left transition-[width,opacity] duration-200 ease-out">
+          <h1 className="truncate text-[26px] font-bold leading-[1] tracking-[-0.03em] text-white">
             QPOS
           </h1>
-          <p className="text-xs font-medium text-blue-100 dark:text-slate-400">
+          <p className="mt-1 truncate text-[10px] font-medium leading-tight tracking-[0.045em] text-white/70">
             Retail Management
           </p>
         </div>
@@ -81,7 +83,7 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
         {onClose ? (
           <Button
             variant="icon"
-            className="lg:hidden"
+            className="border-white/15 text-white hover:bg-white/20 lg:hidden"
             aria-label="Tutup menu"
             onClick={onClose}
           >
@@ -103,7 +105,7 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
                 `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                   isActive
                     ? "bg-white/15 text-white"
-                    : "text-blue-100 hover:bg-white/10 hover:text-white dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                    : "text-white hover:bg-white/20"
                 }`
               }
             >
@@ -120,7 +122,7 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   return (
     <>
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-blue-700 bg-blue-700 px-4 py-5 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-950 lg:block">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-white/10 bg-gradient-to-b from-[#2F6BFF] to-[#214BCB] px-4 py-5 lg:block">
         <SidebarContent />
       </aside>
 
@@ -133,7 +135,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             onClick={onClose}
           />
 
-          <aside className="relative h-full w-72 max-w-[85vw] border-r border-blue-700 bg-blue-700 px-4 py-5 shadow-xl transition-colors duration-300 dark:border-slate-800 dark:bg-slate-950">
+          <aside className="relative h-full w-72 max-w-[85vw] border-r border-white/10 bg-gradient-to-b from-[#2F6BFF] to-[#214BCB] px-4 py-5 shadow-xl">
             <SidebarContent onClose={onClose} />
           </aside>
         </div>

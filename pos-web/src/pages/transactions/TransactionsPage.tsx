@@ -4,6 +4,7 @@ import {
   Eye,
   RefreshCw,
   Search,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +21,8 @@ import {
   TableRow,
 } from "../../components/ui/Table";
 import MainLayout from "../../layouts/MainLayout";
+import { useAuth } from "../../hooks/useAuth";
+import { useToast } from "../../hooks/useToast";
 import {
   TransactionApiError,
   transactionService,
@@ -27,8 +30,10 @@ import {
   type TransactionPagination,
 } from "../../services/transactionService";
 import { formatRupiah } from "../../utils/currency";
+import ResetTransactionHistoryDialog from "../transaction-history/ResetTransactionHistoryDialog";
+import { DEFAULT_PAGE_SIZE } from "../../constants/pagination";
 
-const rowsPerPage = 10;
+const rowsPerPage = DEFAULT_PAGE_SIZE;
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -62,6 +67,8 @@ function getToday() {
 
 export default function TransactionsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { showToast } = useToast();
   const [transactions, setTransactions] = useState<TransactionListItem[]>([]);
   const [pagination, setPagination] = useState<TransactionPagination>({
     page: 1,
@@ -76,6 +83,8 @@ export default function TransactionsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   const fetchTransactions = useCallback(async () => {
     setIsLoading(true);
@@ -108,6 +117,32 @@ export default function TransactionsPage() {
     void fetchTransactions();
   }, [fetchTransactions]);
 
+  const handleResetTransactionHistory = async () => {
+    setIsResetting(true);
+
+    try {
+      const result = await transactionService.resetTransactionHistory();
+      setIsResetDialogOpen(false);
+      setCurrentPage(1);
+      setTransactions([]);
+      setPagination({ page: 1, limit: rowsPerPage, total: 0, totalPages: 1 });
+      setErrorMessage("");
+      showToast(
+        `${result.deletedTransactionCount} transaksi berhasil dihapus.`,
+        "success",
+      );
+    } catch (error) {
+      showToast(
+        error instanceof TransactionApiError
+          ? error.message
+          : "Gagal menghapus riwayat transaksi.",
+        "error",
+      );
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const resetToFirstPage = () => {
     setCurrentPage(1);
   };
@@ -132,10 +167,22 @@ export default function TransactionsPage() {
             </p>
           </div>
 
-          <Button onClick={fetchTransactions} disabled={isLoading}>
-            <RefreshCw className="h-4 w-4" />
-            Refresh
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            {user?.role === "OWNER" ? (
+              <Button
+                variant="secondary"
+                onClick={() => setIsResetDialogOpen(true)}
+                className="border-red-200 text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Reset Seluruh Riwayat
+              </Button>
+            ) : null}
+            <Button onClick={fetchTransactions} disabled={isLoading}>
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
         </Card>
 
         <Card className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_220px_220px_160px] lg:items-end">
@@ -296,6 +343,12 @@ export default function TransactionsPage() {
             </div>
           </div>
         </Card>
+        <ResetTransactionHistoryDialog
+          isOpen={isResetDialogOpen}
+          isSubmitting={isResetting}
+          onClose={() => setIsResetDialogOpen(false)}
+          onConfirm={handleResetTransactionHistory}
+        />
       </div>
     </MainLayout>
   );

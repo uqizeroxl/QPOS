@@ -6,6 +6,7 @@ export type AddTransactionPayload = Omit<SalesTransaction, "id">;
 export type TransactionContextValue = {
   transactions: SalesTransaction[];
   addTransaction: (transaction: AddTransactionPayload) => SalesTransaction;
+  clearTransactions: () => void;
 };
 
 export const TransactionContext = createContext<

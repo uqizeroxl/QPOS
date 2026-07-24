@@ -427,3 +427,106 @@ export const getTransactionById = async (
     }))
   };
 };
+
+export const resetTransactionHistory = async (
+  prisma: PrismaClient,
+  ownerName: string
+) => {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const transactionCount = await tx.transaction.count();
+
+      // TransactionItem owns the only FK that references Transaction.
+      await tx.transactionItem.deleteMany();
+      await tx.stockHistory.deleteMany({
+        where: { referenceType: StockReferenceType.SALE }
+      });
+      await tx.activityLog.deleteMany({
+        where: { type: ActivityType.TRANSACTION_SUCCESS }
+      });
+      await tx.transaction.deleteMany();
+      await tx.activityLog.create({
+        data: {
+          type: ActivityType.TRANSACTION_HISTORY_RESET,
+          title: "Reset Riwayat Transaksi",
+          description: `${ownerName} menghapus ${transactionCount} transaksi.`,
+          metadata: {
+            ownerName,
+            deletedTransactionCount: transactionCount
+          }
+        }
+      });
+
+      return { deletedTransactionCount: transactionCount };
+    });
+  } catch (error) {
+    const prismaError = error instanceof Prisma.PrismaClientKnownRequestError
+      ? { code: error.code, meta: error.meta, clientVersion: error.clientVersion }
+      : undefined;
+
+    console.error("[transaction-history-reset] Prisma transaction failed", {
+      ownerName,
+      name: error instanceof Error ? error.name : "UnknownError",
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      prisma: prismaError,
+      error
+    });
+    throw error;
+  }
+};
+
+export const cleanupExpiredTransactions = async (
+  prisma: PrismaClient,
+  cutoff: Date
+) => {
+  return prisma.$transaction(async (tx) => {
+    const transactionCount = await tx.transaction.count({
+      where: {
+        createdAt: { lt: cutoff }
+      }
+    });
+
+    if (transactionCount === 0) {
+      return { deletedTransactionCount: 0 };
+    }
+
+    await tx.stockHistory.deleteMany({
+      where: {
+        referenceType: StockReferenceType.SALE,
+        createdAt: { lt: cutoff }
+      }
+    });
+    await tx.activityLog.deleteMany({
+      where: {
+        type: ActivityType.TRANSACTION_SUCCESS,
+        createdAt: { lt: cutoff }
+      }
+    });
+    await tx.transactionItem.deleteMany({
+      where: {
+        transaction: {
+          createdAt: { lt: cutoff }
+        }
+      }
+    });
+    await tx.transaction.deleteMany({
+      where: {
+        createdAt: { lt: cutoff }
+      }
+    });
+    await tx.activityLog.create({
+      data: {
+        type: ActivityType.TRANSACTION_RETENTION,
+        title: "Retensi Riwayat Transaksi",
+        description: `${transactionCount} transaksi lama dibersihkan otomatis.`,
+        metadata: {
+          deletedTransactionCount: transactionCount,
+          cutoff: cutoff.toISOString()
+        }
+      }
+    });
+
+    return { deletedTransactionCount: transactionCount };
+  });
+};
