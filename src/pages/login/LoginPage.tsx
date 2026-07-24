@@ -21,9 +21,11 @@ export default function LoginPage() {
   const { settings } = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
-  const [username, setUsername] = useState("manager");
-  const [password, setPassword] = useState("demo");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const state = location.state as LocationState | null;
   const redirectPath = state?.from?.pathname ?? ROUTES.dashboard;
 
@@ -31,20 +33,27 @@ export default function LoginPage() {
     return <Navigate to={ROUTES.dashboard} replace />;
   }
 
-  const handleDemoLogin = () => {
-    login({
-      token: "demo-pos-token",
-      user: {
-        id: "user-1",
-        name: "Manager",
-        role: "manager",
-      },
-    });
+  const handleSubmit = async () => {
+    if (!username.trim() || !password.trim()) {
+      setError("Username dan password wajib diisi.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError("");
+
+    const result = await login(username, password);
+
+    if (!result.ok) {
+      setError(result.error ?? "Login gagal. Periksa username dan password.");
+      setIsSubmitting(false);
+      return;
+    }
 
     addActivity({
       type: "login",
       title: "Login berhasil",
-      description: "Mode demo lokal aktif.",
+      description: `Login sebagai ${username}`,
     });
 
     navigate(redirectPath, { replace: true });
@@ -62,7 +71,11 @@ export default function LoginPage() {
             <span className="text-sm font-medium text-gray-700">Username</span>
             <Input
               value={username}
-              onChange={(event) => setUsername(event.target.value)}
+              onChange={(event) => {
+                setUsername(event.target.value);
+                setError("");
+              }}
+              disabled={isSubmitting}
             />
           </label>
           <label className="space-y-2">
@@ -71,8 +84,12 @@ export default function LoginPage() {
               <Input
                 value={password}
                 type={isPasswordVisible ? "text" : "password"}
-                onChange={(event) => setPassword(event.target.value)}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setError("");
+                }}
                 className="pr-11"
+                disabled={isSubmitting}
               />
               <Button
                 variant="unstyled"
@@ -94,8 +111,15 @@ export default function LoginPage() {
               </Button>
             </span>
           </label>
-          <Button onClick={handleDemoLogin} className="w-full">
-            Masuk Demo
+
+          {error ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+              {error}
+            </p>
+          ) : null}
+
+          <Button onClick={handleSubmit} className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? "Masuk..." : "Masuk"}
           </Button>
         </div>
       </Card>

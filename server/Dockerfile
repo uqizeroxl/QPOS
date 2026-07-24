@@ -7,4 +7,4 @@ COPY . .
 USER node
 EXPOSE 8000
 ENV NODE_ENV=production
-CMD ["dumb-init", "sh", "-c", "npx drizzle-kit push --force 2>/dev/null || true && npx tsx src/index.ts"]
+CMD ["dumb-init", "sh", "-c", "npx drizzle-kit push --force 2>/dev/null; npx tsx src/seed.ts 2>/dev/null; exec npx tsx src/index.ts"]

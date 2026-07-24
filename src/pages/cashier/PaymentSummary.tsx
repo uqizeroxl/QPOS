@@ -14,6 +14,7 @@ type PaymentSummaryProps = {
   paidAmount: string;
   change: number;
   canPay: boolean;
+  isProcessing?: boolean;
   transactionMessage: string;
   onDiscountChange: (value: string) => void;
   onPaidAmountChange: (value: string) => void;
@@ -31,6 +32,7 @@ const PaymentSummary = forwardRef<HTMLInputElement, PaymentSummaryProps>(
       paidAmount,
       change,
       canPay,
+      isProcessing,
       transactionMessage,
       onDiscountChange,
       onPaidAmountChange,
@@ -132,9 +134,9 @@ const PaymentSummary = forwardRef<HTMLInputElement, PaymentSummaryProps>(
         <div className="grid gap-3 sm:grid-cols-2">
           <Button
             onClick={onPay}
-            disabled={!canPay}
+            disabled={!canPay || isProcessing}
           >
-            Bayar
+            {isProcessing ? "Memproses..." : "Bayar"}
           </Button>
 
           <Button

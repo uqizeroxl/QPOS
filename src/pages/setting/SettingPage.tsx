@@ -14,9 +14,13 @@ export default function SettingPage() {
   const [storeInfo, setStoreInfo] = useState(settings);
   const [message, setMessage] = useState("");
 
-  const handleSave = () => {
-    saveSettings(storeInfo);
-    setMessage("Pengaturan toko berhasil disimpan.");
+  const handleSave = async () => {
+    const result = await saveSettings(storeInfo);
+    if (result.ok) {
+      setMessage("Pengaturan toko berhasil disimpan.");
+    } else {
+      setMessage(result.error ?? "Gagal menyimpan pengaturan.");
+    }
   };
 
   const handleBackup = () => {

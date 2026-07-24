@@ -21,4 +21,21 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem(STORAGE_KEYS.authToken);
+      localStorage.removeItem(STORAGE_KEYS.authUser);
+
+      if (window.location.pathname !== "/") {
+        window.location.href = "/";
+      }
+    }
+
+    const message = error.response?.data?.message || error.message || "Terjadi kesalahan";
+    return Promise.reject(new Error(message));
+  },
+);
+
 export default axiosInstance;

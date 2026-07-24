@@ -14,7 +14,9 @@ export const defaultSettings: AppSettings = {
 
 export type SettingsContextValue = {
   settings: AppSettings;
-  saveSettings: (settings: AppSettings) => void;
+  isLoading: boolean;
+  fetchSettings: () => Promise<void>;
+  saveSettings: (settings: AppSettings) => Promise<{ ok: boolean; error?: string }>;
 };
 
 export const SettingsContext = createContext<SettingsContextValue | undefined>(

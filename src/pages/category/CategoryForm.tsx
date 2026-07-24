@@ -15,7 +15,7 @@ type CategoryFormProps = {
   category?: Category | null;
   errorMessage?: string;
   onClose: () => void;
-  onSubmit: (values: CategoryFormValues) => boolean;
+  onSubmit: (values: CategoryFormValues) => Promise<boolean>;
 };
 
 const emptyForm: CategoryFormValues = {
@@ -61,10 +61,10 @@ export default function CategoryForm({
     }));
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    onSubmit({
+    await onSubmit({
       name: formValues.name,
       description: formValues.description,
       status: formValues.status,

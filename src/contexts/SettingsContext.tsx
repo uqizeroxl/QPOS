@@ -1,35 +1,77 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { apiService } from "../services/api/apiService";
 import {
   defaultSettings,
   SettingsContext,
 } from "./settingsContextValue";
 import type { AppSettings } from "./settingsContextValue";
-import { getStoredSettings, storeSettings } from "../utils/settingsStorage";
 
 type SettingsProviderProps = {
   children: ReactNode;
 };
 
 export function SettingsProvider({ children }: SettingsProviderProps) {
-  const [settings, setSettings] = useState<AppSettings>(() =>
-    getStoredSettings(defaultSettings),
-  );
+  const [settings, setSettings] = useState<AppSettings>(defaultSettings);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const saveSettings = useCallback((nextSettings: AppSettings) => {
-    const safeSettings: AppSettings = {
-      storeName: nextSettings.storeName.trim() || defaultSettings.storeName,
-      phone: nextSettings.phone.trim(),
-      address: nextSettings.address.trim(),
-    };
-
-    setSettings(safeSettings);
-    storeSettings(safeSettings);
+  const fetchSettings = useCallback(async () => {
+    try {
+      const response = await apiService.get<AppSettings>("/settings");
+      setSettings({
+        storeName: response.data.storeName || defaultSettings.storeName,
+        phone: response.data.phone || "",
+        address: response.data.address || "",
+      });
+    } catch {
+      // keep previous state on error
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    void apiService.get<AppSettings>("/settings").then((response) => {
+      if (!cancelled) {
+        setSettings({
+          storeName: response.data.storeName || defaultSettings.storeName,
+          phone: response.data.phone || "",
+          address: response.data.address || "",
+        });
+      }
+    }).catch(() => {}).finally(() => {
+      if (!cancelled) {
+        setIsLoading(false);
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  const saveSettings = useCallback(
+    async (nextSettings: AppSettings) => {
+      try {
+        const safeSettings: AppSettings = {
+          storeName: nextSettings.storeName.trim() || defaultSettings.storeName,
+          phone: nextSettings.phone.trim(),
+          address: nextSettings.address.trim(),
+        };
+        await apiService.put("/settings", safeSettings);
+        setSettings(safeSettings);
+        return { ok: true as const };
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Gagal menyimpan pengaturan";
+        return { ok: false as const, error: message };
+      }
+    },
+    [],
+  );
+
   const value = useMemo(
-    () => ({ settings, saveSettings }),
-    [saveSettings, settings],
+    () => ({ settings, isLoading, fetchSettings, saveSettings }),
+    [settings, isLoading, fetchSettings, saveSettings],
   );
 
   return (

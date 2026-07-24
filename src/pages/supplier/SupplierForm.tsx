@@ -11,7 +11,7 @@ type SupplierFormProps = {
   supplier?: Supplier | null;
   errorMessage?: string;
   onClose: () => void;
-  onSubmit: (values: SupplierFormValues) => boolean;
+  onSubmit: (values: SupplierFormValues) => Promise<boolean>;
 };
 
 const emptyForm: SupplierFormValues = {
@@ -59,9 +59,9 @@ export default function SupplierForm({
     }));
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSubmit(formValues);
+    await onSubmit(formValues);
   };
 
   return (
