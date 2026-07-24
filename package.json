@@ -8,8 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "dev:server": "npm run dev --workspace server",
-    "seed": "npm run seed --workspace server",
+    "dev:server": "npm run dev --prefix server",
+    "seed": "npm run seed --prefix server",
+    "db:push": "npm run db:push --prefix server",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   },

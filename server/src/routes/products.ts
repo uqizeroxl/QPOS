@@ -1,17 +1,21 @@
 import { Router } from "express";
 import { z } from "zod";
-import db from "../db";
+import { eq, and, or, ilike, count, asc, desc, sql } from "drizzle-orm";
+import db, { schema } from "../db";
 import { authenticate, authorize } from "../middleware/auth";
 import { validate, validateQuery } from "../middleware/validate";
 import { AppError } from "../middleware/errorHandler";
-import type { Product, PaginatedResponse } from "../types";
+import type { PaginatedResponse } from "../types";
 
 const router = Router();
 
 const paginationSchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(10),
-  sort: z.enum(["barcode", "name", "category", "sellingPrice", "stock", "status"]).optional().default("name"),
+  sort: z
+    .enum(["barcode", "name", "category", "sellingPrice", "stock", "status"])
+    .optional()
+    .default("name"),
   order: z.enum(["asc", "desc"]).optional().default("asc"),
   search: z.string().optional(),
   category: z.string().optional(),
@@ -31,57 +35,64 @@ const createSchema = z.object({
 
 const updateSchema = createSchema.partial();
 
+const colMap: Record<string, any> = {
+  barcode: schema.products.barcode,
+  name: schema.products.name,
+  category: schema.products.category,
+  sellingPrice: schema.products.sellingPrice,
+  stock: schema.products.stock,
+  status: schema.products.status,
+};
+
 router.use(authenticate);
 
-router.get("/", validateQuery(paginationSchema), (req, res) => {
-  const { page, limit, sort, order, search, category, status, lowStock } =
+router.get("/", validateQuery(paginationSchema), async (req, res) => {
+  const { page, limit, sort, order, search, category: catFilter, status, lowStock } =
     req.query as unknown as z.infer<typeof paginationSchema>;
   const offset = (page - 1) * limit;
 
-  const conditions: string[] = [];
-  const params: unknown[] = [];
+  const conditions: any[] = [];
 
   if (search) {
-    conditions.push("(p.name LIKE ? OR p.barcode LIKE ?)");
-    params.push(`%${search}%`, `%${search}%`);
+    conditions.push(
+      or(
+        ilike(schema.products.name, `%${search}%`),
+        ilike(schema.products.barcode, `%${search}%`),
+      ),
+    );
   }
 
-  if (category) {
-    conditions.push("p.category = ?");
-    params.push(category);
+  if (catFilter) {
+    conditions.push(eq(schema.products.category, catFilter));
   }
 
   if (status && status !== "all") {
-    conditions.push("p.status = ?");
-    params.push(status);
+    conditions.push(eq(schema.products.status, status));
   }
 
   if (lowStock) {
-    conditions.push("p.stock <= 5");
+    conditions.push(sql`${schema.products.stock} <= 5`);
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const countRow = db
-    .prepare(`SELECT COUNT(*) as total FROM products p ${whereClause}`)
-    .get(...params) as { total: number };
-  const total = countRow.total;
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(schema.products)
+    .where(where);
 
-  const allowedSorts = ["barcode", "name", "category", "sellingPrice", "stock", "status"];
-  const sortColumn = allowedSorts.includes(sort as string) ? `p.${sort}` : "p.name";
+  const sortCol = colMap[sort] ?? schema.products.name;
+  const orderFn = order === "desc" ? desc : asc;
 
-  const items = db
-    .prepare(
-      `SELECT p.id, p.barcode, p.name, p.category, p.purchase_price as purchasePrice,
-              p.selling_price as sellingPrice, p.stock, p.status
-       FROM products p
-       ${whereClause}
-       ORDER BY ${sortColumn} ${order}
-       LIMIT ? OFFSET ?`,
-    )
-    .all(...params, limit, offset) as Product[];
+  const items = await db
+    .select()
+    .from(schema.products)
+    .where(where)
+    .orderBy(orderFn(sortCol))
+    .limit(limit)
+    .offset(offset);
 
-  const result: PaginatedResponse<Product> = {
+  const result: PaginatedResponse<any> = {
     items,
     total,
     page,
@@ -92,39 +103,36 @@ router.get("/", validateQuery(paginationSchema), (req, res) => {
   res.json({ status: "success", data: result });
 });
 
-router.get("/all", (_req, res) => {
-  const items = db
-    .prepare(
-      `SELECT id, barcode, name, category, purchase_price as purchasePrice,
-              selling_price as sellingPrice, stock, status
-       FROM products ORDER BY name ASC`,
-    )
-    .all() as Product[];
+router.get("/all", async (_req, res) => {
+  const items = await db
+    .select()
+    .from(schema.products)
+    .orderBy(asc(schema.products.name));
 
   res.json({ status: "success", data: items });
 });
 
-router.get("/low-stock", (_req, res) => {
-  const items = db
-    .prepare(
-      `SELECT id, barcode, name, category, purchase_price as purchasePrice,
-              selling_price as sellingPrice, stock, status
-       FROM products WHERE stock <= 5 AND status = 'Aktif'
-       ORDER BY stock ASC`,
+router.get("/low-stock", async (_req, res) => {
+  const items = await db
+    .select()
+    .from(schema.products)
+    .where(
+      and(
+        sql`${schema.products.stock} <= 5`,
+        eq(schema.products.status, "Aktif"),
+      ),
     )
-    .all() as Product[];
+    .orderBy(asc(schema.products.stock));
 
   res.json({ status: "success", data: items });
 });
 
-router.get("/:id", (req, res) => {
-  const product = db
-    .prepare(
-      `SELECT id, barcode, name, category, purchase_price as purchasePrice,
-              selling_price as sellingPrice, stock, status
-       FROM products WHERE id = ?`,
-    )
-    .get(Number(req.params.id)) as Product | undefined;
+router.get("/:id", async (req, res) => {
+  const [product] = await db
+    .select()
+    .from(schema.products)
+    .where(eq(schema.products.id, Number(req.params.id)))
+    .limit(1);
 
   if (!product) {
     throw new AppError(404, "Produk tidak ditemukan");
@@ -133,14 +141,12 @@ router.get("/:id", (req, res) => {
   res.json({ status: "success", data: product });
 });
 
-router.get("/barcode/:barcode", (req, res) => {
-  const product = db
-    .prepare(
-      `SELECT id, barcode, name, category, purchase_price as purchasePrice,
-              selling_price as sellingPrice, stock, status
-       FROM products WHERE barcode = ?`,
-    )
-    .get(req.params.barcode) as Product | undefined;
+router.get("/barcode/:barcode", async (req, res) => {
+  const [product] = await db
+    .select()
+    .from(schema.products)
+    .where(eq(schema.products.barcode, req.params.barcode))
+    .limit(1);
 
   if (!product) {
     throw new AppError(404, "Produk tidak ditemukan");
@@ -149,95 +155,127 @@ router.get("/barcode/:barcode", (req, res) => {
   res.json({ status: "success", data: product });
 });
 
-router.post("/", authorize("admin", "manager"), validate(createSchema), (req, res) => {
-  const { barcode, name, category, purchasePrice, sellingPrice, stock, status } =
-    req.body as z.infer<typeof createSchema>;
+router.post(
+  "/",
+  authorize("admin", "manager"),
+  validate(createSchema),
+  async (req, res) => {
+    const { barcode, name, category, purchasePrice, sellingPrice, stock, status } =
+      req.body as z.infer<typeof createSchema>;
 
-  const duplicate = db.prepare("SELECT id FROM products WHERE barcode = ?").get(barcode);
-  if (duplicate) {
-    throw new AppError(409, "Barcode sudah digunakan");
-  }
+    const [duplicate] = await db
+      .select({ id: schema.products.id })
+      .from(schema.products)
+      .where(eq(schema.products.barcode, barcode))
+      .limit(1);
 
-  const catExists = db.prepare("SELECT id FROM categories WHERE name = ?").get(category);
-  if (!catExists) {
-    throw new AppError(400, "Kategori tidak valid");
-  }
-
-  const result = db
-    .prepare(
-      `INSERT INTO products (barcode, name, category, purchase_price, selling_price, stock, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(barcode, name, category, purchasePrice, sellingPrice, stock, status);
-
-  const product = db
-    .prepare(
-      `SELECT id, barcode, name, category, purchase_price as purchasePrice,
-              selling_price as sellingPrice, stock, status
-       FROM products WHERE id = ?`,
-    )
-    .get(result.lastInsertRowid) as Product;
-
-  res.status(201).json({ status: "success", data: product, message: "Produk berhasil ditambahkan" });
-});
-
-router.put("/:id", authorize("admin", "manager"), validate(updateSchema), (req, res) => {
-  const id = Number(req.params.id);
-  const { barcode, name, category, purchasePrice, sellingPrice, stock, status } =
-    req.body as z.infer<typeof updateSchema>;
-
-  const existing = db.prepare("SELECT id FROM products WHERE id = ?").get(id);
-  if (!existing) {
-    throw new AppError(404, "Produk tidak ditemukan");
-  }
-
-  if (barcode) {
-    const dup = db.prepare("SELECT id FROM products WHERE barcode = ? AND id != ?").get(barcode, id);
-    if (dup) {
+    if (duplicate) {
       throw new AppError(409, "Barcode sudah digunakan");
     }
-  }
 
-  if (category) {
-    const catExists = db.prepare("SELECT id FROM categories WHERE name = ?").get(category);
+    const [catExists] = await db
+      .select({ id: schema.categories.id })
+      .from(schema.categories)
+      .where(eq(schema.categories.name, category))
+      .limit(1);
+
     if (!catExists) {
       throw new AppError(400, "Kategori tidak valid");
     }
-  }
 
-  db.prepare(
-    `UPDATE products SET
-      barcode = COALESCE(?, barcode),
-      name = COALESCE(?, name),
-      category = COALESCE(?, category),
-      purchase_price = COALESCE(?, purchase_price),
-      selling_price = COALESCE(?, selling_price),
-      stock = COALESCE(?, stock),
-      status = COALESCE(?, status),
-      updated_at = datetime('now')
-    WHERE id = ?`,
-  ).run(barcode ?? null, name ?? null, category ?? null, purchasePrice ?? null, sellingPrice ?? null, stock ?? null, status ?? null, id);
+    const [product] = await db
+      .insert(schema.products)
+      .values({ barcode, name, category, purchasePrice, sellingPrice, stock, status })
+      .returning();
 
-  const product = db
-    .prepare(
-      `SELECT id, barcode, name, category, purchase_price as purchasePrice,
-              selling_price as sellingPrice, stock, status
-       FROM products WHERE id = ?`,
-    )
-    .get(id) as Product;
+    res.status(201).json({
+      status: "success",
+      data: product,
+      message: "Produk berhasil ditambahkan",
+    });
+  },
+);
 
-  res.json({ status: "success", data: product, message: "Produk berhasil diperbarui" });
-});
+router.put(
+  "/:id",
+  authorize("admin", "manager"),
+  validate(updateSchema),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const { barcode, name, category, purchasePrice, sellingPrice, stock, status } =
+      req.body as z.infer<typeof updateSchema>;
 
-router.delete("/:id", authorize("admin", "manager"), (req, res) => {
+    const [existing] = await db
+      .select({ id: schema.products.id })
+      .from(schema.products)
+      .where(eq(schema.products.id, id))
+      .limit(1);
+
+    if (!existing) {
+      throw new AppError(404, "Produk tidak ditemukan");
+    }
+
+    if (barcode) {
+      const [dup] = await db
+        .select({ id: schema.products.id })
+        .from(schema.products)
+        .where(and(eq(schema.products.barcode, barcode), sql`id != ${id}`))
+        .limit(1);
+
+      if (dup) {
+        throw new AppError(409, "Barcode sudah digunakan");
+      }
+    }
+
+    if (category) {
+      const [catExists] = await db
+        .select({ id: schema.categories.id })
+        .from(schema.categories)
+        .where(eq(schema.categories.name, category))
+        .limit(1);
+
+      if (!catExists) {
+        throw new AppError(400, "Kategori tidak valid");
+      }
+    }
+
+    const [product] = await db
+      .update(schema.products)
+      .set({
+        ...(barcode !== undefined && { barcode }),
+        ...(name !== undefined && { name }),
+        ...(category !== undefined && { category }),
+        ...(purchasePrice !== undefined && { purchasePrice }),
+        ...(sellingPrice !== undefined && { sellingPrice }),
+        ...(stock !== undefined && { stock }),
+        ...(status !== undefined && { status }),
+        updatedAt: sql`now()`,
+      })
+      .where(eq(schema.products.id, id))
+      .returning();
+
+    res.json({
+      status: "success",
+      data: product,
+      message: "Produk berhasil diperbarui",
+    });
+  },
+);
+
+router.delete("/:id", authorize("admin", "manager"), async (req, res) => {
   const id = Number(req.params.id);
 
-  const existing = db.prepare("SELECT id FROM products WHERE id = ?").get(id);
+  const [existing] = await db
+    .select({ id: schema.products.id })
+    .from(schema.products)
+    .where(eq(schema.products.id, id))
+    .limit(1);
+
   if (!existing) {
     throw new AppError(404, "Produk tidak ditemukan");
   }
 
-  db.prepare("DELETE FROM products WHERE id = ?").run(id);
+  await db.delete(schema.products).where(eq(schema.products.id, id));
 
   res.json({ status: "success", data: null, message: "Produk berhasil dihapus" });
 });

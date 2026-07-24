@@ -1,3 +1,4 @@
+import "express-async-errors";
 import express from "express";
 import cors from "cors";
 import { errorHandler } from "./middleware/errorHandler";
@@ -11,14 +12,19 @@ import dashboardRoutes from "./routes/dashboard";
 
 const app = express();
 
-app.use(cors({
-  origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "success", data: { status: "ok", timestamp: new Date().toISOString() } });
+  res.json({
+    status: "success",
+    data: { status: "ok", timestamp: new Date().toISOString() },
+  });
 });
 
 app.use("/api/auth", authRoutes);

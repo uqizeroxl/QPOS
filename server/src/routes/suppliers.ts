@@ -1,17 +1,21 @@
 import { Router } from "express";
 import { z } from "zod";
-import db from "../db";
+import { eq, and, or, ilike, count, asc, desc, sql } from "drizzle-orm";
+import db, { schema } from "../db";
 import { authenticate, authorize } from "../middleware/auth";
 import { validate, validateQuery } from "../middleware/validate";
 import { AppError } from "../middleware/errorHandler";
-import type { Supplier, PaginatedResponse } from "../types";
+import type { PaginatedResponse } from "../types";
 
 const router = Router();
 
 const paginationSchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(10),
-  sort: z.enum(["name", "phone", "createdAt", "updatedAt"]).optional().default("name"),
+  sort: z
+    .enum(["name", "phone", "createdAt", "updatedAt"])
+    .optional()
+    .default("name"),
   order: z.enum(["asc", "desc"]).optional().default("asc"),
   search: z.string().optional(),
 });
@@ -25,33 +29,48 @@ const createSchema = z.object({
 
 const updateSchema = createSchema.partial();
 
+const colMap: Record<string, any> = {
+  name: schema.suppliers.name,
+  phone: schema.suppliers.phone,
+  createdAt: schema.suppliers.createdAt,
+  updatedAt: schema.suppliers.updatedAt,
+};
+
 router.use(authenticate);
 
-router.get("/", validateQuery(paginationSchema), (req, res) => {
-  const { page, limit, sort, order, search } = req.query as unknown as z.infer<typeof paginationSchema>;
+router.get("/", validateQuery(paginationSchema), async (req, res) => {
+  const { page, limit, sort, order, search } =
+    req.query as unknown as z.infer<typeof paginationSchema>;
   const offset = (page - 1) * limit;
 
-  let whereClause = "";
-  const params: unknown[] = [];
-
+  const conditions: any[] = [];
   if (search) {
-    whereClause = "WHERE name LIKE ? OR phone LIKE ?";
-    params.push(`%${search}%`, `%${search}%`);
+    conditions.push(
+      or(
+        ilike(schema.suppliers.name, `%${search}%`),
+        ilike(schema.suppliers.phone, `%${search}%`),
+      ),
+    );
   }
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const countRow = db.prepare(`SELECT COUNT(*) as total FROM suppliers ${whereClause}`).get(...params) as { total: number };
-  const total = countRow.total;
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(schema.suppliers)
+    .where(where);
 
-  const items = db
-    .prepare(
-      `SELECT id, name, phone, address, notes, created_at as createdAt, updated_at as updatedAt
-       FROM suppliers ${whereClause}
-       ORDER BY ${sort} ${order}
-       LIMIT ? OFFSET ?`,
-    )
-    .all(...params, limit, offset) as Supplier[];
+  const sortCol = colMap[sort] ?? schema.suppliers.name;
+  const orderFn = order === "desc" ? desc : asc;
 
-  const result: PaginatedResponse<Supplier> = {
+  const items = await db
+    .select()
+    .from(schema.suppliers)
+    .where(where)
+    .orderBy(orderFn(sortCol))
+    .limit(limit)
+    .offset(offset);
+
+  const result: PaginatedResponse<any> = {
     items,
     total,
     page,
@@ -62,24 +81,21 @@ router.get("/", validateQuery(paginationSchema), (req, res) => {
   res.json({ status: "success", data: result });
 });
 
-router.get("/all", (_req, res) => {
-  const items = db
-    .prepare(
-      `SELECT id, name, phone, address, notes, created_at as createdAt, updated_at as updatedAt
-       FROM suppliers ORDER BY name ASC`,
-    )
-    .all() as Supplier[];
+router.get("/all", async (_req, res) => {
+  const items = await db
+    .select()
+    .from(schema.suppliers)
+    .orderBy(asc(schema.suppliers.name));
 
   res.json({ status: "success", data: items });
 });
 
-router.get("/:id", (req, res) => {
-  const supplier = db
-    .prepare(
-      `SELECT id, name, phone, address, notes, created_at as createdAt, updated_at as updatedAt
-       FROM suppliers WHERE id = ?`,
-    )
-    .get(Number(req.params.id)) as Supplier | undefined;
+router.get("/:id", async (req, res) => {
+  const [supplier] = await db
+    .select()
+    .from(schema.suppliers)
+    .where(eq(schema.suppliers.id, Number(req.params.id)))
+    .limit(1);
 
   if (!supplier) {
     throw new AppError(404, "Supplier tidak ditemukan");
@@ -88,75 +104,108 @@ router.get("/:id", (req, res) => {
   res.json({ status: "success", data: supplier });
 });
 
-router.post("/", authorize("admin", "manager"), validate(createSchema), (req, res) => {
-  const { name, phone, address, notes } = req.body as z.infer<typeof createSchema>;
+router.post(
+  "/",
+  authorize("admin", "manager"),
+  validate(createSchema),
+  async (req, res) => {
+    const { name, phone, address, notes } =
+      req.body as z.infer<typeof createSchema>;
 
-  const existing = db.prepare("SELECT id FROM suppliers WHERE name = ?").get(name);
-  if (existing) {
-    throw new AppError(409, "Nama supplier sudah digunakan");
-  }
+    const [existing] = await db
+      .select({ id: schema.suppliers.id })
+      .from(schema.suppliers)
+      .where(eq(schema.suppliers.name, name))
+      .limit(1);
 
-  const result = db
-    .prepare("INSERT INTO suppliers (name, phone, address, notes) VALUES (?, ?, ?, ?)")
-    .run(name, phone, address, notes);
-
-  const supplier = db
-    .prepare(
-      `SELECT id, name, phone, address, notes, created_at as createdAt, updated_at as updatedAt
-       FROM suppliers WHERE id = ?`,
-    )
-    .get(result.lastInsertRowid) as Supplier;
-
-  res.status(201).json({ status: "success", data: supplier, message: "Supplier berhasil ditambahkan" });
-});
-
-router.put("/:id", authorize("admin", "manager"), validate(updateSchema), (req, res) => {
-  const id = Number(req.params.id);
-  const { name, phone, address, notes } = req.body as z.infer<typeof updateSchema>;
-
-  const existing = db.prepare("SELECT id FROM suppliers WHERE id = ?").get(id);
-  if (!existing) {
-    throw new AppError(404, "Supplier tidak ditemukan");
-  }
-
-  if (name) {
-    const dup = db.prepare("SELECT id FROM suppliers WHERE name = ? AND id != ?").get(name, id);
-    if (dup) {
+    if (existing) {
       throw new AppError(409, "Nama supplier sudah digunakan");
     }
-  }
 
-  db.prepare(
-    `UPDATE suppliers SET
-      name = COALESCE(?, name),
-      phone = COALESCE(?, phone),
-      address = COALESCE(?, address),
-      notes = COALESCE(?, notes),
-      updated_at = datetime('now')
-    WHERE id = ?`,
-  ).run(name ?? null, phone ?? null, address ?? null, notes ?? null, id);
+    const [supplier] = await db
+      .insert(schema.suppliers)
+      .values({ name, phone, address, notes })
+      .returning();
 
-  const supplier = db
-    .prepare(
-      `SELECT id, name, phone, address, notes, created_at as createdAt, updated_at as updatedAt
-       FROM suppliers WHERE id = ?`,
-    )
-    .get(id) as Supplier;
+    res.status(201).json({
+      status: "success",
+      data: supplier,
+      message: "Supplier berhasil ditambahkan",
+    });
+  },
+);
 
-  res.json({ status: "success", data: supplier, message: "Supplier berhasil diperbarui" });
-});
+router.put(
+  "/:id",
+  authorize("admin", "manager"),
+  validate(updateSchema),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    const { name, phone, address, notes } =
+      req.body as z.infer<typeof updateSchema>;
 
-router.delete("/:id", authorize("admin", "manager"), (req, res) => {
+    const [existing] = await db
+      .select({ id: schema.suppliers.id })
+      .from(schema.suppliers)
+      .where(eq(schema.suppliers.id, id))
+      .limit(1);
+
+    if (!existing) {
+      throw new AppError(404, "Supplier tidak ditemukan");
+    }
+
+    if (name) {
+      const [dup] = await db
+        .select({ id: schema.suppliers.id })
+        .from(schema.suppliers)
+        .where(and(eq(schema.suppliers.name, name), sql`id != ${id}`))
+        .limit(1);
+
+      if (dup) {
+        throw new AppError(409, "Nama supplier sudah digunakan");
+      }
+    }
+
+    const [supplier] = await db
+      .update(schema.suppliers)
+      .set({
+        ...(name !== undefined && { name }),
+        ...(phone !== undefined && { phone }),
+        ...(address !== undefined && { address }),
+        ...(notes !== undefined && { notes }),
+        updatedAt: sql`now()`,
+      })
+      .where(eq(schema.suppliers.id, id))
+      .returning();
+
+    res.json({
+      status: "success",
+      data: supplier,
+      message: "Supplier berhasil diperbarui",
+    });
+  },
+);
+
+router.delete("/:id", authorize("admin", "manager"), async (req, res) => {
   const id = Number(req.params.id);
 
-  const existing = db.prepare("SELECT id FROM suppliers WHERE id = ?").get(id);
+  const [existing] = await db
+    .select({ id: schema.suppliers.id })
+    .from(schema.suppliers)
+    .where(eq(schema.suppliers.id, id))
+    .limit(1);
+
   if (!existing) {
     throw new AppError(404, "Supplier tidak ditemukan");
   }
 
-  db.prepare("DELETE FROM suppliers WHERE id = ?").run(id);
+  await db.delete(schema.suppliers).where(eq(schema.suppliers.id, id));
 
-  res.json({ status: "success", data: null, message: "Supplier berhasil dihapus" });
+  res.json({
+    status: "success",
+    data: null,
+    message: "Supplier berhasil dihapus",
+  });
 });
 
 export default router;

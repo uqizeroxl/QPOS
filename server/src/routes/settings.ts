@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
-import db from "../db";
+import { eq, sql } from "drizzle-orm";
+import db, { schema } from "../db";
 import { authenticate, authorize } from "../middleware/auth";
 import { validate } from "../middleware/validate";
-import type { AppSettings } from "../types";
 
 const router = Router();
 
@@ -15,11 +15,16 @@ const settingsSchema = z.object({
 
 router.use(authenticate);
 
-router.get("/", (_req, res) => {
-  const rows = db.prepare("SELECT key, value FROM settings").all() as { key: string; value: string }[];
-  const settingsMap = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+router.get("/", async (_req, res) => {
+  const rows = await db
+    .select()
+    .from(schema.settings);
 
-  const settings: AppSettings = {
+  const settingsMap = Object.fromEntries(
+    rows.map((r) => [r.key, r.value]),
+  );
+
+  const settings = {
     storeName: settingsMap.storeName ?? "Toko Saya",
     phone: settingsMap.phone ?? "",
     address: settingsMap.address ?? "",
@@ -28,23 +33,37 @@ router.get("/", (_req, res) => {
   res.json({ status: "success", data: settings });
 });
 
-router.put("/", authorize("admin", "manager"), validate(settingsSchema), (req, res) => {
-  const { storeName, phone, address } = req.body as z.infer<typeof settingsSchema>;
+router.put(
+  "/",
+  authorize("admin", "manager"),
+  validate(settingsSchema),
+  async (req, res) => {
+    const { storeName, phone, address } = req.body as z.infer<typeof settingsSchema>;
 
-  const upsert = db.prepare(
-    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-  );
+    const entries = [
+      { key: "storeName", value: storeName },
+      { key: "phone", value: phone },
+      { key: "address", value: address },
+    ];
 
-  const settingsWrapper = db.transaction(() => {
-    upsert.run("storeName", storeName);
-    upsert.run("phone", phone);
-    upsert.run("address", address);
-  });
+    await db.transaction(async (tx) => {
+      for (const entry of entries) {
+        await tx
+          .insert(schema.settings)
+          .values(entry)
+          .onConflictDoUpdate({
+            target: schema.settings.key,
+            set: { value: entry.value },
+          });
+      }
+    });
 
-  settingsWrapper();
-
-  const settings: AppSettings = { storeName, phone, address };
-  res.json({ status: "success", data: settings, message: "Pengaturan berhasil disimpan" });
-});
+    res.json({
+      status: "success",
+      data: { storeName, phone, address },
+      message: "Pengaturan berhasil disimpan",
+    });
+  },
+);
 
 export default router;

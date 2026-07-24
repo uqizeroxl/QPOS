@@ -70,6 +70,7 @@ npm run lint        # ESLint on all source files
 npm run preview     # Preview production build
 npm run dev:server  # Start backend dev server (Express + tsx watch)
 npm run seed        # Seed database with sample data
+npm run db:push     # Sync Drizzle schema to PostgreSQL
 npm run docker:up   # Start backend via Docker Compose
 npm run docker:down # Stop Docker Compose
 ```
@@ -87,7 +88,7 @@ npm run docker:down # Stop Docker Compose
 
 ## Backend (`server/`)
 
-A lightweight **Express.js + SQLite** REST API (port 8000) matching the frontend data models.
+A **Express.js + PostgreSQL** REST API (port 8000) matching the frontend data models, using **Drizzle ORM** for type-safe database access.
 
 ### Stack
 
@@ -95,7 +96,8 @@ A lightweight **Express.js + SQLite** REST API (port 8000) matching the frontend
 |-------|-----------|
 | Runtime | Node.js 22 + TypeScript |
 | Framework | Express.js 4 |
-| Database | SQLite via better-sqlite3 |
+| Database | PostgreSQL 16 |
+| ORM | Drizzle ORM (schema-first, auto-migrations via drizzle-kit) |
 | Auth | JWT (jsonwebtoken + bcryptjs) |
 | Validation | Zod schemas |
 | Dev runner | tsx (watch mode) |
@@ -105,23 +107,27 @@ A lightweight **Express.js + SQLite** REST API (port 8000) matching the frontend
 ```
 server/
   src/
-    index.ts          # Entry point (loads dotenv, starts listening)
-    app.ts            # Express app (middleware + route mounting)
-    db.ts             # SQLite connection + auto-migration on startup
-    types.ts          # Shared type definitions
-    seed.ts           # Sample data seeder
+    index.ts            # Entry point (loads dotenv, starts listening)
+    app.ts              # Express app (middleware + route mounting)
+    db/
+      index.ts          # Drizzle client (postgres-js driver)
+      schema.ts         # All table schemas (pgTable, pgEnum)
+    types.ts            # Shared type definitions
+    seed.ts             # Sample data seeder (uses Drizzle)
     middleware/
-      auth.ts         # JWT authenticate + role-based authorize
-      errorHandler.ts # Global AppError → JSON error response
-      validate.ts     # Zod request body/query/params validation
+      auth.ts           # JWT authenticate + role-based authorize
+      errorHandler.ts   # Global AppError → JSON error response
+      validate.ts       # Zod request body/query/params validation
     routes/
-      auth.ts         # POST /login, GET /me, POST /logout
-      products.ts     # Full CRUD + /barcode/:barcode lookup + low-stock
-      categories.ts   # Full CRUD + rename cascades to products
-      suppliers.ts    # Full CRUD + duplicate name check
-      transactions.ts # Create transaction (deducts stock in txn) + list/detail
-      settings.ts     # GET/PUT store info (upsert pattern)
-      dashboard.ts    # GET /stats (aggregated counts + recent activity)
+      auth.ts           # POST /login, GET /me, POST /logout
+      products.ts       # Full CRUD + /barcode/:barcode lookup + low-stock
+      categories.ts     # Full CRUD + rename cascades to products
+      suppliers.ts      # Full CRUD + duplicate name check
+      transactions.ts   # Create transaction (deducts stock in txn) + list/detail
+      settings.ts       # GET/PUT store info (upsert pattern)
+      dashboard.ts      # GET /stats (aggregated counts + recent activity)
+  drizzle/
+    (auto-generated migration files from drizzle-kit)
 ```
 
 ### API Response Format
@@ -136,11 +142,18 @@ List endpoints support pagination via query params: `?page=1&limit=10&sort=name&
 ### Running
 
 ```bash
-# Direct (dev mode with hot-reload)
-cd server && npm install && npm run seed && npm run dev
+# Option 1: Docker (PostgreSQL + server together)
+cp server/.env.example server/.env
+docker compose up -d          # starts both postgres + server
+docker compose exec qpos-server sh -c "npx drizzle-kit push && tsx src/seed.ts"
 
-# Or via Docker from project root
-docker compose up -d
+# Option 2: Direct dev (requires local PostgreSQL)
+cp server/.env.example server/.env
+# Edit server/.env with your PostgreSQL connection string
+cd server && npm install
+npm run db:push               # sync schema to database
+npm run seed                  # populate demo data
+npm run dev                   # start hot-reload server
 ```
 
 ### Auth (Demo Credentials — see seed.ts)
@@ -154,11 +167,12 @@ docker compose up -d
 ### Notes
 
 - `server/.env.example` documents available env vars; copy to `server/.env` for dev
-- Database file lives at `server/data/qpos.db` (auto-created)
+- PostgreSQL runs in Docker (`qpos-db` service, port 5432, user `qpos`, database `qpos`)
+- Drizzle schema lives at `src/db/schema.ts` — change it, then run `npm run db:push` to sync
 - All list endpoints are paginated; there is also an `/all` variant returning all records (no pagination)
-- Transactions use `db.transaction()` (SQLite txn) to atomically insert the order and deduct stock
+- Transactions use Drizzle's `db.transaction()` to atomically insert the order and deduct stock
 - Role-based auth: `admin` and `manager` can CUD; `cashier` is read-only + create transactions
-- Zod schemas at route level ensure type safety and meaningful 400 error messages
+- `express-async-errors` is imported in `app.ts` so async route handlers throw safely into the error middleware
 
 ## Frontend ↔ Backend Wiring
 

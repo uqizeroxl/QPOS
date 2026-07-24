@@ -11,9 +11,9 @@ RUN apk add --no-cache dumb-init
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/data ./data
-RUN mkdir -p /app/data && chown -R node:node /app/data
+COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
+COPY --from=builder /app/drizzle ./drizzle
 USER node
 EXPOSE 8000
 ENV NODE_ENV=production
-CMD ["dumb-init", "node", "dist/index.js"]
+CMD ["dumb-init", "sh", "-c", "npx drizzle-kit push --force 2>/dev/null || true && node dist/index.js"]

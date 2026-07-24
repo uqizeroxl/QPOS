@@ -2,11 +2,12 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import db from "../db";
+import { eq } from "drizzle-orm";
+import db, { schema } from "../db";
 import { validate } from "../middleware/validate";
 import { AppError } from "../middleware/errorHandler";
 import { authenticate } from "../middleware/auth";
-import type { UserPublic, LoginResponse } from "../types";
+import type { LoginResponse } from "../types";
 
 const JWT_SECRET = process.env.JWT_SECRET ?? "qpos-default-secret";
 const JWT_EXPIRES_IN = "24h";
@@ -18,53 +19,56 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password wajib diisi"),
 });
 
-router.post("/login", validate(loginSchema), async (req, res, next) => {
-  try {
-    const { username, password } = req.body as z.infer<typeof loginSchema>;
+router.post("/login", validate(loginSchema), async (req, res) => {
+  const { username, password } = req.body as z.infer<typeof loginSchema>;
 
-    const user = db
-      .prepare("SELECT * FROM users WHERE username = ?")
-      .get(username) as {
-      id: string;
-      username: string;
-      password: string;
-      name: string;
-      role: string;
-    } | undefined;
+  const [user] = await db
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.username, username))
+    .limit(1);
 
-    if (!user) {
-      throw new AppError(401, "Username atau password salah");
-    }
+  if (!user) {
+    throw new AppError(401, "Username atau password salah");
+  }
 
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
-      throw new AppError(401, "Username atau password salah");
-    }
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) {
+    throw new AppError(401, "Username atau password salah");
+  }
 
-    const token = jwt.sign(
-      { userId: user.id, username: user.username, role: user.role },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN },
-    );
+  const token = jwt.sign(
+    { userId: user.id, username: user.username, role: user.role },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN },
+  );
 
-    const userPublic: UserPublic = {
+  const response: LoginResponse = {
+    token,
+    user: {
       id: user.id,
       username: user.username,
       name: user.name,
-      role: user.role as UserPublic["role"],
-      createdAt: "",
-      updatedAt: "",
-    };
+      role: user.role,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    },
+  };
 
-    const response: LoginResponse = { token, user: userPublic };
-    res.json({ status: "success", data: response, message: "Login berhasil" });
-  } catch (err) {
-    next(err);
-  }
+  res.json({ status: "success", data: response, message: "Login berhasil" });
 });
 
-router.get("/me", authenticate, (req, res) => {
-  const user = db.prepare("SELECT id, username, name, role FROM users WHERE id = ?").get(req.user!.userId) as UserPublic | undefined;
+router.get("/me", authenticate, async (req, res) => {
+  const [user] = await db
+    .select({
+      id: schema.users.id,
+      username: schema.users.username,
+      name: schema.users.name,
+      role: schema.users.role,
+    })
+    .from(schema.users)
+    .where(eq(schema.users.id, req.user!.userId))
+    .limit(1);
 
   if (!user) {
     throw new AppError(404, "User tidak ditemukan");
