@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { STORAGE_KEYS } from "../constants/app";
 import { apiService } from "../services/api/apiService";
 import { CategoryContext } from "./categoryContextValue";
 import type { CategoryResult } from "./categoryContextValue";
@@ -13,7 +14,7 @@ type ApiCategory = Category & { productCount?: number };
 
 export function CategoryProvider({ children }: CategoryProviderProps) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => Boolean(localStorage.getItem(STORAGE_KEYS.authToken)));
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -32,24 +33,35 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
   }, []);
 
   useEffect(() => {
+    if (!localStorage.getItem(STORAGE_KEYS.authToken)) {
+      return;
+    }
+
     let cancelled = false;
 
-    void apiService.get<ApiCategory[]>("/categories/all").then((response) => {
-      if (!cancelled) {
-        setCategories(
-          response.data.map((c) => ({
-            ...c,
-            productCount: c.productCount ?? 0,
-          })),
-        );
-      }
-    }).catch(() => {}).finally(() => {
-      if (!cancelled) {
-        setIsLoading(false);
-      }
-    });
+    const load = () => {
+      void apiService.get<ApiCategory[]>("/categories/all").then((response) => {
+        if (!cancelled) {
+          setCategories(
+            response.data.map((c) => ({
+              ...c,
+              productCount: c.productCount ?? 0,
+            })),
+          );
+        }
+      }).catch(() => {}).finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    };
 
-    return () => { cancelled = true; };
+    load();
+
+    const onLogin = () => { setIsLoading(true); load(); };
+    window.addEventListener("auth:login", onLogin);
+
+    return () => { cancelled = true; window.removeEventListener("auth:login", onLogin); };
   }, []);
 
   const activeCategoryNames = useMemo(

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { STORAGE_KEYS } from "../constants/app";
 import { apiService } from "../services/api/apiService";
 import type { SalesTransaction } from "../pages/cashier/CashierTypes";
 import { TransactionContext } from "./transactionContextValue";
@@ -25,7 +26,7 @@ type ApiTransactionResponse = {
 
 export function TransactionProvider({ children }: TransactionProviderProps) {
   const [transactions, setTransactions] = useState<SalesTransaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => Boolean(localStorage.getItem(STORAGE_KEYS.authToken)));
 
   const fetchTransactions = useCallback(async () => {
     try {
@@ -56,36 +57,47 @@ export function TransactionProvider({ children }: TransactionProviderProps) {
   }, []);
 
   useEffect(() => {
+    if (!localStorage.getItem(STORAGE_KEYS.authToken)) {
+      return;
+    }
+
     let cancelled = false;
 
-    void apiService.get<{ items: ApiTransactionResponse[]; total: number }>(
-      "/transactions",
-      { params: { limit: 1000, page: 1, sort: "createdAt", order: "desc" } },
-    ).then((response) => {
-      if (!cancelled) {
-        setTransactions(
-          response.data.items.map((t) => ({
-            id: t.id,
-            transactionNumber: t.transactionNumber,
-            items: t.items,
-            subtotal: t.subtotal,
-            discountPercent: t.discountPercent,
-            discountAmount: t.discountAmount,
-            grandTotal: t.grandTotal,
-            paidAmount: t.paidAmount,
-            change: t.change,
-            cashierName: t.cashierName,
-            createdAt: t.createdAt ?? new Date().toISOString(),
-          })),
-        );
-      }
-    }).catch(() => {}).finally(() => {
-      if (!cancelled) {
-        setIsLoading(false);
-      }
-    });
+    const load = () => {
+      void apiService.get<{ items: ApiTransactionResponse[]; total: number }>(
+        "/transactions",
+        { params: { limit: 1000, page: 1, sort: "createdAt", order: "desc" } },
+      ).then((response) => {
+        if (!cancelled) {
+          setTransactions(
+            response.data.items.map((t) => ({
+              id: t.id,
+              transactionNumber: t.transactionNumber,
+              items: t.items,
+              subtotal: t.subtotal,
+              discountPercent: t.discountPercent,
+              discountAmount: t.discountAmount,
+              grandTotal: t.grandTotal,
+              paidAmount: t.paidAmount,
+              change: t.change,
+              cashierName: t.cashierName,
+              createdAt: t.createdAt ?? new Date().toISOString(),
+            })),
+          );
+        }
+      }).catch(() => {}).finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    };
 
-    return () => { cancelled = true; };
+    load();
+
+    const onLogin = () => { setIsLoading(true); load(); };
+    window.addEventListener("auth:login", onLogin);
+
+    return () => { cancelled = true; window.removeEventListener("auth:login", onLogin); };
   }, []);
 
   const addTransaction = useCallback(

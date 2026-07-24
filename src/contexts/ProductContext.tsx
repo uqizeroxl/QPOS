@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { STORAGE_KEYS } from "../constants/app";
 import { apiService } from "../services/api/apiService";
 import { ProductContext } from "./productContextValue";
 import type { Product, ProductFormValues } from "../pages/product/ProductTypes";
@@ -12,7 +13,7 @@ type ApiProduct = Product & { createdAt?: string; updatedAt?: string };
 
 export function ProductProvider({ children }: ProductProviderProps) {
   const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => Boolean(localStorage.getItem(STORAGE_KEYS.authToken)));
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -26,19 +27,30 @@ export function ProductProvider({ children }: ProductProviderProps) {
   }, []);
 
   useEffect(() => {
+    if (!localStorage.getItem(STORAGE_KEYS.authToken)) {
+      return;
+    }
+
     let cancelled = false;
 
-    void apiService.get<ApiProduct[]>("/products/all").then((response) => {
-      if (!cancelled) {
-        setProducts(response.data);
-      }
-    }).catch(() => {}).finally(() => {
-      if (!cancelled) {
-        setIsLoading(false);
-      }
-    });
+    const load = () => {
+      void apiService.get<ApiProduct[]>("/products/all").then((response) => {
+        if (!cancelled) {
+          setProducts(response.data);
+        }
+      }).catch(() => {}).finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    };
 
-    return () => { cancelled = true; };
+    load();
+
+    const onLogin = () => { setIsLoading(true); load(); };
+    window.addEventListener("auth:login", onLogin);
+
+    return () => { cancelled = true; window.removeEventListener("auth:login", onLogin); };
   }, []);
 
   const addProduct = useCallback(

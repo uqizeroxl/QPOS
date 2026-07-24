@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { STORAGE_KEYS } from "../constants/app";
 import { apiService } from "../services/api/apiService";
 import type { Supplier, SupplierFormValues } from "../pages/supplier/SupplierTypes";
 import { SupplierContext } from "./supplierContextValue";
@@ -11,7 +12,7 @@ type SupplierProviderProps = {
 
 export function SupplierProvider({ children }: SupplierProviderProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => Boolean(localStorage.getItem(STORAGE_KEYS.authToken)));
 
   const fetchSuppliers = useCallback(async () => {
     try {
@@ -25,19 +26,30 @@ export function SupplierProvider({ children }: SupplierProviderProps) {
   }, []);
 
   useEffect(() => {
+    if (!localStorage.getItem(STORAGE_KEYS.authToken)) {
+      return;
+    }
+
     let cancelled = false;
 
-    void apiService.get<Supplier[]>("/suppliers/all").then((response) => {
-      if (!cancelled) {
-        setSuppliers(response.data);
-      }
-    }).catch(() => {}).finally(() => {
-      if (!cancelled) {
-        setIsLoading(false);
-      }
-    });
+    const load = () => {
+      void apiService.get<Supplier[]>("/suppliers/all").then((response) => {
+        if (!cancelled) {
+          setSuppliers(response.data);
+        }
+      }).catch(() => {}).finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    };
 
-    return () => { cancelled = true; };
+    load();
+
+    const onLogin = () => { setIsLoading(true); load(); };
+    window.addEventListener("auth:login", onLogin);
+
+    return () => { cancelled = true; window.removeEventListener("auth:login", onLogin); };
   }, []);
 
   const addSupplier = useCallback(

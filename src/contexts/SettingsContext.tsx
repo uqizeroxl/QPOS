@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import { STORAGE_KEYS } from "../constants/app";
 import { apiService } from "../services/api/apiService";
 import {
   defaultSettings,
@@ -13,7 +14,7 @@ type SettingsProviderProps = {
 
 export function SettingsProvider({ children }: SettingsProviderProps) {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => Boolean(localStorage.getItem(STORAGE_KEYS.authToken)));
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -31,23 +32,34 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   }, []);
 
   useEffect(() => {
+    if (!localStorage.getItem(STORAGE_KEYS.authToken)) {
+      return;
+    }
+
     let cancelled = false;
 
-    void apiService.get<AppSettings>("/settings").then((response) => {
-      if (!cancelled) {
-        setSettings({
-          storeName: response.data.storeName || defaultSettings.storeName,
-          phone: response.data.phone || "",
-          address: response.data.address || "",
-        });
-      }
-    }).catch(() => {}).finally(() => {
-      if (!cancelled) {
-        setIsLoading(false);
-      }
-    });
+    const load = () => {
+      void apiService.get<AppSettings>("/settings").then((response) => {
+        if (!cancelled) {
+          setSettings({
+            storeName: response.data.storeName || defaultSettings.storeName,
+            phone: response.data.phone || "",
+            address: response.data.address || "",
+          });
+        }
+      }).catch(() => {}).finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    };
 
-    return () => { cancelled = true; };
+    load();
+
+    const onLogin = () => { setIsLoading(true); load(); };
+    window.addEventListener("auth:login", onLogin);
+
+    return () => { cancelled = true; window.removeEventListener("auth:login", onLogin); };
   }, []);
 
   const saveSettings = useCallback(

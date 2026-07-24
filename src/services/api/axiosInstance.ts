@@ -24,16 +24,15 @@ axiosInstance.interceptors.request.use((config) => {
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const message = error.response?.data?.message || error.message || "Terjadi kesalahan";
+
+    if (status === 401 && window.location.pathname !== "/") {
       localStorage.removeItem(STORAGE_KEYS.authToken);
       localStorage.removeItem(STORAGE_KEYS.authUser);
-
-      if (window.location.pathname !== "/") {
-        window.location.href = "/";
-      }
+      window.location.href = "/";
     }
 
-    const message = error.response?.data?.message || error.message || "Terjadi kesalahan";
     return Promise.reject(new Error(message));
   },
 );

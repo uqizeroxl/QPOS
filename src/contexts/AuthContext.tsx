@@ -35,7 +35,7 @@ function saveAuthStorage(token: string, user: AuthUser) {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser);
   const [token, setToken] = useState<string | null>(getStoredToken);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => Boolean(getStoredToken()));
 
   useEffect(() => {
     const storedToken = getStoredToken();
@@ -79,6 +79,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       saveAuthStorage(apiToken, authUser);
       setToken(apiToken);
       setUser(authUser);
+      window.dispatchEvent(new Event("auth:login"));
       return { ok: true as const };
     } catch (error: unknown) {
       const message =
