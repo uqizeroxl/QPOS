@@ -27,7 +27,7 @@ services:
       - PORT=8000
       - JWT_SECRET=qpos-secret-change-in-production
       - DATABASE_URL=postgres://qpos:qpos_secret@qpos-db:5432/qpos
-      - CORS_ORIGIN=https://qpos.shop
+      - CORS_ORIGIN=https://www.qpos.shop
     depends_on:
       qpos-db:
         condition: service_healthy
