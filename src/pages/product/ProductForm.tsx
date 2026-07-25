@@ -23,7 +23,7 @@ type ProductFormProps = {
   existingBarcodes: string[];
   product?: Product | null;
   onClose: () => void;
-  onSubmit: (values: ProductFormValues) => void;
+  onSubmit: (values: ProductFormValues) => Promise<void>;
 };
 
 const initialPrintSettings: BarcodePrintSettings = {
@@ -167,7 +167,7 @@ export default function ProductForm({
     }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const nextValues: ProductFormValues = {
@@ -181,7 +181,7 @@ export default function ProductForm({
       return;
     }
 
-    onSubmit(nextValues);
+    await onSubmit(nextValues);
 
     if (printAfterSave) {
       const shouldPrint = window.confirm(

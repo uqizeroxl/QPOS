@@ -57,10 +57,10 @@ export default function SupplierPage() {
     setFormError("");
   };
 
-  const handleSubmitSupplier = (values: SupplierFormValues) => {
+  const handleSubmitSupplier = async (values: SupplierFormValues) => {
     const result = editingSupplier
-      ? updateSupplier(editingSupplier.id, values)
-      : addSupplier(values);
+      ? await updateSupplier(editingSupplier.id, values)
+      : await addSupplier(values);
 
     if (!result.ok) {
       setFormError(result.message);
@@ -84,7 +84,7 @@ export default function SupplierPage() {
     return true;
   };
 
-  const handleDeleteSupplier = (supplierId: number) => {
+  const handleDeleteSupplier = async (supplierId: number) => {
     const supplier = suppliers.find(
       (currentSupplier) => currentSupplier.id === supplierId,
     );
@@ -102,7 +102,7 @@ export default function SupplierPage() {
       return;
     }
 
-    const result = deleteSupplier(supplierId);
+    const result = await deleteSupplier(supplierId);
 
     if (!result.ok) {
       showToast(result.message, "error");

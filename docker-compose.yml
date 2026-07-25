@@ -1,0 +1,37 @@
+services:
+  qpos-db:
+    image: postgres:16-alpine
+    container_name: qpos-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: qpos
+      POSTGRES_USER: qpos
+      POSTGRES_PASSWORD: qpos_secret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qpos -d qpos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  qpos-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: qpos-server
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - JWT_SECRET=qpos-secret-change-in-production
+      - DATABASE_URL=postgres://qpos:qpos_secret@qpos-db:5432/qpos
+      - CORS_ORIGIN=https://www.qpos.shop
+    depends_on:
+      qpos-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

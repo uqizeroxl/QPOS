@@ -10,12 +10,14 @@ export type SupplierResult =
 
 export type SupplierContextValue = {
   suppliers: Supplier[];
-  addSupplier: (values: SupplierFormValues) => SupplierResult;
+  isLoading: boolean;
+  fetchSuppliers: () => Promise<void>;
+  addSupplier: (values: SupplierFormValues) => Promise<SupplierResult>;
   updateSupplier: (
     supplierId: number,
     values: SupplierFormValues,
-  ) => SupplierResult;
-  deleteSupplier: (supplierId: number) => SupplierResult;
+  ) => Promise<SupplierResult>;
+  deleteSupplier: (supplierId: number) => Promise<SupplierResult>;
 };
 
 export const SupplierContext = createContext<SupplierContextValue | undefined>(

@@ -30,18 +30,8 @@ function normalizeDiscountPercentInput(value: string) {
   return Math.min(Number(numericValue), 100).toString();
 }
 
-function createTransactionNumber(createdAt: Date) {
-  const datePart = createdAt
-    .toISOString()
-    .slice(0, 10)
-    .replaceAll("-", "");
-  const timePart = createdAt.getTime().toString().slice(-6);
-
-  return `TRX-${datePart}-${timePart}`;
-}
-
 export default function CashierPage() {
-  const { products, decreaseProductStock } = useProducts();
+  const { products, fetchProducts } = useProducts();
   const { addActivity } = useActivityLog();
   const { addTransaction } = useTransactions();
   const { user } = useAuth();
@@ -51,6 +41,7 @@ export default function CashierPage() {
   const [paidAmountInput, setPaidAmountInput] = useState("0");
   const [barcodeMessage, setBarcodeMessage] = useState("");
   const [transactionMessage, setTransactionMessage] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
   const [paymentDialogTransaction, setPaymentDialogTransaction] =
     useState<SalesTransaction | null>(null);
   const [receiptPrintTransaction, setReceiptPrintTransaction] =
@@ -224,11 +215,18 @@ export default function CashierPage() {
     setTransactionMessage("");
   };
 
-  const createTransactionPayload = () => {
-    const createdAt = new Date();
+  const handlePay = async () => {
+    const validationMessage = validatePayment();
 
-    return {
-      transactionNumber: createTransactionNumber(createdAt),
+    if (validationMessage) {
+      setTransactionMessage(validationMessage);
+      return;
+    }
+
+    setIsProcessing(true);
+    setTransactionMessage("");
+
+    const result = await addTransaction({
       items: cartItems.map((item) => ({
         productId: item.id,
         barcode: item.barcode,
@@ -244,31 +242,15 @@ export default function CashierPage() {
       paidAmount,
       change,
       cashierName: user?.name,
-      createdAt: createdAt.toISOString(),
-    };
-  };
+    });
 
-  const handlePay = () => {
-    const validationMessage = validatePayment();
-
-    if (validationMessage) {
-      setTransactionMessage(validationMessage);
+    if (!result.ok) {
+      setTransactionMessage(result.error ?? "Gagal memproses transaksi.");
+      setIsProcessing(false);
       return;
     }
 
-    const stockResult = decreaseProductStock(
-      cartItems.map((item) => ({
-        productId: item.id,
-        quantity: item.quantity,
-      })),
-    );
-
-    if (!stockResult.ok) {
-      setTransactionMessage(stockResult.message);
-      return;
-    }
-
-    const transaction = addTransaction(createTransactionPayload());
+    const transaction = result.transaction!;
 
     addActivity({
       type: "transaction-success",
@@ -281,6 +263,10 @@ export default function CashierPage() {
     setLastSuccessfulTransaction(transaction);
     setPaymentDialogTransaction(transaction);
     resetCashierState();
+    setIsProcessing(false);
+
+    // refetch products to get updated stock from server
+    fetchProducts();
   };
 
   const handleClosePaymentDialog = () => {
@@ -362,6 +348,7 @@ export default function CashierPage() {
             paidAmount={paidAmountInput}
             change={change}
             canPay={canPay}
+            isProcessing={isProcessing}
             transactionMessage={transactionMessage}
             onDiscountChange={(value) =>
               setDiscountPercentInput(normalizeDiscountPercentInput(value))

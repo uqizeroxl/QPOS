@@ -11,12 +11,14 @@ export type CategoryResult =
 export type CategoryContextValue = {
   categories: Category[];
   activeCategoryNames: string[];
-  addCategory: (values: CategoryFormValues) => CategoryResult;
+  isLoading: boolean;
+  fetchCategories: () => Promise<void>;
+  addCategory: (values: CategoryFormValues) => Promise<CategoryResult>;
   updateCategory: (
     categoryId: number,
     values: CategoryFormValues,
-  ) => CategoryResult;
-  deleteCategory: (categoryId: number) => CategoryResult;
+  ) => Promise<CategoryResult>;
+  deleteCategory: (categoryId: number) => Promise<CategoryResult>;
 };
 
 export const CategoryContext = createContext<CategoryContextValue | undefined>(

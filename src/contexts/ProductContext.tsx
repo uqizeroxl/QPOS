@@ -1,160 +1,112 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { getStoredProducts, storeProducts } from "../utils/productStorage";
+import { STORAGE_KEYS } from "../constants/app";
+import { apiService } from "../services/api/apiService";
 import { ProductContext } from "./productContextValue";
 import type { Product, ProductFormValues } from "../pages/product/ProductTypes";
-import type { ProductStockAdjustment } from "./productContextValue";
 
 type ProductProviderProps = {
   children: ReactNode;
 };
 
-function getInitialProducts() {
-  return getStoredProducts();
-}
+type ApiProduct = Product & { createdAt?: string; updatedAt?: string };
 
 export function ProductProvider({ children }: ProductProviderProps) {
-  const [products, setProducts] = useState<Product[]>(getInitialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(() => Boolean(localStorage.getItem(STORAGE_KEYS.authToken)));
 
-  const commitProducts = useCallback((nextProducts: Product[]) => {
-    setProducts(nextProducts);
-    storeProducts(nextProducts);
+  const fetchProducts = useCallback(async () => {
+    try {
+      const response = await apiService.get<ApiProduct[]>("/products/all");
+      setProducts(response.data);
+    } catch {
+      // keep previous state on error
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!localStorage.getItem(STORAGE_KEYS.authToken)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = () => {
+      void apiService.get<ApiProduct[]>("/products/all").then((response) => {
+        if (!cancelled) {
+          setProducts(response.data);
+        }
+      }).catch(() => {}).finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+    };
+
+    load();
+
+    const onLogin = () => { setIsLoading(true); load(); };
+    window.addEventListener("auth:login", onLogin);
+
+    return () => { cancelled = true; window.removeEventListener("auth:login", onLogin); };
   }, []);
 
   const addProduct = useCallback(
-    (values: ProductFormValues) => {
-      const product = { ...values, id: Date.now() };
-
-      setProducts((currentProducts) => {
-        const nextProducts = [product, ...currentProducts];
-        storeProducts(nextProducts);
-        return nextProducts;
-      });
-
-      return product;
+    async (values: ProductFormValues) => {
+      try {
+        const response = await apiService.post<Product>("/products", values);
+        setProducts((current) => [response.data, ...current]);
+        return { ok: true as const, product: response.data };
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Gagal menambahkan produk";
+        return { ok: false as const, error: message };
+      }
     },
     [],
   );
 
   const updateProduct = useCallback(
-    (productId: number, values: ProductFormValues) => {
-      const currentProduct = products.find((product) => product.id === productId);
-
-      if (!currentProduct) {
-        return null;
+    async (productId: number, values: ProductFormValues) => {
+      try {
+        const response = await apiService.put<Product>(`/products/${productId}`, values);
+        setProducts((current) =>
+          current.map((p) => (p.id === productId ? response.data : p)),
+        );
+        return { ok: true as const, product: response.data };
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Gagal memperbarui produk";
+        return { ok: false as const, error: message };
       }
-
-      const updatedProduct = { ...values, id: currentProduct.id };
-      commitProducts(
-        products.map((product) =>
-          product.id === productId ? updatedProduct : product,
-        ),
-      );
-
-      return updatedProduct;
     },
-    [commitProducts, products],
+    [],
   );
 
   const deleteProduct = useCallback(
-    (productId: number) => {
-      const deletedProduct = products.find((product) => product.id === productId);
-
-      if (!deletedProduct) {
-        return null;
+    async (productId: number) => {
+      try {
+        await apiService.delete(`/products/${productId}`);
+        setProducts((current) => current.filter((p) => p.id !== productId));
+        return { ok: true as const };
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Gagal menghapus produk";
+        return { ok: false as const, error: message };
       }
-
-      commitProducts(products.filter((product) => product.id !== productId));
-
-      return deletedProduct;
     },
-    [commitProducts, products],
-  );
-
-  const decreaseProductStock = useCallback(
-    (adjustments: ProductStockAdjustment[]) => {
-      const stockChangeByProductId = adjustments.reduce<Record<number, number>>(
-        (changes, adjustment) => {
-          changes[adjustment.productId] =
-            (changes[adjustment.productId] ?? 0) + adjustment.quantity;
-          return changes;
-        },
-        {},
-      );
-
-      for (const [productId, quantity] of Object.entries(
-        stockChangeByProductId,
-      )) {
-        const product = products.find(
-          (currentProduct) => currentProduct.id === Number(productId),
-        );
-
-        if (!product) {
-          return { ok: false as const, message: "Produk tidak ditemukan." };
-        }
-
-        if (quantity <= 0) {
-          return {
-            ok: false as const,
-            message: "Jumlah produk tidak valid.",
-          };
-        }
-
-        if (product.stock < quantity) {
-          return {
-            ok: false as const,
-            message: `Stok ${product.name} tidak mencukupi.`,
-          };
-        }
-      }
-
-      commitProducts(
-        products.map((product) => ({
-          ...product,
-          stock:
-            product.stock - (stockChangeByProductId[product.id] ?? 0),
-        })),
-      );
-
-      return { ok: true as const };
-    },
-    [commitProducts, products],
-  );
-
-  const renameProductCategory = useCallback(
-    (oldCategory: string, newCategory: string) => {
-      if (oldCategory === newCategory) {
-        return;
-      }
-
-      commitProducts(
-        products.map((product) =>
-          product.category === oldCategory
-            ? { ...product, category: newCategory }
-            : product,
-        ),
-      );
-    },
-    [commitProducts, products],
+    [],
   );
 
   const value = useMemo(
     () => ({
       products,
+      isLoading,
+      fetchProducts,
       addProduct,
       updateProduct,
       deleteProduct,
-      decreaseProductStock,
-      renameProductCategory,
     }),
-    [
-      products,
-      addProduct,
-      updateProduct,
-      deleteProduct,
-      decreaseProductStock,
-      renameProductCategory,
-    ],
+    [products, isLoading, fetchProducts, addProduct, updateProduct, deleteProduct],
   );
 
   return (

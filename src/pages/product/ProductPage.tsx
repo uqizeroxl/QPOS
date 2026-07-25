@@ -67,14 +67,15 @@ export default function ProductPage() {
     setIsFormOpen(true);
   };
 
-  const handleDeleteProduct = (productId: number) => {
-    const deletedProduct = deleteProduct(productId);
+  const handleDeleteProduct = async (productId: number) => {
+    const product = products.find((p) => p.id === productId);
+    const result = await deleteProduct(productId);
 
-    if (deletedProduct) {
+    if (result.ok && product) {
       addActivity({
         type: "product-delete",
         title: "Produk berhasil dihapus",
-        description: deletedProduct.name,
+        description: product.name,
       });
     }
   };
@@ -91,35 +92,36 @@ export default function ProductPage() {
     });
   };
 
-  const handleSubmitProduct = (values: ProductFormValues) => {
+  const handleSubmitProduct = async (values: ProductFormValues) => {
     if (editingProduct) {
       const updateDescription = getProductUpdateDescription(editingProduct, values);
-      const updatedProduct = updateProduct(editingProduct.id, values);
+      const result = await updateProduct(editingProduct.id, values);
 
-      if (updatedProduct && updateDescription) {
+      if (result.ok && result.product && updateDescription) {
         addActivity({
           type: "product-update",
           title: "Produk berhasil diperbarui",
           description: updateDescription,
         });
-      }
 
-      if (
-        updatedProduct &&
-        editingProduct.stock !== updatedProduct.stock &&
-        updatedProduct.stock < lowStockThreshold
-      ) {
-        addLowStockActivity(updatedProduct);
+        if (
+          editingProduct.stock !== result.product.stock &&
+          result.product.stock < lowStockThreshold
+        ) {
+          addLowStockActivity(result.product);
+        }
       }
     } else {
-      const newProduct = addProduct(values);
+      const result = await addProduct(values);
 
-      addActivity({
-        type: "product-create",
-        title: "Produk berhasil ditambahkan",
-        description: newProduct.name,
-      });
-      addLowStockActivity(newProduct);
+      if (result.ok && result.product) {
+        addActivity({
+          type: "product-create",
+          title: "Produk berhasil ditambahkan",
+          description: result.product.name,
+        });
+        addLowStockActivity(result.product);
+      }
     }
   };
 
@@ -153,7 +155,7 @@ export default function ProductPage() {
             <Package className="h-5 w-5" />
             <div>
               <p className="text-sm font-semibold">{products.length} Produk</p>
-              <p className="text-xs">Data produk lokal</p>
+              <p className="text-xs">Data produk server</p>
             </div>
           </div>
         </Card>
