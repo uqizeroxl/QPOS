@@ -76,6 +76,21 @@ function isRearCamera(device: MediaDeviceInfo) {
   return /back|rear|environment|belakang/i.test(device.label);
 }
 
+function isTemporaryCameraError(error: unknown) {
+  return (
+    error instanceof DOMException &&
+    (error.name === "NotReadableError" ||
+      error.name === "TrackStartError" ||
+      error.name === "AbortError")
+  );
+}
+
+function scannerDevLog(message: string, details?: unknown) {
+  if (import.meta.env.DEV) {
+    console.debug(`[BarcodeScanner] ${message}`, details ?? "");
+  }
+}
+
 function playSuccessBeep() {
   try {
     const audioContext = new AudioContext();
@@ -105,6 +120,8 @@ export default function BarcodeScannerModal({
   const streamRef = useRef<MediaStream | null>(null);
   const permissionStreamRef = useRef<MediaStream | null>(null);
   const videoTrackRef = useRef<MediaStreamTrack | null>(null);
+  const activeDeviceIdRef = useRef<string | null>(null);
+  const disconnectedCameraRef = useRef(false);
   const decodeTimerRef = useRef<number | null>(null);
   const startSequenceRef = useRef(0);
   const detectedRef = useRef(false);
@@ -121,6 +138,7 @@ export default function BarcodeScannerModal({
     step: number;
   } | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [orientationRevision, setOrientationRevision] = useState(0);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -128,6 +146,7 @@ export default function BarcodeScannerModal({
   }, [onClose, onDetected]);
 
   const stopScanner = useCallback((status: ScannerStatus = "stopped") => {
+    scannerDevLog("Stopping scanner", { status });
     startSequenceRef.current += 1;
     if (decodeTimerRef.current !== null) {
       window.clearTimeout(decodeTimerRef.current);
@@ -138,6 +157,7 @@ export default function BarcodeScannerModal({
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     videoTrackRef.current = null;
+    activeDeviceIdRef.current = null;
     setSupportsTorch(false);
     setTorchEnabled(false);
     setZoomRange(null);
@@ -155,6 +175,7 @@ export default function BarcodeScannerModal({
   }, []);
 
   const startScanner = useCallback(async () => {
+    scannerDevLog("Starting scanner");
     stopScanner("requesting");
     const sequence = startSequenceRef.current;
     detectedRef.current = false;
@@ -197,6 +218,12 @@ export default function BarcodeScannerModal({
       }
 
       const selectedCamera = cameras.find(isRearCamera) ?? cameras[0];
+      activeDeviceIdRef.current = selectedCamera.deviceId;
+      disconnectedCameraRef.current = false;
+      scannerDevLog("Camera selected", {
+        deviceId: selectedCamera.deviceId,
+        label: selectedCamera.label,
+      });
       permissionStreamRef.current.getTracks().forEach((track) => track.stop());
       permissionStreamRef.current = null;
 
@@ -242,6 +269,12 @@ export default function BarcodeScannerModal({
 
       if (videoTrack?.getCapabilities) {
         const capabilities = videoTrack.getCapabilities() as ExtendedTrackCapabilities;
+        scannerDevLog("Camera capabilities detected", {
+          torch: capabilities.torch === true,
+          zoom: capabilities.zoom,
+          focusMode: capabilities.focusMode,
+          exposureMode: capabilities.exposureMode,
+        });
         setSupportsTorch(capabilities.torch === true);
         if (capabilities.zoom) {
           const settings = videoTrack.getSettings() as MediaTrackSettings & { zoom?: number };
@@ -340,8 +373,12 @@ export default function BarcodeScannerModal({
         lastError = error;
         releaseAttemptResources();
         if (sequence !== startSequenceRef.current) return;
-        if (attempt === 0) {
+        const canRetry = attempt === 0 && isTemporaryCameraError(error);
+        scannerDevLog("Camera start failed", { attempt: attempt + 1, canRetry, error });
+        if (canRetry) {
           await new Promise((resolve) => window.setTimeout(resolve, 250));
+        } else {
+          break;
         }
       }
     }
@@ -370,8 +407,10 @@ export default function BarcodeScannerModal({
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "hidden") {
+        scannerDevLog("Page hidden; scanner suspended");
         stopScanner("stopped");
       } else if (!detectedRef.current) {
+        scannerDevLog("Page visible; scanner resumed");
         void startScanner();
       }
     };
@@ -379,6 +418,56 @@ export default function BarcodeScannerModal({
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [isOpen, startScanner, stopScanner]);
+
+  useEffect(() => {
+    if (!isOpen || !navigator.mediaDevices) return;
+
+    const handleDeviceChange = async () => {
+      try {
+        const cameras = (await navigator.mediaDevices.enumerateDevices()).filter(
+          (device) => device.kind === "videoinput",
+        );
+        const activeDeviceId = activeDeviceIdRef.current;
+        scannerDevLog("Camera device list changed", { count: cameras.length });
+
+        if (activeDeviceId && !cameras.some((camera) => camera.deviceId === activeDeviceId)) {
+          disconnectedCameraRef.current = true;
+          stopScanner("stopped");
+          setErrorMessage("Kamera aktif terputus. Sambungkan kamera lalu tekan Restart.");
+        } else if (disconnectedCameraRef.current && cameras.length > 0) {
+          disconnectedCameraRef.current = false;
+          setErrorMessage("Kamera tersedia kembali. Tekan Restart untuk melanjutkan.");
+        }
+      } catch (error) {
+        scannerDevLog("Unable to refresh camera device list", error);
+      }
+    };
+
+    navigator.mediaDevices.addEventListener?.("devicechange", handleDeviceChange);
+    return () =>
+      navigator.mediaDevices.removeEventListener?.("devicechange", handleDeviceChange);
+  }, [isOpen, stopScanner]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleOrientationChange = () => {
+      scannerDevLog("Viewport orientation changed", {
+        angle: globalThis.screen?.orientation?.angle,
+      });
+      setOrientationRevision((revision) => revision + 1);
+    };
+
+    const orientation = globalThis.screen?.orientation;
+    orientation?.addEventListener?.("change", handleOrientationChange);
+    window.addEventListener("orientationchange", handleOrientationChange);
+    window.addEventListener("resize", handleOrientationChange);
+    return () => {
+      orientation?.removeEventListener?.("change", handleOrientationChange);
+      window.removeEventListener("orientationchange", handleOrientationChange);
+      window.removeEventListener("resize", handleOrientationChange);
+    };
+  }, [isOpen]);
 
   const toggleTorch = async () => {
     const track = videoTrackRef.current;
@@ -453,7 +542,10 @@ export default function BarcodeScannerModal({
               playsInline
             />
             {!errorMessage && scannerStatus !== "stopped" ? (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div
+                key={orientationRevision}
+                className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              >
                 <div className="relative h-3/5 w-3/5 overflow-hidden rounded-md shadow-[0_0_0_9999px_rgba(3,7,18,0.52)]">
                   <span className="absolute left-0 top-0 h-7 w-7 rounded-tl-md border-l-4 border-t-4 border-cyan-400" />
                   <span className="absolute right-0 top-0 h-7 w-7 rounded-tr-md border-r-4 border-t-4 border-cyan-400" />
