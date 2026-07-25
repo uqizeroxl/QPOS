@@ -1,13 +1,12 @@
 import {
-  Apple,
   Eye,
   EyeOff,
-  MessageCircle,
-  Search,
   Smartphone,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { FaApple, FaWhatsapp } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -199,20 +198,45 @@ export default function LoginPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <Button variant="secondary" onClick={() => showProviderDialog("Google")}>
-              <Search className="h-4 w-4" />
+            <Button
+              variant="secondary"
+              onClick={() => showProviderDialog("Google")}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              <FcGoogle className="h-5 w-5 shrink-0" aria-hidden="true" />
               Google
             </Button>
-            <Button variant="secondary" onClick={() => showProviderDialog("Apple")}>
-              <Apple className="h-4 w-4" />
+            <Button
+              variant="secondary"
+              onClick={() => showProviderDialog("Apple")}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              <FaApple
+                className="h-5 w-5 shrink-0 text-black dark:text-white"
+                aria-hidden="true"
+              />
               Apple
             </Button>
-            <Button variant="secondary" onClick={() => showProviderDialog("WhatsApp")}>
-              <MessageCircle className="h-4 w-4" />
+            <Button
+              variant="secondary"
+              onClick={() => showProviderDialog("WhatsApp")}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              <FaWhatsapp
+                className="h-5 w-5 shrink-0 text-[#25D366]"
+                aria-hidden="true"
+              />
               WhatsApp
             </Button>
-            <Button variant="secondary" onClick={() => showProviderDialog("Nomor HP")}>
-              <Smartphone className="h-4 w-4" />
+            <Button
+              variant="secondary"
+              onClick={() => showProviderDialog("Nomor HP")}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              <Smartphone
+                className="h-5 w-5 shrink-0 text-blue-600"
+                aria-hidden="true"
+              />
               Nomor HP
             </Button>
           </div>
