@@ -13,7 +13,13 @@ type BarcodeScannerModalProps = {
   onDetected: (barcode: string) => void;
 };
 
-type ScannerStatus = "idle" | "opening" | "ready" | "stopped" | "detected";
+type ScannerStatus =
+  | "idle"
+  | "requesting"
+  | "opening"
+  | "ready"
+  | "stopped"
+  | "detected";
 
 const supportedFormats = [
   BarcodeFormat.EAN_13,
@@ -26,7 +32,8 @@ const supportedFormats = [
 
 const statusMessages: Record<ScannerStatus, string> = {
   idle: "Scanner siap dimulai.",
-  opening: "Mengaktifkan kamera...",
+  requesting: "Meminta izin kamera...",
+  opening: "Membuka kamera...",
   ready: "Mencari barcode...",
   stopped: "Scanner dihentikan.",
   detected: "Barcode ditemukan.",
@@ -67,6 +74,26 @@ function getCameraErrorMessage(error: unknown) {
 
 function isRearCamera(device: MediaDeviceInfo) {
   return /back|rear|environment|belakang/i.test(device.label);
+}
+
+function playSuccessBeep() {
+  try {
+    const audioContext = new AudioContext();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+    gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.12);
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.addEventListener("ended", () => void audioContext.close(), { once: true });
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.12);
+  } catch {
+    // Audio feedback is optional when Web Audio is unavailable or blocked.
+  }
 }
 
 export default function BarcodeScannerModal({
@@ -128,7 +155,7 @@ export default function BarcodeScannerModal({
   }, []);
 
   const startScanner = useCallback(async () => {
-    stopScanner("opening");
+    stopScanner("requesting");
     const sequence = startSequenceRef.current;
     detectedRef.current = false;
     setErrorMessage("");
@@ -160,6 +187,7 @@ export default function BarcodeScannerModal({
         releaseAttemptResources();
         return;
       }
+      setScannerStatus("opening");
 
       const cameras = (await navigator.mediaDevices.enumerateDevices()).filter(
         (device) => device.kind === "videoinput",
@@ -285,6 +313,7 @@ export default function BarcodeScannerModal({
               lastDetectionRef.current = { barcode, detectedAt };
               detectedRef.current = true;
               stopScanner("detected");
+              playSuccessBeep();
               navigator.vibrate?.(80);
               onDetectedRef.current(barcode);
               return;
@@ -387,7 +416,10 @@ export default function BarcodeScannerModal({
     onCloseRef.current();
   };
 
-  const isRunning = scannerStatus === "opening" || scannerStatus === "ready";
+  const isRunning =
+    scannerStatus === "requesting" ||
+    scannerStatus === "opening" ||
+    scannerStatus === "ready";
 
   return (
     <div
@@ -396,7 +428,7 @@ export default function BarcodeScannerModal({
       aria-modal="true"
       aria-labelledby="barcode-scanner-title"
     >
-      <Card className="w-full max-w-lg overflow-hidden border-0 shadow-xl">
+      <Card className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto border-0 shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
           <div>
             <h2 id="barcode-scanner-title" className="text-lg font-semibold text-gray-900">
@@ -422,17 +454,22 @@ export default function BarcodeScannerModal({
             />
             {!errorMessage && scannerStatus !== "stopped" ? (
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div className="relative h-3/5 w-3/5 overflow-hidden rounded-lg border-2 border-blue-400/80">
+                <div className="relative h-3/5 w-3/5 overflow-hidden rounded-md shadow-[0_0_0_9999px_rgba(3,7,18,0.52)]">
+                  <span className="absolute left-0 top-0 h-7 w-7 rounded-tl-md border-l-4 border-t-4 border-cyan-400" />
+                  <span className="absolute right-0 top-0 h-7 w-7 rounded-tr-md border-r-4 border-t-4 border-cyan-400" />
+                  <span className="absolute bottom-0 left-0 h-7 w-7 rounded-bl-md border-b-4 border-l-4 border-cyan-400" />
+                  <span className="absolute bottom-0 right-0 h-7 w-7 rounded-br-md border-b-4 border-r-4 border-cyan-400" />
                   {scannerStatus === "ready" ? (
-                    <span className="barcode-scan-line absolute left-2 right-2 h-0.5 bg-blue-400 shadow-[0_0_8px_2px_rgba(96,165,250,0.75)]" />
+                    <span className="barcode-scan-line absolute left-3 right-3 h-0.5 bg-cyan-300 shadow-[0_0_8px_2px_rgba(103,232,249,0.75)]" />
                   ) : null}
                 </div>
               </div>
             ) : null}
-            {scannerStatus === "opening" && !errorMessage ? (
+            {(scannerStatus === "requesting" || scannerStatus === "opening") &&
+            !errorMessage ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-950/60 text-white">
                 <Loader2 className="h-7 w-7 animate-spin" />
-                <p className="text-sm font-medium">Mengaktifkan kamera...</p>
+                <p className="text-sm font-medium">{statusMessages[scannerStatus]}</p>
               </div>
             ) : null}
           </div>
