@@ -2,7 +2,7 @@ import {
   BarcodeFormat,
   BrowserMultiFormatReader,
 } from "@zxing/browser";
-import { Loader2, Play, RefreshCw, Square, X } from "lucide-react";
+import { Flashlight, Loader2, Play, RefreshCw, Square, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "./ui/Button";
 import Card from "./ui/Card";
@@ -37,6 +37,13 @@ const duplicateDebounceMs = 2_000;
 const minimumBarcodeLength = 4;
 const roiRatio = 0.6;
 
+type ExtendedTrackCapabilities = MediaTrackCapabilities & {
+  torch?: boolean;
+  zoom?: { min: number; max: number; step: number };
+  focusMode?: string[];
+  exposureMode?: string[];
+};
+
 function getCameraErrorMessage(error: unknown) {
   if (error instanceof DOMException) {
     if (error.name === "NotAllowedError" || error.name === "SecurityError") {
@@ -70,6 +77,7 @@ export default function BarcodeScannerModal({
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const permissionStreamRef = useRef<MediaStream | null>(null);
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
   const decodeTimerRef = useRef<number | null>(null);
   const startSequenceRef = useRef(0);
   const detectedRef = useRef(false);
@@ -78,6 +86,14 @@ export default function BarcodeScannerModal({
   const onDetectedRef = useRef(onDetected);
   const [errorMessage, setErrorMessage] = useState("");
   const [scannerStatus, setScannerStatus] = useState<ScannerStatus>("idle");
+  const [supportsTorch, setSupportsTorch] = useState(false);
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  const [zoomRange, setZoomRange] = useState<{
+    min: number;
+    max: number;
+    step: number;
+  } | null>(null);
+  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -94,6 +110,10 @@ export default function BarcodeScannerModal({
     permissionStreamRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    videoTrackRef.current = null;
+    setSupportsTorch(false);
+    setTorchEnabled(false);
+    setZoomRange(null);
 
     const video = videoRef.current;
     const stream = video?.srcObject;
@@ -113,7 +133,19 @@ export default function BarcodeScannerModal({
     detectedRef.current = false;
     setErrorMessage("");
 
-    try {
+    const releaseAttemptResources = () => {
+      permissionStreamRef.current?.getTracks().forEach((track) => track.stop());
+      permissionStreamRef.current = null;
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      videoTrackRef.current = null;
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.srcObject = null;
+      }
+    };
+
+    const initializeCamera = async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error(
           "Browser ini tidak mendukung akses kamera. Gunakan browser terbaru melalui HTTPS.",
@@ -124,7 +156,10 @@ export default function BarcodeScannerModal({
         audio: false,
         video: { facingMode: { ideal: "environment" } },
       });
-      if (sequence !== startSequenceRef.current) return;
+      if (sequence !== startSequenceRef.current) {
+        releaseAttemptResources();
+        return;
+      }
 
       const cameras = (await navigator.mediaDevices.enumerateDevices()).filter(
         (device) => device.kind === "videoinput",
@@ -137,25 +172,73 @@ export default function BarcodeScannerModal({
       permissionStreamRef.current.getTracks().forEach((track) => track.stop());
       permissionStreamRef.current = null;
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          deviceId: { exact: selectedCamera.deviceId },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            deviceId: { exact: selectedCamera.deviceId },
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        });
+      } catch (constraintError) {
+        if (
+          !(constraintError instanceof DOMException) ||
+          constraintError.name !== "OverconstrainedError"
+        ) {
+          throw constraintError;
+        }
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: "environment" } },
+        });
+      }
       if (sequence !== startSequenceRef.current) {
         stream.getTracks().forEach((track) => track.stop());
         return;
       }
 
       streamRef.current = stream;
+      const videoTrack = stream.getVideoTracks()[0];
+      videoTrackRef.current = videoTrack ?? null;
       const video = videoRef.current;
       if (!video) throw new Error("Preview kamera tidak dapat disiapkan.");
       video.srcObject = stream;
       await video.play();
-      if (sequence !== startSequenceRef.current) return;
+      if (sequence !== startSequenceRef.current) {
+        releaseAttemptResources();
+        return;
+      }
+
+      if (videoTrack?.getCapabilities) {
+        const capabilities = videoTrack.getCapabilities() as ExtendedTrackCapabilities;
+        setSupportsTorch(capabilities.torch === true);
+        if (capabilities.zoom) {
+          const settings = videoTrack.getSettings() as MediaTrackSettings & { zoom?: number };
+          const initialZoom = settings.zoom ?? capabilities.zoom.min;
+          setZoomRange(capabilities.zoom);
+          setZoom(initialZoom);
+        }
+
+        const advanced: MediaTrackConstraintSet[] = [];
+        if (capabilities.focusMode?.includes("continuous")) {
+          advanced.push({ focusMode: "continuous" } as MediaTrackConstraintSet);
+        } else if (capabilities.focusMode?.includes("auto")) {
+          advanced.push({ focusMode: "auto" } as MediaTrackConstraintSet);
+        }
+        if (capabilities.exposureMode?.includes("continuous")) {
+          advanced.push({ exposureMode: "continuous" } as MediaTrackConstraintSet);
+        }
+        if (advanced.length > 0) {
+          try {
+            await videoTrack.applyConstraints({ advanced });
+          } catch {
+            // Optional camera enhancements must not prevent scanning.
+          }
+        }
+      }
 
       const reader = new BrowserMultiFormatReader();
       reader.possibleFormats = supportedFormats;
@@ -217,11 +300,26 @@ export default function BarcodeScannerModal({
       };
 
       decodeTimerRef.current = window.setTimeout(decodeRoi, decodeIntervalMs);
-    } catch (error) {
-      if (sequence !== startSequenceRef.current) return;
-      stopScanner("stopped");
-      setErrorMessage(getCameraErrorMessage(error));
+    };
+
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        await initializeCamera();
+        return;
+      } catch (error) {
+        lastError = error;
+        releaseAttemptResources();
+        if (sequence !== startSequenceRef.current) return;
+        if (attempt === 0) {
+          await new Promise((resolve) => window.setTimeout(resolve, 250));
+        }
+      }
     }
+
+    if (sequence !== startSequenceRef.current) return;
+    stopScanner("stopped");
+    setErrorMessage(getCameraErrorMessage(lastError));
   }, [stopScanner]);
 
   const restartScanner = useCallback(() => {
@@ -237,6 +335,50 @@ export default function BarcodeScannerModal({
 
     return () => stopScanner("idle");
   }, [isOpen, startScanner, stopScanner]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        stopScanner("stopped");
+      } else if (!detectedRef.current) {
+        void startScanner();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [isOpen, startScanner, stopScanner]);
+
+  const toggleTorch = async () => {
+    const track = videoTrackRef.current;
+    if (!track || !supportsTorch) return;
+
+    const nextValue = !torchEnabled;
+    try {
+      await track.applyConstraints({
+        advanced: [{ torch: nextValue } as MediaTrackConstraintSet],
+      });
+      setTorchEnabled(nextValue);
+    } catch {
+      setErrorMessage("Flash kamera tidak dapat diaktifkan pada perangkat ini.");
+    }
+  };
+
+  const changeZoom = async (nextZoom: number) => {
+    const track = videoTrackRef.current;
+    if (!track || !zoomRange) return;
+
+    try {
+      await track.applyConstraints({
+        advanced: [{ zoom: nextZoom } as MediaTrackConstraintSet],
+      });
+      setZoom(nextZoom);
+    } catch {
+      setErrorMessage("Zoom kamera tidak dapat diubah pada perangkat ini.");
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -311,6 +453,32 @@ export default function BarcodeScannerModal({
           )}
 
           <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-gray-200 pt-4">
+            {zoomRange ? (
+              <label className="mr-auto flex min-w-40 items-center gap-2 text-sm text-gray-600">
+                Zoom
+                <input
+                  type="range"
+                  min={zoomRange.min}
+                  max={zoomRange.max}
+                  step={zoomRange.step || 0.1}
+                  value={zoom}
+                  onChange={(event) => void changeZoom(Number(event.target.value))}
+                  disabled={!isRunning}
+                  aria-label="Zoom kamera"
+                />
+              </label>
+            ) : null}
+            {supportsTorch ? (
+              <Button
+                variant="secondary"
+                onClick={() => void toggleTorch()}
+                disabled={!isRunning}
+                aria-pressed={torchEnabled}
+              >
+                <Flashlight className="h-4 w-4" />
+                Flash {torchEnabled ? "On" : "Off"}
+              </Button>
+            ) : null}
             <Button variant="secondary" onClick={() => void startScanner()} disabled={isRunning}>
               <Play className="h-4 w-4" />
               Start Scanner
