@@ -1,5 +1,6 @@
 import { Package, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import BarcodeScannerModal from "../../components/BarcodeScannerModal";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { useActivityLog } from "../../hooks/useActivityLog";
@@ -80,6 +81,7 @@ export default function ProductPage() {
   const [bulkOriginals, setBulkOriginals] = useState<Map<string, BulkProductDraft>>(new Map());
   const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false);
   const [isBulkSaving, setIsBulkSaving] = useState(false);
+  const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
 
   useEffect(() => {
     void fetchProducts({
@@ -518,6 +520,7 @@ export default function ProductPage() {
           selectedCategory={selectedCategory}
           categories={activeCategories}
           onSearchChange={handleSearchChange}
+          onScanBarcode={() => setIsBarcodeScannerOpen(true)}
           onCategoryChange={handleCategoryChange}
           onAddProduct={handleAddProduct}
           onBulkEdit={startBulkEdit}
@@ -526,9 +529,20 @@ export default function ProductPage() {
           isDeleteMode={isDeleteMode}
         />
 
+        <BarcodeScannerModal
+          isOpen={isBarcodeScannerOpen}
+          onClose={() => setIsBarcodeScannerOpen(false)}
+          onDetected={handleSearchChange}
+        />
+
         {isBulkEditMode ? (
           <Card className="flex flex-col justify-between gap-3 border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center">
-            <p className="text-sm font-semibold text-blue-800">Mode Ubah Massal</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold text-blue-800">Mode Ubah Massal</p>
+              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                Perubahan: {changedBulkDrafts.length} Produk
+              </span>
+            </div>
             <div className="flex gap-2">
               <Button variant="secondary" onClick={cancelBulkEdit}>Batal</Button>
               <Button onClick={openBulkConfirmation}>Simpan Perubahan Massal</Button>

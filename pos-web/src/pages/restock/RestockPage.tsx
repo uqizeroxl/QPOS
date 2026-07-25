@@ -1,6 +1,7 @@
-import { PackagePlus, Search, Trash2 } from "lucide-react";
+import { PackagePlus, ScanBarcode, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
+import BarcodeScannerModal from "../../components/BarcodeScannerModal";
 import MainLayout from "../../layouts/MainLayout";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -35,6 +36,7 @@ export default function RestockPage() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -158,6 +160,13 @@ export default function RestockPage() {
     setMessage("");
     setActiveIndex(0);
 
+    setIsDropdownOpen(true);
+  };
+
+  const handleBarcodeDetected = (barcode: string) => {
+    setQuery(barcode);
+    setMessage("");
+    setActiveIndex(0);
     setIsDropdownOpen(true);
   };
 
@@ -434,6 +443,15 @@ export default function RestockPage() {
               ) : null}
             </label>
 
+            <Button
+              variant="secondary"
+              onClick={() => setIsBarcodeScannerOpen(true)}
+              className="px-5"
+            >
+              <ScanBarcode className="h-5 w-5" />
+              Scan
+            </Button>
+
             <Button type="submit" className="px-5">
               Tambah
             </Button>
@@ -538,6 +556,11 @@ export default function RestockPage() {
           product={selectedProduct}
           onClose={closeRestockModal}
           onSave={saveRestockProduct}
+        />
+        <BarcodeScannerModal
+          isOpen={isBarcodeScannerOpen}
+          onClose={() => setIsBarcodeScannerOpen(false)}
+          onDetected={handleBarcodeDetected}
         />
       </div>
     </MainLayout>

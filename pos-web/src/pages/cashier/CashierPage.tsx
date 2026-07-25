@@ -1,5 +1,6 @@
 import { ShoppingCart } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import BarcodeScannerModal from "../../components/BarcodeScannerModal";
 import Card from "../../components/ui/Card";
 import { useActivityLog } from "../../hooks/useActivityLog";
 import { useAuth } from "../../hooks/useAuth";
@@ -46,6 +47,7 @@ export default function CashierPage() {
   const [discountPercentInput, setDiscountPercentInput] = useState("0");
   const [paidAmountInput, setPaidAmountInput] = useState("0");
   const [barcodeMessage, setBarcodeMessage] = useState("");
+  const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [transactionMessage, setTransactionMessage] = useState("");
   const [paymentDialogTransaction, setPaymentDialogTransaction] =
@@ -56,6 +58,7 @@ export default function CashierPage() {
   const [cashierSearchResults, setCashierSearchResults] = useState<CashierProduct[]>([]);
   const paidAmountInputRef = useRef<HTMLInputElement>(null);
   const productSearchRequestRef = useRef(0);
+  const skipSearchEffectForQueryRef = useRef<string | null>(null);
   const checkoutRequestRef = useRef<{
     key: string;
     payload: string;
@@ -137,6 +140,12 @@ export default function CashierPage() {
   useEffect(() => {
     const keyword = productQuery.trim();
 
+    if (skipSearchEffectForQueryRef.current === keyword) {
+      skipSearchEffectForQueryRef.current = null;
+      return;
+    }
+    skipSearchEffectForQueryRef.current = null;
+
     if (!keyword) {
       productSearchRequestRef.current += 1;
       setCashierSearchResults([]);
@@ -180,8 +189,8 @@ export default function CashierPage() {
     return () => window.clearTimeout(timeoutId);
   }, [addProductToCart, productQuery]);
 
-  const handleAddByQuery = async () => {
-    const keyword = productQuery.trim();
+  const handleAddByQuery = async (barcode?: string) => {
+    const keyword = (barcode ?? productQuery).trim();
     setTransactionMessage("");
 
     if (!keyword) return;
@@ -219,6 +228,13 @@ export default function CashierPage() {
           : "Terjadi kesalahan pada server.",
       );
     }
+  };
+
+  const handleBarcodeDetected = (barcode: string) => {
+    skipSearchEffectForQueryRef.current = barcode.trim();
+    setProductQuery(barcode);
+    setBarcodeMessage("");
+    void handleAddByQuery(barcode);
   };
 
   const handleQuantityChange = (productId: string, quantity: number) => {
@@ -401,6 +417,13 @@ export default function CashierPage() {
             setBarcodeMessage("");
           }}
           onSubmit={handleAddByQuery}
+          onScanBarcode={() => setIsBarcodeScannerOpen(true)}
+        />
+
+        <BarcodeScannerModal
+          isOpen={isBarcodeScannerOpen}
+          onClose={() => setIsBarcodeScannerOpen(false)}
+          onDetected={handleBarcodeDetected}
         />
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">

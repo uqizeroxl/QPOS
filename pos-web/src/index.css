@@ -29,6 +29,29 @@
   background-color: rgb(100 116 139 / 0.8);
 }
 
+@keyframes barcode-scan {
+  0%,
+  100% {
+    top: 10%;
+  }
+
+  50% {
+    top: 90%;
+  }
+}
+
+.barcode-scan-line {
+  top: 10%;
+  animation: barcode-scan 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barcode-scan-line {
+    animation: none;
+    top: 50%;
+  }
+}
+
 html {
   transition:
     background-color 300ms ease,

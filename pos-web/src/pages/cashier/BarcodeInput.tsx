@@ -1,4 +1,4 @@
-import { Package, Search } from "lucide-react";
+import { Package, ScanBarcode, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
 import Button from "../../components/ui/Button";
@@ -15,6 +15,7 @@ type BarcodeInputProps = {
   onQueryChange: (value: string) => void;
   onProductSelect: (product: CashierProduct) => boolean;
   onSubmit: () => void | Promise<void>;
+  onScanBarcode: () => void;
 };
 
 export default function BarcodeInput({
@@ -25,6 +26,7 @@ export default function BarcodeInput({
   onQueryChange,
   onProductSelect,
   onSubmit,
+  onScanBarcode,
 }: BarcodeInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLLabelElement>(null);
@@ -202,6 +204,11 @@ export default function BarcodeInput({
             </div>
           ) : null}
         </label>
+
+        <Button variant="secondary" onClick={onScanBarcode} className="px-5">
+          <ScanBarcode className="h-5 w-5" />
+          Scan Barcode
+        </Button>
 
         <Button type="submit" className="px-5">
           Tambah
