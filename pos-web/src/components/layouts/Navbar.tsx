@@ -1,37 +1,42 @@
 import { LogOut, Menu, Moon, Sun, UserRound } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Button from "../ui/Button";
 import NotificationBell from "../navbar/NotificationBell";
 import { ROUTES } from "../../constants/routes";
 import { useAuth } from "../../hooks/useAuth";
 import { useSettings } from "../../hooks/useSettings";
 import { useTheme } from "../../hooks/useTheme";
+import LanguageSwitcher from "../navbar/LanguageSwitcher";
 
 type NavbarProps = {
   onMenuClick: () => void;
 };
 
-const pageTitles: Record<string, string> = {
-  [ROUTES.dashboard]: "Dashboard",
-  [ROUTES.product]: "Produk",
-  [ROUTES.category]: "Kategori",
-  [ROUTES.supplier]: "Supplier",
-  [ROUTES.cashier]: "Kasir",
-  [ROUTES.transactions]: "Riwayat Transaksi",
-  [ROUTES.transactionHistory]: "Riwayat Transaksi",
-  [ROUTES.report]: "Laporan",
-  [ROUTES.setting]: "Pengaturan",
-  [ROUTES.helpShortcut]: "Bantuan & Shortcut",
-  [ROUTES.notifications]: "Notifikasi",
+const pageTitleKeys: Record<string, string> = {
+  [ROUTES.dashboard]: "navbar.pages.dashboard",
+  [ROUTES.product]: "navbar.pages.product",
+  [ROUTES.barcodeLabels]: "navbar.pages.barcodeLabels",
+  [ROUTES.category]: "navbar.pages.category",
+  [ROUTES.supplier]: "navbar.pages.supplier",
+  [ROUTES.cashier]: "navbar.pages.cashier",
+  [ROUTES.transactions]: "navbar.pages.transactions",
+  [ROUTES.transactionHistory]: "navbar.pages.transactions",
+  [ROUTES.report]: "navbar.pages.report",
+  [ROUTES.setting]: "navbar.pages.setting",
+  [ROUTES.helpShortcut]: "navbar.pages.help",
+  [ROUTES.notifications]: "navbar.pages.notifications",
 };
 
 export default function Navbar({ onMenuClick }: NavbarProps) {
   const { logout, user } = useAuth();
   const { settings } = useSettings();
   const { resolvedTheme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const pageTitle = pageTitles[location.pathname] ?? settings.storeName;
+  const pageTitleKey = pageTitleKeys[location.pathname];
+  const pageTitle = pageTitleKey ? t(pageTitleKey) : settings.storeName;
 
   const handleLogout = async () => {
     await logout();
@@ -45,7 +50,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           <Button
             variant="unstyled"
             className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 lg:hidden"
-            aria-label="Buka menu"
+            aria-label={t("navbar.openMenu")}
             onClick={onMenuClick}
           >
             <Menu className="h-5 w-5" />
@@ -68,8 +73,8 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             aria-label={
               resolvedTheme === "dark"
-                ? "Aktifkan light mode"
-                : "Aktifkan dark mode"
+                ? t("navbar.enableLight")
+                : t("navbar.enableDark")
             }
           >
             {resolvedTheme === "dark" ? (
@@ -79,12 +84,14 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             )}
           </Button>
 
+          <LanguageSwitcher />
+
           <NotificationBell />
 
           <div className="hidden items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 transition-colors duration-300 dark:border-slate-700 sm:flex">
             <UserRound className="h-4 w-4 text-gray-500 dark:text-slate-400" />
             <span className="text-sm font-medium text-gray-700 dark:text-slate-300">
-              {user?.name ?? "User"} · {user?.role ?? "-"}
+              {user?.name ?? t("navbar.userFallback")} · {user?.role ?? "-"}
             </span>
           </div>
 
@@ -94,7 +101,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700"
           >
             <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Logout</span>
+            <span className="hidden sm:inline">{t("navbar.logout")}</span>
           </Button>
         </div>
       </div>

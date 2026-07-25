@@ -15,6 +15,7 @@ import type {
   NotificationCategory,
   NotificationType,
 } from "../../contexts/notificationContextValue";
+import { useTranslation } from "react-i18next";
 
 type NotificationDropdownProps = {
   notifications: AppNotification[];
@@ -46,6 +47,7 @@ export default function NotificationDropdown({
   onMarkAllAsRead,
   onNavigate,
 }: NotificationDropdownProps) {
+  const { t } = useTranslation();
   return (
     <div
       className={`absolute right-0 top-12 z-50 w-80 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl transition duration-200 sm:w-96 ${
@@ -58,10 +60,10 @@ export default function NotificationDropdown({
         <div>
           <div className="flex items-center gap-2">
             <Bell className="h-4 w-4 text-blue-600" />
-            <h3 className="font-semibold text-gray-900">Notifikasi</h3>
+            <h3 className="font-semibold text-gray-900">{t("navbar.notifications.label")}</h3>
           </div>
           <p className="mt-1 text-xs text-gray-500">
-            {notifications.length} Notifikasi
+            {t("navbar.notifications.count", { count: notifications.length })}
           </p>
         </div>
         <Button
@@ -70,7 +72,7 @@ export default function NotificationDropdown({
           className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
         >
           <CheckCheck className="h-4 w-4" />
-          Tandai semua
+          {t("navbar.notifications.markAll")}
         </Button>
       </div>
 
@@ -115,7 +117,7 @@ export default function NotificationDropdown({
           })
         ) : (
           <p className="px-4 py-8 text-center text-sm font-medium text-gray-500">
-            Belum ada data.
+            {t("common.emptyData")}
           </p>
         )}
       </div>
@@ -125,7 +127,7 @@ export default function NotificationDropdown({
         onClick={onNavigate}
         className="block border-t border-gray-200 px-4 py-3 text-center text-sm font-semibold text-blue-600 hover:bg-gray-50 hover:text-blue-700"
       >
-        Lihat Semua
+        {t("navbar.notifications.viewAll")}
       </Link>
     </div>
   );

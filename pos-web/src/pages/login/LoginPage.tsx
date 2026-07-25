@@ -8,6 +8,7 @@ import { ROUTES } from "../../constants/routes";
 import { useAuth } from "../../hooks/useAuth";
 import { useSettings } from "../../hooks/useSettings";
 import { AuthApiError, authService } from "../../services/authService";
+import { useTranslation } from "react-i18next";
 
 type LocationState = {
   from?: {
@@ -18,6 +19,7 @@ type LocationState = {
 export default function LoginPage() {
   const { isAuthenticated, login } = useAuth();
   const { settings } = useSettings();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const [username, setUsername] = useState("owner");
@@ -45,7 +47,7 @@ export default function LoginPage() {
       setErrorMessage(
         error instanceof AuthApiError
           ? error.message
-          : "Terjadi kesalahan pada server.",
+          : t("common.serverError"),
       );
     } finally {
       setIsSubmitting(false);
@@ -58,17 +60,17 @@ export default function LoginPage() {
         <p className="text-sm font-medium text-blue-600">
           {settings.storeName}
         </p>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Login Page</h1>
+        <h1 className="mt-2 text-2xl font-bold text-gray-900">{t("login.title")}</h1>
         <div className="mt-5 space-y-4">
           <label className="space-y-2">
-            <span className="text-sm font-medium text-gray-700">Username</span>
+            <span className="text-sm font-medium text-gray-700">{t("login.username")}</span>
             <Input
               value={username}
               onChange={(event) => setUsername(event.target.value)}
             />
           </label>
           <label className="space-y-2">
-            <span className="text-sm font-medium text-gray-700">Password</span>
+            <span className="text-sm font-medium text-gray-700">{t("login.password")}</span>
             <span className="relative block">
               <Input
                 value={password}
@@ -85,7 +87,7 @@ export default function LoginPage() {
                 }
                 className="absolute right-3 top-1/2 inline-flex -translate-y-1/2 text-gray-500 transition hover:text-gray-700"
                 aria-label={
-                  isPasswordVisible ? "Sembunyikan password" : "Tampilkan password"
+                  isPasswordVisible ? t("login.hidePassword") : t("login.showPassword")
                 }
               >
                 {isPasswordVisible ? (
@@ -102,7 +104,7 @@ export default function LoginPage() {
             </p>
           ) : null}
           <Button onClick={handleLogin} className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Memproses..." : "Masuk"}
+            {isSubmitting ? t("login.processing") : t("login.submit")}
           </Button>
         </div>
       </Card>

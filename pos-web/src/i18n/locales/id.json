@@ -1,0 +1,101 @@
+{
+  "common": {
+    "serverError": "Terjadi kesalahan pada server.",
+    "emptyData": "Belum ada data.",
+    "product": "Produk",
+    "category": "Kategori",
+    "stock": "Stok",
+    "total": "Total"
+  },
+  "language": {
+    "label": "Bahasa",
+    "indonesian": "Indonesia",
+    "english": "English"
+  },
+  "navbar": {
+    "openMenu": "Buka menu",
+    "enableLight": "Aktifkan mode terang",
+    "enableDark": "Aktifkan mode gelap",
+    "logout": "Keluar",
+    "userFallback": "Pengguna",
+    "pages": {
+      "dashboard": "Dashboard",
+      "product": "Produk",
+      "barcodeLabels": "Label Barcode",
+      "category": "Kategori",
+      "supplier": "Supplier",
+      "cashier": "Kasir",
+      "transactions": "Riwayat Transaksi",
+      "report": "Laporan",
+      "setting": "Pengaturan",
+      "help": "Bantuan & Shortcut",
+      "notifications": "Notifikasi"
+    },
+    "notifications": {
+      "label": "Notifikasi",
+      "count": "{{count}} Notifikasi",
+      "markAll": "Tandai semua",
+      "viewAll": "Lihat Semua"
+    }
+  },
+  "sidebar": {
+    "logoAlt": "Logo QPOS",
+    "tagline": "Retail Management",
+    "closeMenu": "Tutup menu",
+    "menu": {
+      "dashboard": "Dashboard",
+      "product": "Produk",
+      "barcodeLabels": "Label Barcode",
+      "category": "Kategori",
+      "supplier": "Supplier",
+      "restock": "Restok Barang",
+      "stockHistory": "Riwayat Stok",
+      "cashier": "Kasir",
+      "transactions": "Riwayat Transaksi",
+      "report": "Laporan",
+      "setting": "Pengaturan",
+      "help": "Bantuan & Shortcut"
+    }
+  },
+  "login": {
+    "title": "Halaman Masuk",
+    "username": "Nama pengguna",
+    "password": "Kata sandi",
+    "showPassword": "Tampilkan kata sandi",
+    "hidePassword": "Sembunyikan kata sandi",
+    "processing": "Memproses...",
+    "submit": "Masuk"
+  },
+  "dashboard": {
+    "eyebrow": "Ringkasan Operasional",
+    "title": "Dashboard",
+    "description": "Pantau penjualan, transaksi terbaru, dan kondisi stok toko.",
+    "backendData": "Data Backend",
+    "backendDescription": "Statistik dihitung dari API",
+    "refresh": "Muat ulang",
+    "stats": {
+      "todaySales": { "title": "Penjualan Hari Ini", "description": "Total item terjual hari ini" },
+      "todayRevenue": { "title": "Pendapatan Hari Ini", "description": "Akumulasi transaksi hari ini" },
+      "todayTransactions": { "title": "Transaksi Hari Ini", "description": "Jumlah invoice hari ini" },
+      "totalProducts": { "title": "Total Produk", "description": "Produk aktif terdaftar" },
+      "lowStock": { "title": "Stok Menipis", "description": "Produk stok <= {{threshold}}" }
+    },
+    "lowStock": {
+      "title": "Produk Stok Menipis",
+      "count": "{{count}} produk",
+      "empty": "Tidak ada produk stok menipis."
+    },
+    "topProducts": {
+      "title": "5 Produk Terlaris",
+      "quantity": "Qty",
+      "empty": "Belum ada produk terjual."
+    },
+    "recentTransactions": {
+      "title": "5 Transaksi Terbaru",
+      "invoice": "Invoice",
+      "date": "Tanggal",
+      "cashier": "Kasir",
+      "empty": "Belum ada transaksi."
+    }
+  }
+}

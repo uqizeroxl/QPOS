@@ -19,9 +19,10 @@ import Button from "../ui/Button";
 import { ROUTES } from "../../constants/routes";
 import { useAuth } from "../../hooks/useAuth";
 import type { UserRole } from "../../services/authService";
+import { useTranslation } from "react-i18next";
 
 type SidebarMenuItem = {
-  label: string;
+  labelKey: string;
   path: string;
   icon: LucideIcon;
   roles: UserRole[];
@@ -33,23 +34,23 @@ const inventoryRoles: UserRole[] = ["OWNER", "ADMIN", "WAREHOUSE"];
 const salesRoles: UserRole[] = ["OWNER", "ADMIN", "CASHIER"];
 
 const menuItems: SidebarMenuItem[] = [
-  { label: "Dashboard", path: ROUTES.dashboard, icon: LayoutDashboard, roles: allRoles },
-  { label: "Produk", path: ROUTES.product, icon: Package, roles: inventoryRoles },
-  { label: "Label Barcode", path: ROUTES.barcodeLabels, icon: Barcode, roles: inventoryRoles },
-  { label: "Kategori", path: ROUTES.category, icon: Tags, roles: inventoryRoles },
-  { label: "Supplier", path: ROUTES.supplier, icon: Truck, roles: inventoryRoles },
-  { label: "Restok Barang", path: ROUTES.restock, icon: PackagePlus, roles: inventoryRoles },
-  { label: "Riwayat Stok", path: ROUTES.stockHistory, icon: ScrollText, roles: inventoryRoles },
-  { label: "Kasir", path: ROUTES.cashier, icon: ShoppingCart, roles: salesRoles },
+  { labelKey: "sidebar.menu.dashboard", path: ROUTES.dashboard, icon: LayoutDashboard, roles: allRoles },
+  { labelKey: "sidebar.menu.product", path: ROUTES.product, icon: Package, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.barcodeLabels", path: ROUTES.barcodeLabels, icon: Barcode, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.category", path: ROUTES.category, icon: Tags, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.supplier", path: ROUTES.supplier, icon: Truck, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.restock", path: ROUTES.restock, icon: PackagePlus, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.stockHistory", path: ROUTES.stockHistory, icon: ScrollText, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.cashier", path: ROUTES.cashier, icon: ShoppingCart, roles: salesRoles },
   {
-    label: "Riwayat Transaksi",
+    labelKey: "sidebar.menu.transactions",
     path: ROUTES.transactions,
     icon: ReceiptText,
     roles: salesRoles,
   },
-  { label: "Laporan", path: ROUTES.report, icon: BarChart3, roles: ownerAdminRoles },
-  { label: "Pengaturan", path: ROUTES.setting, icon: Settings, roles: ownerAdminRoles },
-  { label: "Bantuan & Shortcut", path: ROUTES.helpShortcut, icon: CircleHelp, roles: allRoles },
+  { labelKey: "sidebar.menu.report", path: ROUTES.report, icon: BarChart3, roles: ownerAdminRoles },
+  { labelKey: "sidebar.menu.setting", path: ROUTES.setting, icon: Settings, roles: ownerAdminRoles },
+  { labelKey: "sidebar.menu.help", path: ROUTES.helpShortcut, icon: CircleHelp, roles: allRoles },
 ];
 
 type SidebarProps = {
@@ -59,6 +60,7 @@ type SidebarProps = {
 
 function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const visibleMenuItems = menuItems.filter(
     (item) => user && item.roles.includes(user.role),
   );
@@ -68,7 +70,7 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
       <div className="mb-8 flex min-h-12 items-center gap-[14px] px-2">
         <img
           src="/qpos-logo.png"
-          alt="Logo QPOS"
+          alt={t("sidebar.logoAlt")}
           className="h-12 w-12 shrink-0 object-contain"
         />
         <div className="qpos-brand-type min-w-0 flex-1 overflow-hidden text-left transition-[width,opacity] duration-200 ease-out">
@@ -76,7 +78,7 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
             QPOS
           </h1>
           <p className="mt-1 truncate text-[10px] font-medium leading-tight tracking-[0.045em] text-white/70">
-            Retail Management
+            {t("sidebar.tagline")}
           </p>
         </div>
 
@@ -84,7 +86,7 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
           <Button
             variant="icon"
             className="border-white/15 text-white hover:bg-white/20 lg:hidden"
-            aria-label="Tutup menu"
+            aria-label={t("sidebar.closeMenu")}
             onClick={onClose}
           >
             <X className="h-5 w-5" />
@@ -110,7 +112,7 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
               }
             >
               <Icon className="h-5 w-5" />
-              <span>{item.label}</span>
+              <span>{t(item.labelKey)}</span>
             </NavLink>
           );
         })}
@@ -120,6 +122,7 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
 }
 
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
+  const { t } = useTranslation();
   return (
     <>
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-white/10 bg-gradient-to-b from-[#2F6BFF] to-[#214BCB] px-4 py-5 lg:block">
@@ -131,7 +134,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           <Button
             variant="unstyled"
             className="absolute inset-0 h-full w-full bg-gray-900/40"
-            aria-label="Tutup menu"
+            aria-label={t("sidebar.closeMenu")}
             onClick={onClose}
           />
 

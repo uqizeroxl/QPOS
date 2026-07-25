@@ -7,7 +7,7 @@ import {
   RefreshCw,
   ShoppingBag,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import StatCard from "../../components/ui/StatCard";
@@ -26,9 +26,10 @@ import {
   type DashboardData,
 } from "../../services/dashboardService";
 import { formatRupiah } from "../../utils/currency";
+import { useTranslation } from "react-i18next";
 
-const formatDateTime = (value: string) =>
-  new Intl.DateTimeFormat("id-ID", {
+const formatDateTime = (value: string, locale: string) =>
+  new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -48,11 +49,12 @@ const emptyDashboard: DashboardData = {
 };
 
 export default function DashboardPage() {
+  const { i18n, t } = useTranslation();
   const [dashboard, setDashboard] = useState<DashboardData>(emptyDashboard);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage("");
 
@@ -63,50 +65,52 @@ export default function DashboardPage() {
       setErrorMessage(
         error instanceof DashboardApiError
           ? error.message
-          : "Terjadi kesalahan pada server.",
+          : t("common.serverError"),
       );
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     void fetchDashboard();
-  }, []);
+  }, [fetchDashboard]);
 
   const stats = [
     {
-      title: "Penjualan Hari Ini",
+      title: t("dashboard.stats.todaySales.title"),
       value: dashboard.todaySales.toString(),
-      description: "Total item terjual hari ini",
+      description: t("dashboard.stats.todaySales.description"),
       icon: ShoppingBag,
       tone: "green" as const,
     },
     {
-      title: "Pendapatan Hari Ini",
+      title: t("dashboard.stats.todayRevenue.title"),
       value: formatRupiah(dashboard.todayRevenue, { prefix: true }),
-      description: "Akumulasi transaksi hari ini",
+      description: t("dashboard.stats.todayRevenue.description"),
       icon: DollarSign,
       tone: "blue" as const,
     },
     {
-      title: "Transaksi Hari Ini",
+      title: t("dashboard.stats.todayTransactions.title"),
       value: dashboard.todayTransactions.toString(),
-      description: "Jumlah invoice hari ini",
+      description: t("dashboard.stats.todayTransactions.description"),
       icon: ReceiptText,
       tone: "amber" as const,
     },
     {
-      title: "Total Produk",
+      title: t("dashboard.stats.totalProducts.title"),
       value: dashboard.totalProducts.toString(),
-      description: "Produk aktif terdaftar",
+      description: t("dashboard.stats.totalProducts.description"),
       icon: Package,
       tone: "blue" as const,
     },
     {
-      title: "Stok Menipis",
+      title: t("dashboard.stats.lowStock.title"),
       value: dashboard.lowStockProducts.length.toString(),
-      description: `Produk stok <= ${dashboard.lowStockThreshold}`,
+      description: t("dashboard.stats.lowStock.description", {
+        threshold: dashboard.lowStockThreshold,
+      }),
       icon: AlertTriangle,
       tone: "red" as const,
     },
@@ -118,13 +122,13 @@ export default function DashboardPage() {
         <Card className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
           <div>
             <p className="text-sm font-medium text-blue-600">
-              Ringkasan Operasional
+              {t("dashboard.eyebrow")}
             </p>
             <h1 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
-              Dashboard
+              {t("dashboard.title")}
             </h1>
             <p className="mt-1 text-gray-500">
-              Pantau penjualan, transaksi terbaru, dan kondisi stok toko.
+              {t("dashboard.description")}
             </p>
           </div>
 
@@ -132,8 +136,8 @@ export default function DashboardPage() {
             <div className="flex items-center gap-3 rounded-lg bg-blue-50 px-4 py-3 text-blue-700">
               <Boxes className="h-5 w-5" />
               <div>
-                <p className="text-sm font-semibold">Data Backend</p>
-                <p className="text-xs">Statistik dihitung dari API</p>
+                <p className="text-sm font-semibold">{t("dashboard.backendData")}</p>
+                <p className="text-xs">{t("dashboard.backendDescription")}</p>
               </div>
             </div>
             <Button
@@ -142,7 +146,7 @@ export default function DashboardPage() {
               disabled={isLoading}
             >
               <RefreshCw className="h-4 w-4" />
-              Refresh
+              {t("dashboard.refresh")}
             </Button>
           </div>
         </Card>
@@ -170,19 +174,19 @@ export default function DashboardPage() {
           <Card as="section" className="flex max-h-[420px] flex-col overflow-hidden">
             <div className="flex shrink-0 items-center justify-between gap-4 border-b border-gray-200 bg-white px-5 py-4 dark:bg-slate-800">
               <h2 className="text-lg font-semibold text-gray-900">
-                Produk Stok Menipis
+                {t("dashboard.lowStock.title")}
               </h2>
               <span className="shrink-0 rounded-full bg-red-50 px-3 py-1 text-sm font-semibold text-red-700">
-                {dashboard.lowStockProducts.length} produk
+                {t("dashboard.lowStock.count", { count: dashboard.lowStockProducts.length })}
               </span>
             </div>
             <div className="app-scrollbar min-h-0 overflow-auto scroll-smooth">
               <Table>
                 <TableHead className="sticky top-0 z-[1]">
                   <TableRow className="hover:bg-transparent">
-                    <TableHeadCell>Produk</TableHeadCell>
-                    <TableHeadCell>Kategori</TableHeadCell>
-                    <TableHeadCell className="text-right">Stok</TableHeadCell>
+                    <TableHeadCell>{t("common.product")}</TableHeadCell>
+                    <TableHeadCell>{t("common.category")}</TableHeadCell>
+                    <TableHeadCell className="text-right">{t("common.stock")}</TableHeadCell>
                   </TableRow>
                 </TableHead>
                 <TableBody className="bg-white">
@@ -207,7 +211,7 @@ export default function DashboardPage() {
                     <TableRow className="hover:bg-transparent">
                       <TableCell colSpan={3} className="py-10 text-center">
                         <p className="font-semibold text-gray-700">
-                          Tidak ada produk stok menipis.
+                          {t("dashboard.lowStock.empty")}
                         </p>
                       </TableCell>
                     </TableRow>
@@ -220,16 +224,16 @@ export default function DashboardPage() {
           <Card as="section" className="overflow-hidden">
             <div className="border-b border-gray-200 px-5 py-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                5 Produk Terlaris
+                {t("dashboard.topProducts.title")}
               </h2>
             </div>
             <div className="overflow-x-auto">
               <Table>
                 <TableHead>
                   <TableRow className="hover:bg-transparent">
-                    <TableHeadCell>Produk</TableHeadCell>
-                    <TableHeadCell className="text-right">Qty</TableHeadCell>
-                    <TableHeadCell className="text-right">Total</TableHeadCell>
+                    <TableHeadCell>{t("common.product")}</TableHeadCell>
+                    <TableHeadCell className="text-right">{t("dashboard.topProducts.quantity")}</TableHeadCell>
+                    <TableHeadCell className="text-right">{t("common.total")}</TableHeadCell>
                   </TableRow>
                 </TableHead>
                 <TableBody className="bg-white">
@@ -256,7 +260,7 @@ export default function DashboardPage() {
                     <TableRow className="hover:bg-transparent">
                       <TableCell colSpan={3} className="py-10 text-center">
                         <p className="font-semibold text-gray-700">
-                          Belum ada produk terjual.
+                          {t("dashboard.topProducts.empty")}
                         </p>
                       </TableCell>
                     </TableRow>
@@ -270,17 +274,17 @@ export default function DashboardPage() {
         <Card as="section" className="overflow-hidden">
           <div className="border-b border-gray-200 px-5 py-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              5 Transaksi Terbaru
+              {t("dashboard.recentTransactions.title")}
             </h2>
           </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHead>
                 <TableRow className="hover:bg-transparent">
-                  <TableHeadCell>Invoice</TableHeadCell>
-                  <TableHeadCell>Tanggal</TableHeadCell>
-                  <TableHeadCell>Kasir</TableHeadCell>
-                  <TableHeadCell className="text-right">Total</TableHeadCell>
+                  <TableHeadCell>{t("dashboard.recentTransactions.invoice")}</TableHeadCell>
+                  <TableHeadCell>{t("dashboard.recentTransactions.date")}</TableHeadCell>
+                  <TableHeadCell>{t("dashboard.recentTransactions.cashier")}</TableHeadCell>
+                  <TableHeadCell className="text-right">{t("common.total")}</TableHeadCell>
                 </TableRow>
               </TableHead>
               <TableBody className="bg-white">
@@ -291,7 +295,10 @@ export default function DashboardPage() {
                         {transaction.invoiceNumber}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
-                        {formatDateTime(transaction.createdAt)}
+                        {formatDateTime(
+                          transaction.createdAt,
+                          i18n.resolvedLanguage === "en" ? "en-US" : "id-ID",
+                        )}
                       </TableCell>
                       <TableCell>{transaction.cashierName ?? "-"}</TableCell>
                       <TableCell className="text-right font-semibold">
@@ -303,7 +310,7 @@ export default function DashboardPage() {
                   <TableRow className="hover:bg-transparent">
                     <TableCell colSpan={4} className="py-10 text-center">
                       <p className="font-semibold text-gray-700">
-                        Belum ada transaksi.
+                        {t("dashboard.recentTransactions.empty")}
                       </p>
                     </TableCell>
                   </TableRow>
