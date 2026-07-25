@@ -32,6 +32,12 @@ function saveAuthStorage(token: string, user: AuthUser) {
   localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(user));
 }
 
+function normalizeRole(role: string): AuthUser["role"] {
+  if (role === "CASHIER" || role === "cashier") return "cashier";
+  if (role === "WAREHOUSE" || role === "manager") return "manager";
+  return "admin";
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser);
   const [token, setToken] = useState<string | null>(getStoredToken);
@@ -51,7 +57,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const authUser: AuthUser = {
           id: me.id,
           name: me.name,
-          role: me.role,
+          role: normalizeRole(me.role),
         };
         setToken(storedToken);
         setUser(authUser);
@@ -74,7 +80,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const authUser: AuthUser = {
         id: apiUser.id,
         name: apiUser.name,
-        role: apiUser.role,
+        role: normalizeRole(apiUser.role),
       };
       saveAuthStorage(apiToken, authUser);
       setToken(apiToken);

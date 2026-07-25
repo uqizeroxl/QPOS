@@ -16,7 +16,7 @@ export function SupplierProvider({ children }: SupplierProviderProps) {
 
   const fetchSuppliers = useCallback(async () => {
     try {
-      const response = await apiService.get<Supplier[]>("/suppliers/all");
+      const response = await apiService.get<Supplier[]>("/suppliers");
       setSuppliers(response.data);
     } catch {
       // keep previous state on error
@@ -26,14 +26,10 @@ export function SupplierProvider({ children }: SupplierProviderProps) {
   }, []);
 
   useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEYS.authToken)) {
-      return;
-    }
-
     let cancelled = false;
 
     const load = () => {
-      void apiService.get<Supplier[]>("/suppliers/all").then((response) => {
+      void apiService.get<Supplier[]>("/suppliers").then((response) => {
         if (!cancelled) {
           setSuppliers(response.data);
         }
@@ -44,7 +40,7 @@ export function SupplierProvider({ children }: SupplierProviderProps) {
       });
     };
 
-    load();
+    if (localStorage.getItem(STORAGE_KEYS.authToken)) load();
 
     const onLogin = () => { setIsLoading(true); load(); };
     window.addEventListener("auth:login", onLogin);

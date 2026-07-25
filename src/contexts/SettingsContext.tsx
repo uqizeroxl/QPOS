@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { STORAGE_KEYS } from "../constants/app";
-import { apiService } from "../services/api/apiService";
 import {
   defaultSettings,
   SettingsContext,
@@ -12,54 +11,23 @@ type SettingsProviderProps = {
   children: ReactNode;
 };
 
+function getStoredSettings(): AppSettings {
+  try {
+    const value = localStorage.getItem(STORAGE_KEYS.settings);
+    return value ? { ...defaultSettings, ...(JSON.parse(value) as AppSettings) } : defaultSettings;
+  } catch {
+    return defaultSettings;
+  }
+}
+
 export function SettingsProvider({ children }: SettingsProviderProps) {
-  const [settings, setSettings] = useState<AppSettings>(defaultSettings);
-  const [isLoading, setIsLoading] = useState(() => Boolean(localStorage.getItem(STORAGE_KEYS.authToken)));
+  const [settings, setSettings] = useState<AppSettings>(getStoredSettings);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchSettings = useCallback(async () => {
-    try {
-      const response = await apiService.get<AppSettings>("/settings");
-      setSettings({
-        storeName: response.data.storeName || defaultSettings.storeName,
-        phone: response.data.phone || "",
-        address: response.data.address || "",
-      });
-    } catch {
-      // keep previous state on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEYS.authToken)) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const load = () => {
-      void apiService.get<AppSettings>("/settings").then((response) => {
-        if (!cancelled) {
-          setSettings({
-            storeName: response.data.storeName || defaultSettings.storeName,
-            phone: response.data.phone || "",
-            address: response.data.address || "",
-          });
-        }
-      }).catch(() => {}).finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
-    };
-
-    load();
-
-    const onLogin = () => { setIsLoading(true); load(); };
-    window.addEventListener("auth:login", onLogin);
-
-    return () => { cancelled = true; window.removeEventListener("auth:login", onLogin); };
+    setIsLoading(true);
+    setSettings(getStoredSettings());
+    setIsLoading(false);
   }, []);
 
   const saveSettings = useCallback(
@@ -70,7 +38,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
           phone: nextSettings.phone.trim(),
           address: nextSettings.address.trim(),
         };
-        await apiService.put("/settings", safeSettings);
+        localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(safeSettings));
         setSettings(safeSettings);
         return { ok: true as const };
       } catch (error: unknown) {

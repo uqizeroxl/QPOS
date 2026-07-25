@@ -17,7 +17,9 @@ export function ProductProvider({ children }: ProductProviderProps) {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const response = await apiService.get<ApiProduct[]>("/products/all");
+      const response = await apiService.get<ApiProduct[]>("/products", {
+        params: { page: 1, limit: 100 },
+      });
       setProducts(response.data);
     } catch {
       // keep previous state on error
@@ -27,14 +29,12 @@ export function ProductProvider({ children }: ProductProviderProps) {
   }, []);
 
   useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEYS.authToken)) {
-      return;
-    }
-
     let cancelled = false;
 
     const load = () => {
-      void apiService.get<ApiProduct[]>("/products/all").then((response) => {
+      void apiService.get<ApiProduct[]>("/products", {
+        params: { page: 1, limit: 100 },
+      }).then((response) => {
         if (!cancelled) {
           setProducts(response.data);
         }
@@ -45,7 +45,7 @@ export function ProductProvider({ children }: ProductProviderProps) {
       });
     };
 
-    load();
+    if (localStorage.getItem(STORAGE_KEYS.authToken)) load();
 
     const onLogin = () => { setIsLoading(true); load(); };
     window.addEventListener("auth:login", onLogin);

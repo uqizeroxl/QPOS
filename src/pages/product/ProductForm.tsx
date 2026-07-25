@@ -1,6 +1,7 @@
-import { X } from "lucide-react";
+import { Camera, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "../../components/ui/Button";
+import BarcodeScannerModal from "../../components/barcode/BarcodeScannerModal";
 import Card from "../../components/ui/Card";
 import { Input, Select } from "../../components/ui/Input";
 import { useActivityLog } from "../../hooks/useActivityLog";
@@ -88,6 +89,7 @@ export default function ProductForm({
     null,
   );
   const [closeAfterPrint, setCloseAfterPrint] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -232,6 +234,15 @@ export default function ProductForm({
                     updateField("barcode", event.target.value)
                   }
                 />
+                <Button
+                  variant="icon"
+                  onClick={() => setIsScannerOpen(true)}
+                  className="shrink-0"
+                  aria-label="Scan barcode dengan kamera"
+                  title="Scan dengan kamera"
+                >
+                  <Camera className="h-5 w-5" />
+                </Button>
                 <Button
                   variant="secondary"
                   onClick={handleGenerateBarcode}
@@ -386,6 +397,11 @@ export default function ProductForm({
         </form>
       </Card>
       <BarcodePrintArea payload={printPayload} />
+      <BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onDetected={(barcode) => updateField("barcode", barcode)}
+      />
     </div>
   );
 }

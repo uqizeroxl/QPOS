@@ -8,12 +8,14 @@ export type LoginRequest = {
 
 export type LoginResponse = {
   token: string;
-  user: AuthUser;
+  user: Omit<AuthUser, "role"> & {
+    role: AuthUser["role"] | "OWNER" | "ADMIN" | "CASHIER" | "WAREHOUSE";
+  };
 };
 
 export const authService = {
   login: (payload: LoginRequest) =>
     apiService.post<LoginResponse, LoginRequest>("/auth/login", payload),
-  me: () => apiService.get<AuthUser>("/auth/me"),
+  me: () => apiService.get<LoginResponse["user"]>("/auth/profile"),
   logout: () => apiService.post<null>("/auth/logout"),
 };

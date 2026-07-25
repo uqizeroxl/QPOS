@@ -1,6 +1,7 @@
-import { Package, Search } from "lucide-react";
+import { Camera, Package, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
+import BarcodeScannerModal from "../../components/barcode/BarcodeScannerModal";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
@@ -29,6 +30,7 @@ export default function BarcodeInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const normalizedQuery = query.trim().toLowerCase();
 
   useEffect(() => {
@@ -92,6 +94,13 @@ export default function BarcodeInput({
     }
 
     setIsDropdownOpen(true);
+  };
+
+  const handleCameraBarcode = (barcode: string) => {
+    const product = products.find((item) => item.barcode === barcode);
+    onQueryChange(barcode);
+    if (product) selectProduct(product);
+    else setIsDropdownOpen(false);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -162,8 +171,17 @@ export default function BarcodeInput({
             onFocus={() => setIsDropdownOpen(true)}
             onKeyDown={handleKeyDown}
             placeholder="Scan barcode atau ketik nama produk..."
-            className="pl-10 pr-3 text-gray-700"
+            className="pl-10 pr-12 text-gray-700"
           />
+          <Button
+            variant="unstyled"
+            onClick={() => setIsScannerOpen(true)}
+            className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-blue-600"
+            aria-label="Buka scanner kamera"
+            title="Scan dengan kamera"
+          >
+            <Camera className="h-5 w-5" />
+          </Button>
 
           {shouldShowDropdown ? (
             <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
@@ -215,6 +233,11 @@ export default function BarcodeInput({
           {message || "Produk tidak ditemukan."}
         </p>
       ) : null}
+      <BarcodeScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onDetected={handleCameraBarcode}
+      />
     </Card>
   );
 }

@@ -18,7 +18,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
 
   const fetchCategories = useCallback(async () => {
     try {
-      const response = await apiService.get<ApiCategory[]>("/categories/all");
+      const response = await apiService.get<ApiCategory[]>("/categories");
       setCategories(
         response.data.map((c) => ({
           ...c,
@@ -33,14 +33,10 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
   }, []);
 
   useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEYS.authToken)) {
-      return;
-    }
-
     let cancelled = false;
 
     const load = () => {
-      void apiService.get<ApiCategory[]>("/categories/all").then((response) => {
+      void apiService.get<ApiCategory[]>("/categories").then((response) => {
         if (!cancelled) {
           setCategories(
             response.data.map((c) => ({
@@ -56,7 +52,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       });
     };
 
-    load();
+    if (localStorage.getItem(STORAGE_KEYS.authToken)) load();
 
     const onLogin = () => { setIsLoading(true); load(); };
     window.addEventListener("auth:login", onLogin);

@@ -57,10 +57,6 @@ export function TransactionProvider({ children }: TransactionProviderProps) {
   }, []);
 
   useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEYS.authToken)) {
-      return;
-    }
-
     let cancelled = false;
 
     const load = () => {
@@ -92,7 +88,7 @@ export function TransactionProvider({ children }: TransactionProviderProps) {
       });
     };
 
-    load();
+    if (localStorage.getItem(STORAGE_KEYS.authToken)) load();
 
     const onLogin = () => { setIsLoading(true); load(); };
     window.addEventListener("auth:login", onLogin);

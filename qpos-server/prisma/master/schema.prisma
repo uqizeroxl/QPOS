@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../../src/generated/master-prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum StoreRole {
+  OWNER
+  MANAGER
+  CASHIER
+}
+
+enum TenantMigrationStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model Account {
+  id           String        @id @default(cuid())
+  username     String        @unique @db.VarChar(80)
+  name         String        @db.VarChar(120)
+  passwordHash String        @db.VarChar(255)
+  isActive     Boolean       @default(true)
+  memberships  StoreMember[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([username])
+  @@map("accounts")
+}
+
+model Store {
+  id             String                  @id @default(cuid())
+  name           String                  @db.VarChar(150)
+  isActive       Boolean                 @default(true)
+  members        StoreMember[]
+  tenantRegistry TenantDatabaseRegistry?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@index([name])
+  @@map("stores")
+}
+
+model StoreMember {
+  id        String    @id @default(cuid())
+  accountId String
+  storeId   String
+  role      StoreRole
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([accountId, storeId])
+  @@index([accountId])
+  @@index([storeId])
+  @@index([role])
+  @@map("store_members")
+}
+
+model TenantDatabaseRegistry {
+  id              String                @id @default(cuid())
+  storeId         String                @unique
+  databaseUrl     String                @db.Text
+  schemaVersion   String                @default("0") @db.VarChar(50)
+  migrationStatus TenantMigrationStatus @default(PENDING)
+  lastMigratedAt  DateTime?
+  store           Store                 @relation(fields: [storeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([migrationStatus])
+  @@map("tenant_database_registries")
+}

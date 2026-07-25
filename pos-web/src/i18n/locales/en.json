@@ -1,0 +1,101 @@
+{
+  "common": {
+    "serverError": "An unexpected server error occurred.",
+    "emptyData": "No data available.",
+    "product": "Product",
+    "category": "Category",
+    "stock": "Stock",
+    "total": "Total"
+  },
+  "language": {
+    "label": "Language",
+    "indonesian": "Indonesia",
+    "english": "English"
+  },
+  "navbar": {
+    "openMenu": "Open menu",
+    "enableLight": "Enable light mode",
+    "enableDark": "Enable dark mode",
+    "logout": "Logout",
+    "userFallback": "User",
+    "pages": {
+      "dashboard": "Dashboard",
+      "product": "Products",
+      "barcodeLabels": "Barcode Labels",
+      "category": "Categories",
+      "supplier": "Suppliers",
+      "cashier": "Cashier",
+      "transactions": "Transaction History",
+      "report": "Reports",
+      "setting": "Settings",
+      "help": "Help & Shortcuts",
+      "notifications": "Notifications"
+    },
+    "notifications": {
+      "label": "Notifications",
+      "count": "{{count}} Notifications",
+      "markAll": "Mark all read",
+      "viewAll": "View All"
+    }
+  },
+  "sidebar": {
+    "logoAlt": "QPOS Logo",
+    "tagline": "Retail Management",
+    "closeMenu": "Close menu",
+    "menu": {
+      "dashboard": "Dashboard",
+      "product": "Products",
+      "barcodeLabels": "Barcode Labels",
+      "category": "Categories",
+      "supplier": "Suppliers",
+      "restock": "Restock",
+      "stockHistory": "Stock History",
+      "cashier": "Cashier",
+      "transactions": "Transaction History",
+      "report": "Reports",
+      "setting": "Settings",
+      "help": "Help & Shortcuts"
+    }
+  },
+  "login": {
+    "title": "Login",
+    "username": "Username",
+    "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "processing": "Processing...",
+    "submit": "Sign In"
+  },
+  "dashboard": {
+    "eyebrow": "Operational Overview",
+    "title": "Dashboard",
+    "description": "Monitor sales, recent transactions, and store inventory levels.",
+    "backendData": "Backend Data",
+    "backendDescription": "Statistics calculated by the API",
+    "refresh": "Refresh",
+    "stats": {
+      "todaySales": { "title": "Today's Sales", "description": "Items sold today" },
+      "todayRevenue": { "title": "Today's Revenue", "description": "Today's transaction revenue" },
+      "todayTransactions": { "title": "Today's Transactions", "description": "Number of invoices today" },
+      "totalProducts": { "title": "Total Products", "description": "Registered active products" },
+      "lowStock": { "title": "Low Stock", "description": "Products with stock <= {{threshold}}" }
+    },
+    "lowStock": {
+      "title": "Low Stock Products",
+      "count": "{{count}} products",
+      "empty": "There are no low-stock products."
+    },
+    "topProducts": {
+      "title": "Top 5 Products",
+      "quantity": "Qty",
+      "empty": "No products have been sold yet."
+    },
+    "recentTransactions": {
+      "title": "5 Recent Transactions",
+      "invoice": "Invoice",
+      "date": "Date",
+      "cashier": "Cashier",
+      "empty": "No transactions yet."
+    }
+  }
+}
