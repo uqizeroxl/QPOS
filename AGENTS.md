@@ -144,3 +144,162 @@ npm run seed             # Seed database with sample data
 - Utilities in `src/utils/`
 - Backend follows controller → service → Prisma pattern
 - Language: Indonesian throughout (UI labels, Rupiah currency)
+
+## Deployment
+
+### Frontend (Vercel)
+
+- Hosted on **Vercel** at `https://www.qpos.shop`
+- Configured via `vercel.json` (SPA rewrites + Vite framework)
+- Build command: `npm run build` (Vite)
+- Output: `dist/`
+
+#### Environment Variables (Vercel)
+
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `VITE_API_URL` | `https://api.qpos.shop/api` | Backend API base URL. Inlined at build time by Vite. If missing, falls back to `VITE_API_BASE_URL`, then `/api`. |
+
+**IMPORTANT**: Vite inlines `import.meta.env.*` at **build time**. If you change env vars on Vercel, you MUST trigger a new deployment for changes to take effect.
+
+### Backend (VPS + Docker)
+
+- Hosted on a **VPS** (Ubuntu) at `https://api.qpos.shop`
+- Docker Compose orchestration (`docker-compose.yml` at project root)
+- Two containers: `qpos-db` (PostgreSQL 16) + `qpos-server` (Express.js on Node 22)
+
+#### Docker Services
+
+| Service | Image | Port Mapping | Purpose |
+|---------|-------|-------------|---------|
+| `qpos-db` | `postgres:16-alpine` | `5433:5432` | PostgreSQL database (tenant + master) |
+| `qpos-server` | Custom (multi-stage `server/Dockerfile`) | `8000:8000` | Express.js API server |
+
+#### Environment Variables (Backend)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | `3000` | Express listen port (set to `8000` in docker-compose) |
+| `NODE_ENV` | No | `development` | `production` enables combined Morgan logging |
+| `DATABASE_URL` | **Yes** | — | PostgreSQL connection string for tenant database |
+| `MASTER_DATABASE_URL` | **Yes** | — | PostgreSQL connection string for master database |
+| `JWT_SECRET` | **Yes** | `qpos-development-secret` | Secret key for JWT signing |
+| `JWT_EXPIRES_IN` | No | `1d` | JWT token expiration |
+| `DEFAULT_OWNER_USERNAME` | No | `owner` | Bootstrap: default owner username |
+| `DEFAULT_OWNER_PASSWORD` | No | `owner123` | Bootstrap: default owner password |
+| `DEFAULT_OWNER_NAME` | No | `Owner` | Bootstrap: default owner display name |
+| `TRANSACTION_RETENTION_DAYS` | No | `14` | Days to keep transaction history |
+| `CORS_ORIGIN` | No | — | Allowed CORS origin (`https://www.qpos.shop`) |
+
+#### Database Architecture (Multi-Tenant)
+
+**Dual-database model on a single PostgreSQL instance:**
+
+1. **Master DB** (`qpos_master`) — accessed via `MASTER_DATABASE_URL`
+   - `accounts` — Global user accounts
+   - `stores` — Tenant store instances
+   - `store_members` — Account ↔ Store mapping with role
+   - `tenant_database_registries` — Maps stores to their database URLs
+
+2. **Tenant DB** (`qpos`) — accessed via `DATABASE_URL`
+   - All business tables: categories, suppliers, products, transactions, stock_histories, etc.
+   - Each store has its own database (multi-tenant isolation)
+
+**Runtime flow:** Auth middleware resolves `storeId` from JWT → `getStorePrisma(storeId)` looks up DB URL from master DB → creates cached PrismaClient for that store's DB.
+
+#### Deployment Commands (VPS)
+
+**Full setup (new deployment):**
+```bash
+cd ~/QPOS
+sudo docker compose up -d --build
+sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.master.config.ts
+sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.config.ts
+sudo docker compose exec qpos-server node dist/scripts/bootstrap-master-default-store.js
+```
+
+**Re-deploy after code changes:**
+```bash
+cd ~/QPOS
+git pull
+sudo docker compose up -d --build
+```
+
+**Run migrations after schema changes:**
+```bash
+# Master DB
+sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.master.config.ts
+# Tenant DB
+sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.config.ts
+```
+
+**Reset tenant DB (WARNING: deletes all business data):**
+```bash
+sudo docker compose stop qpos-server
+sudo docker compose exec -T qpos-db psql -U qpos -d postgres -c "DROP DATABASE qpos;"
+sudo docker compose exec -T qpos-db psql -U qpos -d postgres -c "CREATE DATABASE qpos;"
+sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.config.ts
+sudo docker compose up -d
+sudo docker compose exec qpos-server node dist/scripts/bootstrap-master-default-store.js
+```
+
+**Bootstrap default store + users:**
+```bash
+sudo docker compose exec qpos-server node dist/scripts/bootstrap-master-default-store.js
+```
+This creates a default OWNER user (`owner` / `owner123`) and registers the "Multazam" store in the master DB.
+
+#### Dockerfile Details (`server/Dockerfile`)
+
+Multi-stage build:
+1. **Build stage** (`node:22-alpine`): `npm ci` → `prisma generate` (tenant + master) → `tsc`
+2. **Runtime stage** (`node:22-alpine`): Python 3 + reportlab (for PDF generation) + compiled `dist/` + Prisma client + prisma schemas
+
+**IMPORTANT**: Use `docker compose run` (not `exec`) for one-off commands like migrations when the server is stopped. `docker compose exec` requires the container to be running.
+
+#### Reverse Proxy
+
+- nginx serves the SPA frontend with `try_files $uri $uri/ /index.html`
+- API proxy to backend is configured at infrastructure level (domain routing)
+- Frontend `VITE_API_URL` points directly to `https://api.qpos.shop/api`
+
+## Known Issues & Gotchas
+
+### Column Casing (PostgreSQL + Prisma)
+
+PostgreSQL folds unquoted identifiers to lowercase. Prisma quotes column names as camelCase. If tables are created with raw SQL without quoted identifiers, columns become lowercase (e.g., `passwordhash`) but Prisma queries for `"passwordHash"` (quoted camelCase), causing `ColumnNotFound` errors.
+
+**Rule**: Always use Prisma migrations (`prisma migrate deploy`) to create/modify tables. Never create tables manually with unquoted SQL.
+
+### Vite Env Vars at Build Time
+
+`import.meta.env.VITE_*` values are inlined into the JavaScript bundle at build time. Changing env vars on Vercel without rebuilding won't affect the deployed app.
+
+### `docker compose run` vs `docker compose exec`
+
+- `docker compose run` — starts a **new one-off container** (use for migrations when server is stopped)
+- `docker compose exec` — runs in the **already running** container (fails if container is stopped/crash-looping)
+
+### Frontend API Configuration
+
+- `src/constants/api.ts` reads: `VITE_API_URL` → `VITE_API_BASE_URL` → `/api` (fallback)
+- `src/services/api/axiosInstance.ts` uses `API_BASE_URL` as the axios `baseURL`
+- All API calls go through `apiService` or `axiosInstance` — no hardcoded URLs
+- Auth token attached via axios request interceptor from `localStorage`
+- 401 responses auto-clear auth from `localStorage`
+
+### Lint Warnings (Pre-existing)
+
+The ESLint config includes `react-hooks/set-state-in-effect` and `react-hooks/preserve-manual-memoization` rules from React Compiler. These produce ~19 warnings across the codebase but are safe to ignore — they are common patterns in React 19 codebases.
+
+### Frontend Type Mismatches
+
+- `SalesTransaction.transactionNumber` (frontend) maps from `Transaction.invoiceNumber` (backend API) — intentional alias
+- `CategoryStatus` = `"Aktif" | "Nonaktif"` for display, `RecordStatus` = `"ACTIVE" | "INACTIVE"` for API payloads
+- `ProductFormValues.status` is `ProductStatus` (`"Aktif"/"Nonaktif"`), must be converted to `RecordStatus` (`"ACTIVE"/"INACTIVE"`) before sending to API (done in `productService.ts:buildProductPayload`)
+- `UserRole` values: `OWNER | ADMIN | CASHIER | WAREHOUSE` (uppercase)
+
+### Commit History
+
+- `b02e28d` — `refactor: consolidate pos-web and qpos-server into root project` (initial consolidation)
+- `2db06b6` — `fix: resolve all TypeScript build errors from type consolidation`
