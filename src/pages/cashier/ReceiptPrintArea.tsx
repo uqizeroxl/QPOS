@@ -1,6 +1,6 @@
 import { useSettings } from "../../hooks/useSettings";
 import { formatRupiah } from "../../utils/currency";
-import type { SalesTransaction } from "./CashierTypes";
+import type { SalesTransaction } from "../../types/cashier";
 
 type ReceiptPrintAreaProps = {
   transaction: SalesTransaction | null;
@@ -81,7 +81,9 @@ export default function ReceiptPrintArea({
 
         <div className="receipt-divider" />
 
-        <p className="receipt-center receipt-thanks">Terima kasih</p>
+        <p className="receipt-center receipt-thanks whitespace-pre-line">
+          {settings.receiptFooter}
+        </p>
       </div>
     </div>
   );

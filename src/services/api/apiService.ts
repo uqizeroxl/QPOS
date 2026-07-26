@@ -1,11 +1,8 @@
 import type { AxiosRequestConfig } from "axios";
 import axiosInstance from "./axiosInstance";
+import type { ApiResponse } from "../../types/api";
 
-export type ApiResponse<TData> = {
-  data: TData;
-  message?: string;
-  status?: string;
-};
+export type { ApiResponse } from "../../types/api";
 
 export const apiService = {
   get: async <TData>(url: string, config?: AxiosRequestConfig) => {

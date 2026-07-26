@@ -1,11 +1,14 @@
 import {
+  History,
   LogIn,
   LogOut,
   Package,
   Pencil,
   Printer,
   ReceiptText,
+  RotateCcw,
   ShoppingCart,
+  Tags,
   Trash2,
   Truck,
 } from "lucide-react";
@@ -22,7 +25,7 @@ const activityIcons: Record<ActivityType, LucideIcon> = {
   "product-create": Package,
   "product-update": Pencil,
   "product-delete": Trash2,
-  "category-create": Package,
+  "category-create": Tags,
   "category-update": Pencil,
   "category-delete": Trash2,
   "supplier-create": Truck,
@@ -31,8 +34,11 @@ const activityIcons: Record<ActivityType, LucideIcon> = {
   login: LogIn,
   logout: LogOut,
   "transaction-success": ShoppingCart,
+  "transaction-history-reset": RotateCcw,
+  "transaction-retention": History,
   "barcode-print": Printer,
   "receipt-print": ReceiptText,
+  "stock-restock": Package,
   "stock-minimum": Package,
 };
 

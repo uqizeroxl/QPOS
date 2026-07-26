@@ -9,7 +9,7 @@ import {
   TableHeadCell,
   TableRow,
 } from "../../components/ui/Table";
-import type { Category } from "./CategoryTypes";
+import type { Category } from "../../types/category";
 
 type CategoryTableProps = {
   categories: Category[];
@@ -18,7 +18,7 @@ type CategoryTableProps = {
   totalCategories: number;
   onPageChange: (page: number) => void;
   onEdit: (category: Category) => void;
-  onDelete: (categoryId: number) => void;
+  onDelete: (category: Category) => void;
 };
 
 function formatDate(value: string) {
@@ -113,11 +113,13 @@ export default function CategoryTable({
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="dangerIcon"
-                        onClick={() => onDelete(category.id)}
-                        aria-label={`Hapus ${category.name}`}
+                        variant="compactSecondary"
+                        onClick={() => onDelete(category)}
+                        className="border-red-200 text-red-700 hover:bg-red-50"
+                        aria-label={`Hapus permanen ${category.name}`}
                       >
                         <Trash2 className="h-4 w-4" />
+                        Hapus Permanen
                       </Button>
                     </div>
                   </TableCell>

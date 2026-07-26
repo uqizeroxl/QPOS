@@ -1,22 +1,12 @@
 import { createContext } from "react";
-
-export type AppSettings = {
-  storeName: string;
-  phone: string;
-  address: string;
-};
-
-export const defaultSettings: AppSettings = {
-  storeName: "Toko Saya",
-  phone: "",
-  address: "",
-};
+import type { AppSettings } from "../types/settings";
+export { defaultSettings } from "../types/settings";
+export type { AppSettings } from "../types/settings";
 
 export type SettingsContextValue = {
   settings: AppSettings;
-  isLoading: boolean;
-  fetchSettings: () => Promise<void>;
-  saveSettings: (settings: AppSettings) => Promise<{ ok: boolean; error?: string }>;
+  saveSettings: (settings: AppSettings) => void;
+  setReceiptFooter: (receiptFooter: string) => void;
 };
 
 export const SettingsContext = createContext<SettingsContextValue | undefined>(

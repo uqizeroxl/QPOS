@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { STORAGE_KEYS } from "../constants/app";
-import { apiService } from "../services/api/apiService";
-import type { Supplier, SupplierFormValues } from "../pages/supplier/SupplierTypes";
+import {
+  SupplierApiError,
+  supplierService,
+} from "../services/supplierService";
 import { SupplierContext } from "./supplierContextValue";
+import type { Supplier, SupplierFormValues } from "../types/supplier";
 import type { SupplierResult } from "./supplierContextValue";
 
 type SupplierProviderProps = {
@@ -12,97 +14,127 @@ type SupplierProviderProps = {
 
 export function SupplierProvider({ children }: SupplierProviderProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [isLoading, setIsLoading] = useState(() => Boolean(localStorage.getItem(STORAGE_KEYS.authToken)));
 
-  const fetchSuppliers = useCallback(async () => {
-    try {
-      const response = await apiService.get<Supplier[]>("/suppliers");
-      setSuppliers(response.data);
-    } catch {
-      // keep previous state on error
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = () => {
-      void apiService.get<Supplier[]>("/suppliers").then((response) => {
-        if (!cancelled) {
-          setSuppliers(response.data);
-        }
-      }).catch(() => {}).finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
-    };
-
-    if (localStorage.getItem(STORAGE_KEYS.authToken)) load();
-
-    const onLogin = () => { setIsLoading(true); load(); };
-    window.addEventListener("auth:login", onLogin);
-
-    return () => { cancelled = true; window.removeEventListener("auth:login", onLogin); };
+  const fetchSuppliers = useCallback(async (search?: string) => {
+    const nextSuppliers = await supplierService.getSuppliers(search);
+    setSuppliers(nextSuppliers);
   }, []);
 
   const addSupplier = useCallback(
     async (values: SupplierFormValues): Promise<SupplierResult> => {
       try {
-        const response = await apiService.post<Supplier>("/suppliers", values);
-        setSuppliers((current) => [response.data, ...current]);
-        return { ok: true, supplier: response.data };
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Gagal menambahkan supplier";
-        return { ok: false, message };
+        const supplier = await supplierService.createSupplier(values);
+        await fetchSuppliers();
+
+        return { ok: true, supplier };
+      } catch (error) {
+        return {
+          ok: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Supplier gagal ditambahkan.",
+        };
       }
     },
-    [],
+    [fetchSuppliers],
   );
 
   const updateSupplier = useCallback(
-    async (supplierId: number, values: SupplierFormValues): Promise<SupplierResult> => {
+    async (
+      supplierId: string,
+      values: SupplierFormValues,
+    ): Promise<SupplierResult> => {
       try {
-        const response = await apiService.put<Supplier>(`/suppliers/${supplierId}`, values);
-        setSuppliers((current) =>
-          current.map((s) => (s.id === supplierId ? response.data : s)),
-        );
-        return { ok: true, supplier: response.data };
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Gagal memperbarui supplier";
-        return { ok: false, message };
+        const supplier = await supplierService.updateSupplier(supplierId, values);
+        await fetchSuppliers();
+
+        return { ok: true, supplier };
+      } catch (error) {
+        return {
+          ok: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Supplier gagal diperbarui.",
+        };
       }
     },
-    [],
+    [fetchSuppliers],
   );
 
   const deleteSupplier = useCallback(
-    async (supplierId: number): Promise<SupplierResult> => {
+    async (supplierId: string): Promise<SupplierResult> => {
       try {
-        const current = suppliers.find((s) => s.id === supplierId);
-        await apiService.delete(`/suppliers/${supplierId}`);
-        setSuppliers((prev) => prev.filter((s) => s.id !== supplierId));
-        return { ok: true, supplier: current! };
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Gagal menghapus supplier";
-        return { ok: false, message };
+        const supplier = await supplierService.deleteSupplier(supplierId);
+        await fetchSuppliers();
+
+        return { ok: true, supplier };
+      } catch (error) {
+        return {
+          ok: false,
+          message:
+            error instanceof Error ? error.message : "Supplier gagal dihapus.",
+          productCount:
+            error instanceof SupplierApiError
+              ? error.productCount
+              : undefined,
+        };
       }
     },
-    [suppliers],
+    [fetchSuppliers],
+  );
+
+  const setSupplierActive = useCallback(
+    async (
+      supplier: Supplier,
+      isActive: boolean,
+    ): Promise<SupplierResult> => {
+      try {
+        const updatedSupplier = await supplierService.setSupplierActive(
+          supplier.id,
+          {
+            name: supplier.name,
+            phone: supplier.phone,
+            email: supplier.email,
+            address: supplier.address,
+            notes: supplier.notes,
+          },
+          isActive,
+        );
+        await fetchSuppliers();
+
+        return { ok: true, supplier: updatedSupplier };
+      } catch (error) {
+        return {
+          ok: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : `Supplier gagal ${isActive ? "diaktifkan" : "dinonaktifkan"}.`,
+        };
+      }
+    },
+    [fetchSuppliers],
   );
 
   const value = useMemo(
     () => ({
       suppliers,
-      isLoading,
       fetchSuppliers,
       addSupplier,
       updateSupplier,
+      setSupplierActive,
       deleteSupplier,
     }),
-    [suppliers, isLoading, fetchSuppliers, addSupplier, updateSupplier, deleteSupplier],
+    [
+      addSupplier,
+      setSupplierActive,
+      deleteSupplier,
+      fetchSuppliers,
+      suppliers,
+      updateSupplier,
+    ],
   );
 
   return (

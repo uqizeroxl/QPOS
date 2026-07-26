@@ -1,4 +1,4 @@
-import type { SalesTransaction } from "../pages/cashier/CashierTypes";
+import type { SalesTransaction } from "../types/cashier";
 import { formatRupiah } from "./currency";
 
 type SalesReportPdfPayload = {

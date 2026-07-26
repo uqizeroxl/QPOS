@@ -1,13 +1,42 @@
 import { createContext } from "react";
-import type { Product, ProductFormValues } from "../pages/product/ProductTypes";
+import type { Product, ProductFormValues } from "../types";
+import type {
+  ProductListParams,
+  StockAdjustmentPayload,
+  StockHistoryItem,
+} from "../services/productService";
+
+export type ProductStockAdjustment = {
+  productId: string;
+  quantity: number;
+};
+
+export type ProductStockAdjustmentResult =
+  | { ok: true }
+  | { ok: false; message: string };
 
 export type ProductContextValue = {
   products: Product[];
+  totalProducts: number;
   isLoading: boolean;
-  fetchProducts: () => Promise<void>;
-  addProduct: (values: ProductFormValues) => Promise<{ ok: boolean; product?: Product; error?: string }>;
-  updateProduct: (productId: number, values: ProductFormValues) => Promise<{ ok: boolean; product?: Product; error?: string }>;
-  deleteProduct: (productId: number) => Promise<{ ok: boolean; error?: string }>;
+  errorMessage: string;
+  fetchProducts: (params?: Partial<ProductListParams>) => Promise<void>;
+  createProduct: (values: ProductFormValues) => Promise<Product>;
+  updateProduct: (productId: string, values: ProductFormValues) => Promise<Product>;
+  deleteProduct: (productId: string) => Promise<Product>;
+  bulkDeleteProducts: (productIds: string[]) => Promise<number>;
+  bulkUpdateProducts: (
+    products: Parameters<typeof import("../services/productService").productService.bulkUpdateProducts>[0],
+  ) => Promise<number>;
+  adjustStock: (
+    productId: string,
+    payload: StockAdjustmentPayload,
+  ) => Promise<Product>;
+  getStockHistory: (productId: string) => Promise<StockHistoryItem[]>;
+  decreaseProductStock: (
+    adjustments: ProductStockAdjustment[],
+  ) => ProductStockAdjustmentResult;
+  renameProductCategory: (oldCategory: string, newCategory: string) => void;
 };
 
 export const ProductContext = createContext<ProductContextValue | undefined>(

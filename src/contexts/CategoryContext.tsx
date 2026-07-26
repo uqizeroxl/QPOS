@@ -1,64 +1,178 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { STORAGE_KEYS } from "../constants/app";
-import { apiService } from "../services/api/apiService";
+import {
+  CategoryApiError,
+  categoryService,
+} from "../services/categoryService";
 import { CategoryContext } from "./categoryContextValue";
+import type { Category, CategoryFormValues } from "../types/category";
 import type { CategoryResult } from "./categoryContextValue";
-import type { Category, CategoryFormValues } from "../pages/category/CategoryTypes";
 
 type CategoryProviderProps = {
   children: ReactNode;
 };
 
-type ApiCategory = Category & { productCount?: number };
+function normalizeName(name: string) {
+  return name.trim().toLowerCase();
+}
+
+function validateCategoryName(
+  categories: Category[],
+  values: CategoryFormValues,
+  editingCategoryId?: string,
+) {
+  const name = values.name.trim();
+
+  if (!name) {
+    return "Nama kategori wajib diisi.";
+  }
+
+  if (name.length > 50) {
+    return "Nama kategori maksimal 50 karakter.";
+  }
+
+  const isDuplicate = categories.some(
+    (category) =>
+      category.id !== editingCategoryId &&
+      normalizeName(category.name) === normalizeName(name),
+  );
+
+  if (isDuplicate) {
+    return "Nama kategori tidak boleh duplikat.";
+  }
+
+  return "";
+}
 
 export function CategoryProvider({ children }: CategoryProviderProps) {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(() => Boolean(localStorage.getItem(STORAGE_KEYS.authToken)));
+  const [baseCategories, setBaseCategories] = useState<Category[]>([]);
 
   const fetchCategories = useCallback(async () => {
-    try {
-      const response = await apiService.get<ApiCategory[]>("/categories");
-      setCategories(
-        response.data.map((c) => ({
-          ...c,
-          productCount: c.productCount ?? 0,
-        })),
-      );
-    } catch {
-      // keep previous state on error
-    } finally {
-      setIsLoading(false);
-    }
+    const nextCategories = await categoryService.getCategories();
+    setBaseCategories(nextCategories);
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
+    void fetchCategories().catch((error) => {
+      console.error("Failed to fetch categories:", error);
+    });
 
-    const load = () => {
-      void apiService.get<ApiCategory[]>("/categories").then((response) => {
-        if (!cancelled) {
-          setCategories(
-            response.data.map((c) => ({
-              ...c,
-              productCount: c.productCount ?? 0,
-            })),
-          );
-        }
-      }).catch(() => {}).finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+    const refreshCounts = () => {
+      void fetchCategories().catch((error) => {
+        console.error("Failed to refresh category product counts:", error);
       });
     };
+    window.addEventListener("qpos:products-changed", refreshCounts);
+    return () => window.removeEventListener("qpos:products-changed", refreshCounts);
+  }, [fetchCategories]);
 
-    if (localStorage.getItem(STORAGE_KEYS.authToken)) load();
+  const categories = baseCategories;
 
-    const onLogin = () => { setIsLoading(true); load(); };
-    window.addEventListener("auth:login", onLogin);
+  const addCategory = useCallback(
+    async (values: CategoryFormValues): Promise<CategoryResult> => {
+      const message = validateCategoryName(baseCategories, values);
 
-    return () => { cancelled = true; window.removeEventListener("auth:login", onLogin); };
-  }, []);
+      if (message) {
+        return { ok: false, message };
+      }
+
+      try {
+        const category = await categoryService.createCategory({
+          ...values,
+          name: values.name.trim().toUpperCase(),
+          description: values.description.trim(),
+        });
+
+        await fetchCategories();
+
+        return { ok: true, category };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Kategori gagal ditambahkan.";
+
+        return { ok: false, message };
+      }
+    },
+    [baseCategories, fetchCategories],
+  );
+
+  const updateCategory = useCallback(
+    async (
+      categoryId: string,
+      values: CategoryFormValues,
+    ): Promise<CategoryResult> => {
+      const message = validateCategoryName(baseCategories, values, categoryId);
+
+      if (message) {
+        return { ok: false, message };
+      }
+
+      const currentCategory = baseCategories.find(
+        (category) => category.id === categoryId,
+      );
+
+      if (!currentCategory) {
+        return { ok: false, message: "Kategori tidak ditemukan." };
+      }
+
+      try {
+        const category = await categoryService.updateCategory(categoryId, {
+          ...values,
+          name: values.name.trim().toUpperCase(),
+          description: values.description.trim(),
+        });
+
+        await fetchCategories();
+
+        return { ok: true, category };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Kategori gagal diperbarui.";
+
+        return { ok: false, message };
+      }
+    },
+    [baseCategories, fetchCategories],
+  );
+
+  const deleteCategory = useCallback(
+    async (categoryId: string): Promise<CategoryResult> => {
+      const currentCategory = categories.find(
+        (category) => category.id === categoryId,
+      );
+
+      if (!currentCategory) {
+        return { ok: false, message: "Kategori tidak ditemukan." };
+      }
+
+      try {
+        const category = await categoryService.deleteCategory(categoryId);
+
+        await fetchCategories();
+
+        return { ok: true, category };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Kategori gagal dihapus.";
+
+        return {
+          ok: false,
+          message,
+          productCount:
+            error instanceof CategoryApiError
+              ? error.productCount
+              : undefined,
+        };
+      }
+    },
+    [categories, fetchCategories],
+  );
 
   const activeCategoryNames = useMemo(
     () =>
@@ -68,56 +182,8 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     [categories],
   );
 
-  const addCategory = useCallback(
-    async (values: CategoryFormValues): Promise<CategoryResult> => {
-      try {
-        const response = await apiService.post<ApiCategory>("/categories", values);
-        const category: Category = {
-          ...response.data,
-          productCount: response.data.productCount ?? 0,
-        };
-        setCategories((current) => [category, ...current]);
-        return { ok: true, category };
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Gagal menambahkan kategori";
-        return { ok: false, message };
-      }
-    },
-    [],
-  );
-
-  const updateCategory = useCallback(
-    async (categoryId: number, values: CategoryFormValues): Promise<CategoryResult> => {
-      try {
-        const response = await apiService.put<ApiCategory>(`/categories/${categoryId}`, values);
-        const category: Category = {
-          ...response.data,
-          productCount: response.data.productCount ?? 0,
-        };
-        setCategories((current) =>
-          current.map((c) => (c.id === categoryId ? category : c)),
-        );
-        return { ok: true, category };
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Gagal memperbarui kategori";
-        return { ok: false, message };
-      }
-    },
-    [],
-  );
-
-  const deleteCategory = useCallback(
-    async (categoryId: number): Promise<CategoryResult> => {
-      try {
-        const current = categories.find((c) => c.id === categoryId);
-        await apiService.delete(`/categories/${categoryId}`);
-        setCategories((prev) => prev.filter((c) => c.id !== categoryId));
-        return { ok: true, category: current! };
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Gagal menghapus kategori";
-        return { ok: false, message };
-      }
-    },
+  const activeCategories = useMemo(
+    () => categories.filter((category) => category.status === "Aktif"),
     [categories],
   );
 
@@ -125,20 +191,20 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     () => ({
       categories,
       activeCategoryNames,
-      isLoading,
+      activeCategories,
       fetchCategories,
       addCategory,
       updateCategory,
       deleteCategory,
     }),
     [
-      categories,
       activeCategoryNames,
-      isLoading,
+      activeCategories,
       fetchCategories,
       addCategory,
-      updateCategory,
+      categories,
       deleteCategory,
+      updateCategory,
     ],
   );
 

@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import Button from "../ui/Button";
 import { useNotification } from "../../hooks/useNotification";
 import NotificationDropdown from "./NotificationDropdown";
+import { useTranslation } from "react-i18next";
 
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const { notifications, markAllAsRead } = useNotification();
+  const { t } = useTranslation();
   const unreadCount = notifications.filter(
     (notification) => !notification.isRead,
   ).length;
@@ -35,7 +37,7 @@ export default function NotificationBell() {
         variant="unstyled"
         onClick={() => setIsOpen((currentValue) => !currentValue)}
         className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-        aria-label="Notifikasi"
+        aria-label={t("navbar.notifications.label")}
         aria-expanded={isOpen}
       >
         <Bell className="h-5 w-5" />

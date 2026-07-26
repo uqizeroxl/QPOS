@@ -1,6 +1,5 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
+import TablePagination from "../../components/ui/TablePagination";
 import {
   Table,
   TableBody,
@@ -10,37 +9,67 @@ import {
   TableRow,
 } from "../../components/ui/Table";
 import ProductRow from "./ProductRow";
-import type { Product } from "./ProductTypes";
+import type { BulkProductDraft, Product } from "../../types";
 
 type ProductTableProps = {
   products: Product[];
+  isLoading?: boolean;
   currentPage: number;
   rowsPerPage: number;
   totalProducts: number;
   onPageChange: (page: number) => void;
+  pageSizeOptions: readonly number[];
+  onPageSizeChange: (pageSize: number) => void;
   onEdit: (product: Product) => void;
-  onDelete: (productId: number) => void;
+  selectedProductIds: ReadonlySet<string>;
+  isDeleteMode: boolean;
+  onSelectionChange: (product: Product, selected: boolean) => void;
+  onSelectPage: (products: Product[], selected: boolean) => void;
+  onAdjustStock: (product: Product) => void;
+  onShowStockHistory: (product: Product) => void;
+  editDrafts: ReadonlyMap<string, BulkProductDraft>;
+  onDraftChange: (productId: string, changes: Partial<BulkProductDraft>) => void;
 };
 
 export default function ProductTable({
   products,
+  isLoading = false,
   currentPage,
   rowsPerPage,
   totalProducts,
   onPageChange,
+  pageSizeOptions,
+  onPageSizeChange,
   onEdit,
-  onDelete,
+  selectedProductIds,
+  isDeleteMode,
+  onSelectionChange,
+  onSelectPage,
+  onAdjustStock,
+  onShowStockHistory,
+  editDrafts,
+  onDraftChange,
 }: ProductTableProps) {
-  const totalPages = Math.max(1, Math.ceil(totalProducts / rowsPerPage));
-  const startItem = totalProducts === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
-  const endItem = Math.min(currentPage * rowsPerPage, totalProducts);
+  const isPageSelected =
+    products.length > 0 && products.every((product) => selectedProductIds.has(product.id));
 
   return (
     <Card as="section" className="overflow-hidden">
-      <div className="overflow-x-auto">
+      <div className="app-scrollbar max-h-[480px] overflow-auto scroll-smooth">
         <Table>
-          <TableHead>
+          <TableHead className="sticky top-0 z-[1]">
             <TableRow className="hover:bg-transparent">
+              {isDeleteMode ? (
+                <TableHeadCell className="w-12">
+                  <input
+                    type="checkbox"
+                    checked={isPageSelected}
+                    onChange={(event) => onSelectPage(products, event.target.checked)}
+                    aria-label="Pilih semua produk di halaman ini"
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </TableHeadCell>
+              ) : null}
               <TableHeadCell>Barcode</TableHeadCell>
               <TableHeadCell>Nama Produk</TableHeadCell>
               <TableHeadCell>Kategori</TableHeadCell>
@@ -53,18 +82,32 @@ export default function ProductTable({
           </TableHead>
 
           <TableBody className="bg-white">
-            {products.length > 0 ? (
+            {isLoading ? (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={isDeleteMode ? 9 : 8} className="py-12 text-center">
+                  <p className="font-semibold text-gray-700">
+                    Memuat data produk...
+                  </p>
+                </TableCell>
+              </TableRow>
+            ) : products.length > 0 ? (
               products.map((product) => (
                 <ProductRow
                   key={product.id}
                   product={product}
+                  isSelected={selectedProductIds.has(product.id)}
+                  isDeleteMode={isDeleteMode}
+                  onSelectionChange={onSelectionChange}
                   onEdit={onEdit}
-                  onDelete={onDelete}
+                  onAdjustStock={onAdjustStock}
+                  onShowStockHistory={onShowStockHistory}
+                  editDraft={editDrafts.get(product.id)}
+                  onDraftChange={onDraftChange}
                 />
               ))
             ) : (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={8} className="py-12 text-center">
+                <TableCell colSpan={isDeleteMode ? 9 : 8} className="py-12 text-center">
                   <p className="font-semibold text-gray-700">
                     Belum ada data.
                   </p>
@@ -78,35 +121,15 @@ export default function ProductTable({
         </Table>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-gray-500">
-          Menampilkan {startItem}-{endItem} dari {totalProducts} produk
-        </p>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="compactSecondary"
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Prev
-          </Button>
-
-          <span className="rounded-lg bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700">
-            {currentPage} / {totalPages}
-          </span>
-
-          <Button
-            variant="compactSecondary"
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          >
-            Next
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+      <TablePagination
+        page={currentPage}
+        pageSize={rowsPerPage}
+        total={totalProducts}
+        pageSizeOptions={pageSizeOptions}
+        onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
+        itemLabel="produk"
+      />
     </Card>
   );
 }

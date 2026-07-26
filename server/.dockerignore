@@ -1,6 +1,7 @@
 node_modules
 dist
-data
-*.db
 .env
+.env.*
+!.env.production.example
+npm-debug.log*
 .git

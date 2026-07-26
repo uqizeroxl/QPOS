@@ -1,22 +1,14 @@
 import { createContext } from "react";
+import type { AuthUser, LoginPayload } from "../types/auth";
 
-export type AuthUser = {
-  id: string;
-  name: string;
-  role: "admin" | "manager" | "cashier";
-};
-
-export type LoginPayload = {
-  token: string;
-  user: AuthUser;
-};
+export type { AuthUser, LoginPayload } from "../types/auth";
 
 export type AuthContextValue = {
   user: AuthUser | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (payload: LoginPayload) => void;
   logout: () => Promise<void>;
 };
 

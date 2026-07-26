@@ -96,10 +96,25 @@ const activityNotificationMap: Record<
     type: "info",
     category: "sales",
   },
+  "stock-restock": {
+    title: "Restok Barang",
+    type: "success",
+    category: "stock",
+  },
   "stock-minimum": {
     title: "Stok Minimum",
     type: "warning",
     category: "stock",
+  },
+  "transaction-history-reset": {
+    title: "Riwayat Transaksi Direset",
+    type: "warning",
+    category: "sales",
+  },
+  "transaction-retention": {
+    title: "Retensi Transaksi",
+    type: "info",
+    category: "sales",
   },
 };
 

@@ -1,7 +1,6 @@
-import { Camera, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import Button from "../../components/ui/Button";
-import BarcodeScannerModal from "../../components/barcode/BarcodeScannerModal";
 import Card from "../../components/ui/Card";
 import { Input, Select } from "../../components/ui/Input";
 import { useActivityLog } from "../../hooks/useActivityLog";
@@ -10,21 +9,25 @@ import { formatRupiah, parseRupiah } from "../../utils/currency";
 import BarcodePreview from "./BarcodePreview";
 import BarcodePrintArea from "./BarcodePrintArea";
 import BarcodePrintPanel from "./BarcodePrintPanel";
+import type { Category } from "../../types/category";
+import CategoryCombobox from "./CategoryCombobox";
 import type {
   BarcodePrintPayload,
   BarcodePrintSettings,
   Product,
   ProductFormValues,
   ProductStatus,
-} from "./ProductTypes";
+} from "../../types";
 
 type ProductFormProps = {
   isOpen: boolean;
-  categories: string[];
+  categories: Category[];
   existingBarcodes: string[];
+  isSubmitting?: boolean;
   product?: Product | null;
   onClose: () => void;
-  onSubmit: (values: ProductFormValues) => Promise<void>;
+  onSubmit: (values: ProductFormValues) => Promise<boolean>;
+  onCreateCategory: (name: string) => Promise<Category>;
 };
 
 const initialPrintSettings: BarcodePrintSettings = {
@@ -34,15 +37,18 @@ const initialPrintSettings: BarcodePrintSettings = {
 };
 
 const getInitialFormValues = (
-  categories: string[],
+  categories: Category[],
   product?: Product | null,
 ): ProductFormValues => {
   if (!product) {
+    const firstCategory = categories[0];
+
     return {
       barcode: "",
       name: "",
-      category: categories[0] ?? "",
-      purchasePrice: 0,
+      categoryId: firstCategory?.id ?? "",
+      category: firstCategory?.name ?? "",
+      purchasePrice: null,
       sellingPrice: 0,
       stock: 0,
       status: "Aktif",
@@ -52,6 +58,7 @@ const getInitialFormValues = (
   return {
     barcode: product.barcode,
     name: product.name,
+    categoryId: product.categoryId ?? "",
     category: product.category,
     purchasePrice: product.purchasePrice,
     sellingPrice: product.sellingPrice,
@@ -64,9 +71,11 @@ export default function ProductForm({
   isOpen,
   categories,
   existingBarcodes,
+  isSubmitting = false,
   product,
   onClose,
   onSubmit,
+  onCreateCategory,
 }: ProductFormProps) {
   const { addActivity } = useActivityLog();
   const [formValues, setFormValues] = useState<ProductFormValues>(() =>
@@ -74,7 +83,9 @@ export default function ProductForm({
   );
   const initialFormValues = getInitialFormValues(categories, product);
   const [purchasePriceInput, setPurchasePriceInput] = useState(() =>
-    formatRupiah(initialFormValues.purchasePrice),
+    initialFormValues.purchasePrice === null
+      ? ""
+      : formatRupiah(initialFormValues.purchasePrice),
   );
   const [sellingPriceInput, setSellingPriceInput] = useState(() =>
     formatRupiah(initialFormValues.sellingPrice),
@@ -89,7 +100,7 @@ export default function ProductForm({
     null,
   );
   const [closeAfterPrint, setCloseAfterPrint] = useState(false);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     const handleAfterPrint = () => {
@@ -105,10 +116,6 @@ export default function ProductForm({
     };
   }, [closeAfterPrint, onClose]);
 
-  if (!isOpen) {
-    return null;
-  }
-
   const updateField = <Key extends keyof ProductFormValues>(
     key: Key,
     value: ProductFormValues[Key],
@@ -119,9 +126,23 @@ export default function ProductForm({
     }));
   };
 
+  const updateCategory = useCallback((selectedCategory: Category) => {
+    setFormValues((currentValues) => ({
+      ...currentValues,
+      categoryId: selectedCategory.id,
+      category: selectedCategory.name,
+    }));
+  }, []);
+
+  if (!isOpen) {
+    return null;
+  }
+
   const getPreparedFormValues = (): ProductFormValues => ({
     ...formValues,
-    purchasePrice: parseRupiah(purchasePriceInput),
+    purchasePrice: purchasePriceInput
+      ? parseRupiah(purchasePriceInput)
+      : null,
     sellingPrice: parseRupiah(sellingPriceInput),
     stock: Number(stockInput || 0),
   });
@@ -179,11 +200,23 @@ export default function ProductForm({
         (autoGenerateWhenEmpty ? generateBarcode(existingBarcodes) : ""),
     };
 
-    if (!nextValues.barcode || !nextValues.category) {
+    if (!nextValues.name.trim()) {
+      setFormError("Nama produk wajib diisi.");
       return;
     }
 
-    await onSubmit(nextValues);
+    if (!nextValues.categoryId) {
+      setFormError("Kategori wajib dipilih.");
+      return;
+    }
+
+    setFormError("");
+
+    const isSaved = await onSubmit(nextValues);
+
+    if (!isSaved) {
+      return;
+    }
 
     if (printAfterSave) {
       const shouldPrint = window.confirm(
@@ -225,31 +258,25 @@ export default function ProductForm({
         <form onSubmit={handleSubmit} className="space-y-5 p-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">Barcode</span>
+              <span className="text-sm font-medium text-gray-700">
+                Barcode (Opsional)
+              </span>
               <div className="flex gap-2">
                 <Input
-                  required={!autoGenerateWhenEmpty}
                   value={formValues.barcode}
                   onChange={(event) =>
                     updateField("barcode", event.target.value)
                   }
                 />
-                <Button
-                  variant="icon"
-                  onClick={() => setIsScannerOpen(true)}
-                  className="shrink-0"
-                  aria-label="Scan barcode dengan kamera"
-                  title="Scan dengan kamera"
-                >
-                  <Camera className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={handleGenerateBarcode}
-                  className="shrink-0"
-                >
-                  Generate
-                </Button>
+                {!formValues.barcode.trim() ? (
+                  <Button
+                    variant="secondary"
+                    onClick={handleGenerateBarcode}
+                    className="shrink-0"
+                  >
+                    Generate Barcode
+                  </Button>
+                ) : null}
               </div>
             </label>
 
@@ -268,22 +295,19 @@ export default function ProductForm({
               <span className="text-sm font-medium text-gray-700">
                 Kategori
               </span>
-              <Select
-                required
-                value={formValues.category}
-                onChange={(event) =>
-                  updateField("category", event.target.value)
+              <CategoryCombobox
+                categories={categories}
+                selectedCategoryId={formValues.categoryId ?? ""}
+                onSelect={updateCategory}
+                onCreate={onCreateCategory}
+                onClearSelection={() =>
+                  setFormValues((currentValues) => ({
+                    ...currentValues,
+                    categoryId: "",
+                    category: "",
+                  }))
                 }
-              >
-                {categories.length === 0 ? (
-                  <option value="">Belum ada kategori</option>
-                ) : null}
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </Select>
+              />
             </label>
 
             <label className="space-y-2">
@@ -301,7 +325,7 @@ export default function ProductForm({
 
             <label className="space-y-2">
               <span className="text-sm font-medium text-gray-700">
-                Harga Beli
+                Harga Beli (Opsional)
               </span>
               <Input
                 inputMode="numeric"
@@ -383,25 +407,23 @@ export default function ProductForm({
             />
           </div>
 
+          {formError ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+              {formError}
+            </p>
+          ) : null}
+
           <div className="flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
               Batal
             </Button>
-            <Button
-              type="submit"
-              disabled={categories.length === 0}
-            >
-              Simpan Produk
+            <Button type="submit" disabled={categories.length === 0 || isSubmitting}>
+              {isSubmitting ? "Menyimpan..." : "Simpan Produk"}
             </Button>
           </div>
         </form>
       </Card>
       <BarcodePrintArea payload={printPayload} />
-      <BarcodeScannerModal
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onDetected={(barcode) => updateField("barcode", barcode)}
-      />
     </div>
   );
 }

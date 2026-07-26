@@ -1,10 +1,17 @@
 import { ShoppingCart } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import BarcodeScannerModal from "../../components/BarcodeScannerModal";
 import Card from "../../components/ui/Card";
 import { useActivityLog } from "../../hooks/useActivityLog";
 import { useAuth } from "../../hooks/useAuth";
 import { useProducts } from "../../hooks/useProducts";
-import { useTransactions } from "../../hooks/useTransactions";
+import { useToast } from "../../hooks/useToast";
+import { useReceiptPrinter } from "../../hooks/useReceiptPrinter";
+import {
+  TransactionApiError,
+  transactionService,
+} from "../../services/transactionService";
+import { ProductApiError, productService } from "../../services/productService";
 import { formatRupiah, parseRupiah } from "../../utils/currency";
 import MainLayout from "../../layouts/MainLayout";
 import BarcodeInput from "./BarcodeInput";
@@ -12,7 +19,7 @@ import CartTable from "./CartTable";
 import PaymentSuccessDialog from "./PaymentSuccessDialog";
 import PaymentSummary from "./PaymentSummary";
 import ReceiptPrintArea from "./ReceiptPrintArea";
-import type { CartItem, CashierProduct, SalesTransaction } from "./CashierTypes";
+import type { CartItem, CashierProduct, SalesTransaction } from "../../types/cashier";
 
 function normalizeDiscountPercentInput(value: string) {
   const trimmedValue = value.trim();
@@ -31,38 +38,36 @@ function normalizeDiscountPercentInput(value: string) {
 }
 
 export default function CashierPage() {
-  const { products, fetchProducts } = useProducts();
+  const { fetchProducts } = useProducts();
   const { addActivity } = useActivityLog();
-  const { addTransaction } = useTransactions();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [productQuery, setProductQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [discountPercentInput, setDiscountPercentInput] = useState("0");
   const [paidAmountInput, setPaidAmountInput] = useState("0");
   const [barcodeMessage, setBarcodeMessage] = useState("");
+  const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
   const [transactionMessage, setTransactionMessage] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [paymentDialogTransaction, setPaymentDialogTransaction] =
-    useState<SalesTransaction | null>(null);
-  const [receiptPrintTransaction, setReceiptPrintTransaction] =
     useState<SalesTransaction | null>(null);
   const [lastSuccessfulTransaction, setLastSuccessfulTransaction] =
     useState<SalesTransaction | null>(null);
   const [focusRequestId, setFocusRequestId] = useState(0);
+  const [cashierSearchResults, setCashierSearchResults] = useState<CashierProduct[]>([]);
   const paidAmountInputRef = useRef<HTMLInputElement>(null);
-  const cashierProducts = useMemo<CashierProduct[]>(() => {
-    return products
-      .filter((product) => product.status === "Aktif")
-      .map((product) => ({
-        id: product.id,
-        barcode: product.barcode,
-        name: product.name,
-        category: product.category,
-        price: product.sellingPrice,
-        stock: product.stock,
-      }));
-  }, [products]);
-
+  const productSearchRequestRef = useRef(0);
+  const skipSearchEffectForQueryRef = useRef<string | null>(null);
+  const checkoutRequestRef = useRef<{
+    key: string;
+    payload: string;
+  } | null>(null);
+  const requestInputFocus = useCallback(() => {
+    setFocusRequestId((currentRequestId) => currentRequestId + 1);
+  }, []);
+  const { receiptPrintTransaction, printReceipt: printReceiptArea } =
+    useReceiptPrinter(requestInputFocus);
   const subtotal = useMemo(
     () =>
       cartItems.reduce(
@@ -82,22 +87,9 @@ export default function CashierPage() {
   const change = Math.max(paidAmount - total, 0);
   const canPay = cartItems.length > 0 && paidAmount >= total;
 
-  const requestInputFocus = useCallback(() => {
-    setFocusRequestId((currentRequestId) => currentRequestId + 1);
-  }, []);
-
   useEffect(() => {
-    const handleAfterPrint = () => {
-      setReceiptPrintTransaction(null);
-      requestInputFocus();
-    };
-
-    window.addEventListener("afterprint", handleAfterPrint);
-
-    return () => {
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
-  }, [requestInputFocus]);
+    void fetchProducts();
+  }, [fetchProducts]);
 
   useEffect(() => {
     const handleCashierShortcuts = (event: KeyboardEvent) => {
@@ -119,7 +111,8 @@ export default function CashierPage() {
     };
   }, [paymentDialogTransaction]);
 
-  const addProductToCart = (product: CashierProduct) => {
+  const addProductToCart = useCallback((product: CashierProduct) => {
+    productSearchRequestRef.current += 1;
     setCartItems((currentItems) => {
       const existingItem = currentItems.find((item) => item.id === product.id);
 
@@ -138,30 +131,113 @@ export default function CashierPage() {
     });
 
     setProductQuery("");
+    setCashierSearchResults([]);
     setBarcodeMessage("");
     setTransactionMessage("");
     return true;
-  };
+  }, []);
 
-  const handleAddByQuery = () => {
-    const normalizedQuery = productQuery.trim().toLowerCase();
-    const product = cashierProducts.find(
-      (currentProduct) =>
-        currentProduct.barcode.toLowerCase() === normalizedQuery ||
-        currentProduct.name.toLowerCase() === normalizedQuery,
-    );
+  useEffect(() => {
+    const keyword = productQuery.trim();
 
-    setTransactionMessage("");
+    if (skipSearchEffectForQueryRef.current === keyword) {
+      skipSearchEffectForQueryRef.current = null;
+      return;
+    }
+    skipSearchEffectForQueryRef.current = null;
 
-    if (!product) {
-      setBarcodeMessage("Produk tidak ditemukan.");
+    if (!keyword) {
+      productSearchRequestRef.current += 1;
+      setCashierSearchResults([]);
       return;
     }
 
-    addProductToCart(product);
+    const requestId = ++productSearchRequestRef.current;
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const products = await productService.searchCashierProducts(keyword);
+
+        if (requestId !== productSearchRequestRef.current) return;
+
+        const results = products.map((product) => ({
+          id: product.id,
+          barcode: product.barcode,
+          name: product.name,
+          category: product.category,
+          price: product.sellingPrice,
+          stock: product.stock,
+        }));
+        setCashierSearchResults(results);
+
+        const normalizedKeyword = keyword.toLowerCase();
+        const barcodeProduct = results.find(
+          (product) => product.barcode.toLowerCase() === normalizedKeyword,
+        );
+
+        if (barcodeProduct) addProductToCart(barcodeProduct);
+      } catch (error) {
+        if (requestId !== productSearchRequestRef.current) return;
+        setCashierSearchResults([]);
+        setBarcodeMessage(
+          error instanceof ProductApiError
+            ? error.message
+            : "Terjadi kesalahan pada server.",
+        );
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [addProductToCart, productQuery]);
+
+  const handleAddByQuery = async (barcode?: string) => {
+    const keyword = (barcode ?? productQuery).trim();
+    setTransactionMessage("");
+
+    if (!keyword) return;
+
+    const requestId = ++productSearchRequestRef.current;
+
+    try {
+      const products = await productService.searchCashierProducts(keyword);
+
+      if (requestId !== productSearchRequestRef.current) return;
+
+      const results = products.map((product) => ({
+        id: product.id,
+        barcode: product.barcode,
+        name: product.name,
+        category: product.category,
+        price: product.sellingPrice,
+        stock: product.stock,
+      }));
+      setCashierSearchResults(results);
+
+      if (results.length === 1) {
+        addProductToCart(results[0]);
+        return;
+      }
+
+      if (results.length === 0) {
+        setBarcodeMessage("Produk tidak ditemukan.");
+      }
+    } catch (error) {
+      if (requestId !== productSearchRequestRef.current) return;
+      setBarcodeMessage(
+        error instanceof ProductApiError
+          ? error.message
+          : "Terjadi kesalahan pada server.",
+      );
+    }
   };
 
-  const handleQuantityChange = (productId: number, quantity: number) => {
+  const handleBarcodeDetected = (barcode: string) => {
+    skipSearchEffectForQueryRef.current = barcode.trim();
+    setProductQuery(barcode);
+    setBarcodeMessage("");
+    void handleAddByQuery(barcode);
+  };
+
+  const handleQuantityChange = (productId: string, quantity: number) => {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
         item.id === productId
@@ -174,7 +250,7 @@ export default function CashierPage() {
     );
   };
 
-  const handleRemoveItem = (productId: number) => {
+  const handleRemoveItem = (productId: string) => {
     setCartItems((currentItems) =>
       currentItems.filter((item) => item.id !== productId),
     );
@@ -190,15 +266,7 @@ export default function CashierPage() {
     }
 
     for (const item of cartItems) {
-      const product = products.find(
-        (currentProduct) => currentProduct.id === item.id,
-      );
-
-      if (!product || product.status !== "Aktif") {
-        return `${item.name} tidak tersedia.`;
-      }
-
-      if (product.stock < item.quantity) {
+      if (item.stock < item.quantity) {
         return `Stok ${item.name} tidak mencukupi.`;
       }
     }
@@ -215,18 +283,8 @@ export default function CashierPage() {
     setTransactionMessage("");
   };
 
-  const handlePay = async () => {
-    const validationMessage = validatePayment();
-
-    if (validationMessage) {
-      setTransactionMessage(validationMessage);
-      return;
-    }
-
-    setIsProcessing(true);
-    setTransactionMessage("");
-
-    const result = await addTransaction({
+  const createTransactionPayload = () => {
+    return {
       items: cartItems.map((item) => ({
         productId: item.id,
         barcode: item.barcode,
@@ -242,31 +300,61 @@ export default function CashierPage() {
       paidAmount,
       change,
       cashierName: user?.name,
-    });
+    };
+  };
 
-    if (!result.ok) {
-      setTransactionMessage(result.error ?? "Gagal memproses transaksi.");
-      setIsProcessing(false);
+  const handlePay = async () => {
+    if (isPaying) return;
+    const validationMessage = validatePayment();
+
+    if (validationMessage) {
+      setTransactionMessage(validationMessage);
       return;
     }
 
-    const transaction = result.transaction!;
+    setIsPaying(true);
+    try {
+      const payload = createTransactionPayload();
+      const serializedPayload = JSON.stringify(payload);
 
-    addActivity({
-      type: "transaction-success",
-      title: "Transaksi berhasil",
-      description: `${transaction.transactionNumber}\n${formatRupiah(
-        transaction.grandTotal,
-        { prefix: true },
-      )}`,
-    });
-    setLastSuccessfulTransaction(transaction);
-    setPaymentDialogTransaction(transaction);
-    resetCashierState();
-    setIsProcessing(false);
+      if (checkoutRequestRef.current?.payload !== serializedPayload) {
+        checkoutRequestRef.current = {
+          key: crypto.randomUUID(),
+          payload: serializedPayload,
+        };
+      }
 
-    // refetch products to get updated stock from server
-    fetchProducts();
+      const transaction = await transactionService.createTransaction(
+        payload,
+        checkoutRequestRef.current.key,
+      );
+
+      checkoutRequestRef.current = null;
+
+      showToast("Transaksi berhasil.", "success");
+      addActivity({
+        type: "transaction-success",
+        title: "Transaksi berhasil",
+        description: `${transaction.transactionNumber}\n${formatRupiah(
+          transaction.grandTotal,
+          { prefix: true },
+        )}`,
+      });
+      setLastSuccessfulTransaction(transaction);
+      setPaymentDialogTransaction(transaction);
+      resetCashierState();
+      await fetchProducts();
+    } catch (error) {
+      const message =
+        error instanceof TransactionApiError
+          ? error.message
+          : "Terjadi kesalahan pada server.";
+
+      setTransactionMessage(message);
+      showToast(message, "error");
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   const handleClosePaymentDialog = () => {
@@ -276,13 +364,12 @@ export default function CashierPage() {
 
   const printReceipt = (transaction: SalesTransaction) => {
     setPaymentDialogTransaction(null);
-    setReceiptPrintTransaction(transaction);
     addActivity({
       type: "receipt-print",
       title: "Struk dicetak",
       description: transaction.transactionNumber,
     });
-    window.setTimeout(() => window.print(), 100);
+    printReceiptArea(transaction);
   };
 
   const handlePrintReceipt = () => {
@@ -323,13 +410,20 @@ export default function CashierPage() {
           query={productQuery}
           message={barcodeMessage}
           focusRequestId={focusRequestId}
-          products={cashierProducts}
+          products={cashierSearchResults}
           onProductSelect={addProductToCart}
           onQueryChange={(value) => {
             setProductQuery(value);
             setBarcodeMessage("");
           }}
           onSubmit={handleAddByQuery}
+          onScanBarcode={() => setIsBarcodeScannerOpen(true)}
+        />
+
+        <BarcodeScannerModal
+          isOpen={isBarcodeScannerOpen}
+          onClose={() => setIsBarcodeScannerOpen(false)}
+          onDetected={handleBarcodeDetected}
         />
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -348,7 +442,7 @@ export default function CashierPage() {
             paidAmount={paidAmountInput}
             change={change}
             canPay={canPay}
-            isProcessing={isProcessing}
+            isPaying={isPaying}
             transactionMessage={transactionMessage}
             onDiscountChange={(value) =>
               setDiscountPercentInput(normalizeDiscountPercentInput(value))

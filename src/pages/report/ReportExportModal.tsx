@@ -3,7 +3,7 @@ import { useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import DatePicker from "../../components/ui/DatePicker";
-import type { SalesTransaction } from "../cashier/CashierTypes";
+import type { SalesTransaction } from "../../types/cashier";
 import { createSalesReportPdf, downloadPdf } from "../../utils/reportPdf";
 import { useSettings } from "../../hooks/useSettings";
 

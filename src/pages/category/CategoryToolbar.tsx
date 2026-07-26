@@ -2,7 +2,7 @@ import { Plus, Search } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input, Select } from "../../components/ui/Input";
-import type { CategorySortKey, SortDirection } from "./CategoryTypes";
+import type { CategorySortKey, SortDirection } from "../../types/category";
 
 type CategoryToolbarProps = {
   searchTerm: string;
