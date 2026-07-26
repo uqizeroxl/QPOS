@@ -2,9 +2,13 @@
   "name": "qpos-monorepo",
   "private": true,
   "scripts": {
-    "dev": "npm run dev --prefix pos-web",
-    "build": "npm run build --prefix pos-web",
-    "lint": "npm run lint --prefix pos-web",
-    "preview": "npm run preview --prefix pos-web"
+    "dev": "vite",
+    "dev:server": "npm run dev --prefix server",
+    "build": "tsc -b && vite build",
+    "lint": "eslint src/",
+    "preview": "vite preview",
+    "prisma:generate": "npm run prisma:generate --prefix server",
+    "prisma:migrate": "npm run prisma:migrate --prefix server",
+    "seed": "npm run seed --prefix server"
   }
 }

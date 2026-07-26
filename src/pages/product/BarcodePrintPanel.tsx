@@ -3,7 +3,7 @@ import { useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input, Select } from "../../components/ui/Input";
-import type { BarcodeLabelSize, BarcodePrintSettings } from "./ProductTypes";
+import type { BarcodeLabelSize, BarcodePrintSettings } from "../../types";
 
 type BarcodePrintPanelProps = {
   settings: BarcodePrintSettings;

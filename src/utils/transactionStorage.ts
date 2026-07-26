@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from "../constants/app";
-import type { SalesTransaction } from "../pages/cashier/CashierTypes";
+import type { SalesTransaction } from "../types/cashier";
 
 export function getStoredTransactions(
   fallbackTransactions: SalesTransaction[] = [],

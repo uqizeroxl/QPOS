@@ -3,107 +3,96 @@ import type { ReactNode } from "react";
 import { STORAGE_KEYS } from "../constants/app";
 import { authService } from "../services/authService";
 import { AuthContext } from "./authContextValue";
-import type { AuthContextValue, AuthUser } from "./authContextValue";
+import type { AuthContextValue, AuthUser, LoginPayload } from "./authContextValue";
 
 type AuthProviderProps = {
   children: ReactNode;
 };
 
-function getStoredToken(): string | null {
-  return localStorage.getItem(STORAGE_KEYS.authToken);
-}
+type AuthState = {
+  user: AuthUser | null;
+  token: string | null;
+};
 
-function getStoredUser(): AuthUser | null {
+function getInitialAuthState(): AuthState {
+  const storedToken = localStorage.getItem(STORAGE_KEYS.authToken);
+  const storedUser = localStorage.getItem(STORAGE_KEYS.authUser);
+
+  if (!storedToken || !storedUser) {
+    return { user: null, token: null };
+  }
+
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.authUser);
-    return raw ? (JSON.parse(raw) as AuthUser) : null;
+    return {
+      token: storedToken,
+      user: JSON.parse(storedUser) as AuthUser,
+    };
   } catch {
-    return null;
+    localStorage.removeItem(STORAGE_KEYS.authToken);
+    localStorage.removeItem(STORAGE_KEYS.authUser);
+    return { user: null, token: null };
   }
 }
 
-function clearAuthStorage() {
-  localStorage.removeItem(STORAGE_KEYS.authToken);
-  localStorage.removeItem(STORAGE_KEYS.authUser);
-}
-
-function saveAuthStorage(token: string, user: AuthUser) {
-  localStorage.setItem(STORAGE_KEYS.authToken, token);
-  localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(user));
-}
-
-function normalizeRole(role: string): AuthUser["role"] {
-  if (role === "CASHIER" || role === "cashier") return "cashier";
-  if (role === "WAREHOUSE" || role === "manager") return "manager";
-  return "admin";
-}
-
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<AuthUser | null>(getStoredUser);
-  const [token, setToken] = useState<string | null>(getStoredToken);
-  const [isLoading, setIsLoading] = useState(() => Boolean(getStoredToken()));
+  const [{ user, token }, setAuthState] = useState(getInitialAuthState);
+  const [isLoading, setIsLoading] = useState(Boolean(token));
 
-  useEffect(() => {
-    const storedToken = getStoredToken();
-
-    if (!storedToken) {
-      return;
-    }
-
-    void authService
-      .me()
-      .then((response) => {
-        const me = response.data;
-        const authUser: AuthUser = {
-          id: me.id,
-          name: me.name,
-          role: normalizeRole(me.role),
-        };
-        setToken(storedToken);
-        setUser(authUser);
-        saveAuthStorage(storedToken, authUser);
-      })
-      .catch(() => {
-        clearAuthStorage();
-        setToken(null);
-        setUser(null);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+  const login = useCallback(({ token: nextToken, user: nextUser }: LoginPayload) => {
+    localStorage.setItem(STORAGE_KEYS.authToken, nextToken);
+    localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(nextUser));
+    setAuthState({ token: nextToken, user: nextUser });
   }, []);
 
-  const login = useCallback(async (username: string, password: string) => {
-    try {
-      const response = await authService.login({ username, password });
-      const { token: apiToken, user: apiUser } = response.data;
-      const authUser: AuthUser = {
-        id: apiUser.id,
-        name: apiUser.name,
-        role: normalizeRole(apiUser.role),
-      };
-      saveAuthStorage(apiToken, authUser);
-      setToken(apiToken);
-      setUser(authUser);
-      window.dispatchEvent(new Event("auth:login"));
-      return { ok: true as const };
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Login gagal";
-      return { ok: false as const, error: message };
-    }
+  const clearAuth = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEYS.authToken);
+    localStorage.removeItem(STORAGE_KEYS.authUser);
+    setAuthState({ token: null, user: null });
   }, []);
 
   const logout = useCallback(async () => {
     try {
-      await authService.logout();
-    } catch {
-      // ignore logout errors
+      if (localStorage.getItem(STORAGE_KEYS.authToken)) {
+        await authService.logout();
+      }
+    } finally {
+      clearAuth();
     }
-    clearAuthStorage();
-    setToken(null);
-    setUser(null);
-  }, []);
+  }, [clearAuth]);
+
+  useEffect(() => {
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const verifyProfile = async () => {
+      try {
+        const profile = await authService.profile();
+
+        if (!isMounted) return;
+
+        localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(profile));
+        setAuthState({ token, user: profile });
+      } catch {
+        if (isMounted) {
+          clearAuth();
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void verifyProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [clearAuth, token]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -114,7 +103,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       login,
       logout,
     }),
-    [login, logout, token, user, isLoading],
+    [isLoading, login, logout, token, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

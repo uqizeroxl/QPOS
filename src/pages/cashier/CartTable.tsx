@@ -12,12 +12,12 @@ import {
   TableHeadCell,
   TableRow,
 } from "../../components/ui/Table";
-import type { CartItem } from "./CashierTypes";
+import type { CartItem } from "../../types/cashier";
 
 type CartTableProps = {
   items: CartItem[];
-  onQuantityChange: (productId: number, quantity: number) => void;
-  onRemoveItem: (productId: number) => void;
+  onQuantityChange: (productId: string, quantity: number) => void;
+  onRemoveItem: (productId: string) => void;
 };
 
 export default function CartTable({
@@ -25,12 +25,12 @@ export default function CartTable({
   onQuantityChange,
   onRemoveItem,
 }: CartTableProps) {
-  const [quantityInputs, setQuantityInputs] = useState<Record<number, string>>(
+  const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>(
     {},
   );
 
   const updateQuantityInput = (
-    productId: number,
+    productId: string,
     value: string,
     maxQuantity: number,
   ) => {
@@ -55,7 +55,7 @@ export default function CartTable({
   };
 
   const updateQuantityFromButton = (
-    productId: number,
+    productId: string,
     quantity: number,
     maxQuantity: number,
   ) => {

@@ -1,22 +1,23 @@
 import { X } from "lucide-react";
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent, RefObject } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input, Textarea } from "../../components/ui/Input";
-import type { Supplier, SupplierFormValues } from "./SupplierTypes";
+import type { Supplier, SupplierFormValues } from "../../types/supplier";
 
 type SupplierFormProps = {
   isOpen: boolean;
   supplier?: Supplier | null;
   errorMessage?: string;
   onClose: () => void;
-  onSubmit: (values: SupplierFormValues) => Promise<boolean>;
+  onSubmit: (values: SupplierFormValues) => boolean | Promise<boolean>;
 };
 
 const emptyForm: SupplierFormValues = {
   name: "",
   phone: "",
+  email: "",
   address: "",
   notes: "",
 };
@@ -29,6 +30,7 @@ function getInitialFormValues(supplier?: Supplier | null): SupplierFormValues {
   return {
     name: supplier.name,
     phone: supplier.phone ?? "",
+    email: supplier.email ?? "",
     address: supplier.address ?? "",
     notes: supplier.notes ?? "",
   };
@@ -44,6 +46,29 @@ export default function SupplierForm({
   const [formValues, setFormValues] = useState<SupplierFormValues>(() =>
     getInitialFormValues(supplier),
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const addressInputRef = useRef<HTMLTextAreaElement>(null);
+  const notesInputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      nameInputRef.current?.focus();
+    }
+  }, [isOpen, supplier]);
+
+  useEffect(() => {
+    if (!errorMessage) return;
+
+    const firstInvalidField = formRef.current?.querySelector<
+      HTMLInputElement | HTMLTextAreaElement
+    >("input:invalid, textarea:invalid");
+
+    (firstInvalidField ?? nameInputRef.current)?.focus();
+  }, [errorMessage]);
 
   if (!isOpen) {
     return null;
@@ -59,9 +84,32 @@ export default function SupplierForm({
     }));
   };
 
+  const focusNextOnEnter = (
+    event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+    nextFieldRef: RefObject<HTMLInputElement | HTMLTextAreaElement | null>,
+  ) => {
+    if (event.key !== "Enter") return;
+
+    event.preventDefault();
+    nextFieldRef.current?.focus();
+  };
+
+  const handleNotesKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && event.ctrlKey) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    await onSubmit(formValues);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formValues);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -86,41 +134,69 @@ export default function SupplierForm({
           </Button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5 p-5">
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-5 p-5">
           <label className="space-y-2">
             <span className="text-sm font-medium text-gray-700">
               Nama Supplier
             </span>
             <Input
+              ref={nameInputRef}
+              autoFocus
               required
               value={formValues.name}
               onChange={(event) => updateField("name", event.target.value)}
+              onKeyDown={(event) =>
+                focusNextOnEnter(event, phoneInputRef)
+              }
             />
           </label>
 
           <label className="space-y-2">
             <span className="text-sm font-medium text-gray-700">Telepon</span>
             <Input
+              ref={phoneInputRef}
               value={formValues.phone}
               onChange={(event) => updateField("phone", event.target.value)}
+              onKeyDown={(event) =>
+                focusNextOnEnter(event, emailInputRef)
+              }
+            />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-gray-700">Email</span>
+            <Input
+              ref={emailInputRef}
+              type="email"
+              value={formValues.email}
+              onChange={(event) => updateField("email", event.target.value)}
+              onKeyDown={(event) =>
+                focusNextOnEnter(event, addressInputRef)
+              }
             />
           </label>
 
           <label className="space-y-2">
             <span className="text-sm font-medium text-gray-700">Alamat</span>
             <Textarea
+              ref={addressInputRef}
               rows={3}
               value={formValues.address}
               onChange={(event) => updateField("address", event.target.value)}
+              onKeyDown={(event) =>
+                focusNextOnEnter(event, notesInputRef)
+              }
             />
           </label>
 
           <label className="space-y-2">
             <span className="text-sm font-medium text-gray-700">Catatan</span>
             <Textarea
+              ref={notesInputRef}
               rows={3}
               value={formValues.notes}
               onChange={(event) => updateField("notes", event.target.value)}
+              onKeyDown={handleNotesKeyDown}
             />
           </label>
 
@@ -131,11 +207,11 @@ export default function SupplierForm({
           ) : null}
 
           <div className="flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
               Batal
             </Button>
-            <Button type="submit">
-              {supplier ? "Simpan Perubahan" : "Simpan Supplier"}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Menyimpan..." : supplier ? "Simpan Perubahan" : "Simpan Supplier"}
             </Button>
           </div>
         </form>

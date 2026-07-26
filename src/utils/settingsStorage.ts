@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from "../constants/app";
-import type { AppSettings } from "../contexts/settingsContextValue";
+import type { AppSettings } from "../types/settings";
 
 export function getStoredSettings(fallbackSettings: AppSettings) {
   const storedSettings = localStorage.getItem(STORAGE_KEYS.settings);

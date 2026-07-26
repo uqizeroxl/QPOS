@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from "../constants/app";
-import type { Category } from "../pages/category/CategoryTypes";
+import type { Category } from "../types/category";
 
 export function getStoredCategories(fallbackCategories: Category[] = []) {
   const storedCategories = localStorage.getItem(STORAGE_KEYS.categories);

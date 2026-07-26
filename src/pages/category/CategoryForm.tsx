@@ -8,14 +8,14 @@ import type {
   Category,
   CategoryFormValues,
   CategoryStatus,
-} from "./CategoryTypes";
+} from "../../types/category";
 
 type CategoryFormProps = {
   isOpen: boolean;
   category?: Category | null;
   errorMessage?: string;
   onClose: () => void;
-  onSubmit: (values: CategoryFormValues) => Promise<boolean>;
+  onSubmit: (values: CategoryFormValues) => boolean | Promise<boolean>;
 };
 
 const emptyForm: CategoryFormValues = {
@@ -30,7 +30,7 @@ function getInitialFormValues(category?: Category | null): CategoryFormValues {
   }
 
   return {
-    name: category.name,
+    name: category.name.toUpperCase(),
     description: category.description,
     status: category.status,
   };
@@ -46,6 +46,7 @@ export default function CategoryForm({
   const [formValues, setFormValues] = useState<CategoryFormValues>(() =>
     getInitialFormValues(category),
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) {
     return null;
@@ -63,12 +64,18 @@ export default function CategoryForm({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isSubmitting) return;
 
-    await onSubmit({
-      name: formValues.name,
-      description: formValues.description,
-      status: formValues.status,
-    });
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        name: formValues.name,
+        description: formValues.description,
+        status: formValues.status,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -99,10 +106,13 @@ export default function CategoryForm({
               Nama Kategori
             </span>
             <Input
+              autoFocus={!category}
               required
               maxLength={50}
               value={formValues.name}
-              onChange={(event) => updateField("name", event.target.value)}
+              onChange={(event) =>
+                updateField("name", event.target.value.toUpperCase())
+              }
             />
             <span className="block text-xs font-medium text-gray-400">
               {formValues.name.length}/50 karakter
@@ -140,11 +150,11 @@ export default function CategoryForm({
           ) : null}
 
           <div className="flex flex-col-reverse gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
               Batal
             </Button>
-            <Button type="submit">
-              {category ? "Simpan Perubahan" : "Simpan Kategori"}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Menyimpan..." : category ? "Simpan Perubahan" : "Simpan Kategori"}
             </Button>
           </div>
         </form>

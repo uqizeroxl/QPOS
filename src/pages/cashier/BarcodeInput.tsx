@@ -1,12 +1,11 @@
-import { Camera, Package, Search } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Package, ScanBarcode, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
-import BarcodeScannerModal from "../../components/barcode/BarcodeScannerModal";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { formatRupiah } from "../../utils/currency";
-import type { CashierProduct } from "./CashierTypes";
+import type { CashierProduct } from "../../types/cashier";
 
 type BarcodeInputProps = {
   query: string;
@@ -15,7 +14,8 @@ type BarcodeInputProps = {
   products: CashierProduct[];
   onQueryChange: (value: string) => void;
   onProductSelect: (product: CashierProduct) => boolean;
-  onSubmit: () => void;
+  onSubmit: () => void | Promise<void>;
+  onScanBarcode: () => void;
 };
 
 export default function BarcodeInput({
@@ -26,11 +26,13 @@ export default function BarcodeInput({
   onQueryChange,
   onProductSelect,
   onSubmit,
+  onScanBarcode,
 }: BarcodeInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLLabelElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const normalizedQuery = query.trim().toLowerCase();
 
   useEffect(() => {
@@ -41,28 +43,29 @@ export default function BarcodeInput({
     inputRef.current?.focus();
   }, [focusRequestId]);
 
-  const matchedProducts = useMemo(() => {
-    if (!normalizedQuery) {
-      return [];
-    }
-
-    return products
-      .filter(
-        (product) =>
-          product.name.toLowerCase().includes(normalizedQuery) ||
-          product.barcode.toLowerCase().includes(normalizedQuery),
-      )
-      .slice(0, 8);
-  }, [normalizedQuery, products]);
+  const matchedProducts = normalizedQuery ? products : [];
 
   const safeActiveIndex =
     matchedProducts.length === 0
       ? 0
       : Math.min(activeIndex, matchedProducts.length - 1);
-  const shouldShowDropdown =
-    isDropdownOpen && normalizedQuery.length > 0 && matchedProducts.length > 0;
-  const shouldShowNotFound =
-    normalizedQuery.length > 0 && matchedProducts.length === 0;
+  const shouldShowDropdown = isDropdownOpen && normalizedQuery.length > 0;
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  useEffect(() => {
+    if (!shouldShowDropdown || matchedProducts.length === 0) return;
+    optionRefs.current[safeActiveIndex]?.scrollIntoView({ block: "nearest" });
+  }, [matchedProducts.length, normalizedQuery, safeActiveIndex, shouldShowDropdown]);
 
   const focusInput = () => {
     window.setTimeout(() => inputRef.current?.focus(), 0);
@@ -80,27 +83,9 @@ export default function BarcodeInput({
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextQuery = event.target.value;
-    const nextNormalizedQuery = nextQuery.trim().toLowerCase();
-    const exactBarcodeProduct = products.find(
-      (product) => product.barcode.toLowerCase() === nextNormalizedQuery,
-    );
-
     onQueryChange(nextQuery);
     setActiveIndex(0);
-
-    if (exactBarcodeProduct) {
-      selectProduct(exactBarcodeProduct);
-      return;
-    }
-
     setIsDropdownOpen(true);
-  };
-
-  const handleCameraBarcode = (barcode: string) => {
-    const product = products.find((item) => item.barcode === barcode);
-    onQueryChange(barcode);
-    if (product) selectProduct(product);
-    else setIsDropdownOpen(false);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -111,7 +96,7 @@ export default function BarcodeInput({
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "ArrowDown") {
-      if (!shouldShowDropdown) {
+      if (!shouldShowDropdown || matchedProducts.length === 0) {
         return;
       }
 
@@ -123,7 +108,7 @@ export default function BarcodeInput({
     }
 
     if (event.key === "ArrowUp") {
-      if (!shouldShowDropdown) {
+      if (!shouldShowDropdown || matchedProducts.length === 0) {
         return;
       }
 
@@ -132,7 +117,7 @@ export default function BarcodeInput({
       return;
     }
 
-    if (event.key === "Enter" && shouldShowDropdown) {
+    if (event.key === "Enter" && shouldShowDropdown && matchedProducts.length > 0) {
       event.preventDefault();
       selectProduct(matchedProducts[safeActiveIndex]);
       return;
@@ -160,36 +145,29 @@ export default function BarcodeInput({
       </div>
 
       <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-3 sm:flex-row">
-        <label className="relative flex-1">
+        <label ref={containerRef} className="relative flex-1">
           <span className="sr-only">Cari barang</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
           <Input
             ref={inputRef}
             value={query}
-            onBlur={() => setIsDropdownOpen(false)}
             onChange={handleChange}
             onFocus={() => setIsDropdownOpen(true)}
             onKeyDown={handleKeyDown}
             placeholder="Scan barcode atau ketik nama produk..."
-            className="pl-10 pr-12 text-gray-700"
+            className="pl-10 pr-3 text-gray-700"
           />
-          <Button
-            variant="unstyled"
-            onClick={() => setIsScannerOpen(true)}
-            className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-blue-600"
-            aria-label="Buka scanner kamera"
-            title="Scan dengan kamera"
-          >
-            <Camera className="h-5 w-5" />
-          </Button>
 
           {shouldShowDropdown ? (
-            <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl">
-              {matchedProducts.map((product, index) => {
+            <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[320px] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl">
+              {matchedProducts.length > 0 ? matchedProducts.map((product, index) => {
                 const isActive = index === safeActiveIndex;
 
                 return (
                   <button
+                    ref={(element) => {
+                      optionRefs.current[index] = element;
+                    }}
                     key={product.id}
                     type="button"
                     onMouseDown={(event) => {
@@ -205,7 +183,7 @@ export default function BarcodeInput({
                         {product.name}
                       </span>
                       <span className="mt-1 block text-xs font-medium text-gray-400">
-                        {product.barcode}
+                        {product.barcode || "-"}
                       </span>
                     </span>
                     <span className="shrink-0 text-right">
@@ -218,26 +196,30 @@ export default function BarcodeInput({
                     </span>
                   </button>
                 );
-              })}
+              }) : (
+                <p className="px-4 py-4 text-center text-sm font-medium text-gray-500">
+                  Produk tidak ditemukan
+                </p>
+              )}
             </div>
           ) : null}
         </label>
+
+        <Button variant="secondary" onClick={onScanBarcode} className="px-5">
+          <ScanBarcode className="h-5 w-5" />
+          Scan Barcode
+        </Button>
 
         <Button type="submit" className="px-5">
           Tambah
         </Button>
       </form>
 
-      {message || shouldShowNotFound ? (
+      {message ? (
         <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-          {message || "Produk tidak ditemukan."}
+          {message}
         </p>
       ) : null}
-      <BarcodeScannerModal
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onDetected={handleCameraBarcode}
-      />
     </Card>
   );
 }

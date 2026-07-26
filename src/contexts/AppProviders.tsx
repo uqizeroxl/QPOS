@@ -17,23 +17,23 @@ type AppProvidersProps = {
 export default function AppProviders({ children }: AppProvidersProps) {
   return (
     <ThemeProvider>
-      <SettingsProvider>
-        <ToastProvider>
-          <NotificationProvider>
-            <ActivityProvider>
-              <ProductProvider>
-                <CategoryProvider>
-                  <SupplierProvider>
-                    <TransactionProvider>
-                      <AuthProvider>{children}</AuthProvider>
-                    </TransactionProvider>
-                  </SupplierProvider>
-                </CategoryProvider>
-              </ProductProvider>
-            </ActivityProvider>
-          </NotificationProvider>
-        </ToastProvider>
-      </SettingsProvider>
+      <AuthProvider>
+        <SettingsProvider>
+          <ToastProvider>
+            <NotificationProvider>
+              <ActivityProvider>
+                <ProductProvider>
+                  <CategoryProvider>
+                    <SupplierProvider>
+                      <TransactionProvider>{children}</TransactionProvider>
+                    </SupplierProvider>
+                  </CategoryProvider>
+                </ProductProvider>
+              </ActivityProvider>
+            </NotificationProvider>
+          </ToastProvider>
+        </SettingsProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

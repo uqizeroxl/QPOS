@@ -1,34 +1,15 @@
 import { createContext } from "react";
+import type {
+  AppNotification,
+  AddNotificationPayload,
+} from "../types/notification";
 
-export type NotificationType = "success" | "error" | "info" | "warning";
-export type NotificationCategory =
-  | "stock"
-  | "product"
-  | "category"
-  | "barcode"
-  | "supplier"
-  | "sales"
-  | "announcement";
-
-export type AppNotification = {
-  id: string;
-  title: string;
-  description?: string;
-  message?: string;
-  time: string;
-  type: NotificationType;
-  category: NotificationCategory;
-  isRead: boolean;
-};
-
-export type AddNotificationPayload = {
-  title: string;
-  description?: string;
-  message?: string;
-  time?: string;
-  type: NotificationType;
-  category?: NotificationCategory;
-};
+export type {
+  NotificationType,
+  NotificationCategory,
+  AppNotification,
+  AddNotificationPayload,
+} from "../types/notification";
 
 export type NotificationContextValue = {
   notifications: AppNotification[];

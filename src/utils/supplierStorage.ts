@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from "../constants/app";
-import type { Supplier } from "../pages/supplier/SupplierTypes";
+import type { Supplier } from "../types/supplier";
 
 export function getStoredSuppliers(fallbackSuppliers: Supplier[] = []) {
   const storedSuppliers = localStorage.getItem(STORAGE_KEYS.suppliers);

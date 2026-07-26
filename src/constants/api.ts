@@ -1,6 +1,6 @@
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ??
   import.meta.env.VITE_API_URL ??
-  "http://127.0.0.1:3000/api";
+  import.meta.env.VITE_API_BASE_URL ??
+  "/api";
 
 export const API_TIMEOUT = 15_000;

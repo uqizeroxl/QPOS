@@ -14,7 +14,7 @@ type PaymentSummaryProps = {
   paidAmount: string;
   change: number;
   canPay: boolean;
-  isProcessing?: boolean;
+  isPaying: boolean;
   transactionMessage: string;
   onDiscountChange: (value: string) => void;
   onPaidAmountChange: (value: string) => void;
@@ -32,7 +32,7 @@ const PaymentSummary = forwardRef<HTMLInputElement, PaymentSummaryProps>(
       paidAmount,
       change,
       canPay,
-      isProcessing,
+      isPaying,
       transactionMessage,
       onDiscountChange,
       onPaidAmountChange,
@@ -126,7 +126,7 @@ const PaymentSummary = forwardRef<HTMLInputElement, PaymentSummaryProps>(
         </div>
 
         {transactionMessage ? (
-          <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
             {transactionMessage}
           </p>
         ) : null}
@@ -134,9 +134,9 @@ const PaymentSummary = forwardRef<HTMLInputElement, PaymentSummaryProps>(
         <div className="grid gap-3 sm:grid-cols-2">
           <Button
             onClick={onPay}
-            disabled={!canPay || isProcessing}
+            disabled={!canPay || isPaying}
           >
-            {isProcessing ? "Memproses..." : "Bayar"}
+            {isPaying ? "Memproses..." : "Bayar"}
           </Button>
 
           <Button

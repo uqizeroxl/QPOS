@@ -1,4 +1,4 @@
-import type { Product, ProductFormValues } from "../pages/product/ProductTypes";
+import type { Product, ProductFormValues } from "../types";
 import { formatRupiah } from "./currency";
 
 type ProductChangeField = {
@@ -29,7 +29,7 @@ function formatChangeValue(
   field: ProductChangeField,
   value: ProductFormValues[keyof ProductFormValues],
 ) {
-  return field.formatValue ? field.formatValue(value) : value.toString();
+  return field.formatValue ? field.formatValue(value) : String(value ?? "");
 }
 
 export function getProductUpdateDescription(

@@ -1,5 +1,5 @@
 import Barcode from "react-barcode";
-import type { BarcodeLabelSize, BarcodePrintPayload } from "./ProductTypes";
+import type { BarcodeLabelSize, BarcodePrintPayload } from "../../types";
 
 type BarcodePrintAreaProps = {
   payload: BarcodePrintPayload | null;

@@ -2,22 +2,25 @@ import { createContext } from "react";
 import type {
   Supplier,
   SupplierFormValues,
-} from "../pages/supplier/SupplierTypes";
+} from "../types/supplier";
 
 export type SupplierResult =
   | { ok: true; supplier: Supplier }
-  | { ok: false; message: string };
+  | { ok: false; message: string; productCount?: number };
 
 export type SupplierContextValue = {
   suppliers: Supplier[];
-  isLoading: boolean;
-  fetchSuppliers: () => Promise<void>;
+  fetchSuppliers: (search?: string) => Promise<void>;
   addSupplier: (values: SupplierFormValues) => Promise<SupplierResult>;
   updateSupplier: (
-    supplierId: number,
+    supplierId: string,
     values: SupplierFormValues,
   ) => Promise<SupplierResult>;
-  deleteSupplier: (supplierId: number) => Promise<SupplierResult>;
+  setSupplierActive: (
+    supplier: Supplier,
+    isActive: boolean,
+  ) => Promise<SupplierResult>;
+  deleteSupplier: (supplierId: string) => Promise<SupplierResult>;
 };
 
 export const SupplierContext = createContext<SupplierContextValue | undefined>(

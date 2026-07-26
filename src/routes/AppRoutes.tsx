@@ -1,47 +1,75 @@
+import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import LoginPage from "../pages/login/LoginPage";
-import DashboardPage from "../pages/dashboard/DashboardPage";
-import ProductPage from "../pages/product/ProductPage";
-import CashierPage from "../pages/cashier/CashierPage";
-import TransactionHistoryPage from "../pages/transaction-history/TransactionHistoryPage";
-import CategoryPage from "../pages/category/CategoryPage";
-import SupplierPage from "../pages/supplier/SupplierPage";
-import ReportPage from "../pages/report/ReportPage";
-import SettingPage from "../pages/setting/SettingPage";
-import HelpShortcutPage from "../pages/help/HelpShortcutPage";
-import NotificationsPage from "../pages/notifications/NotificationsPage";
-import NotFoundPage from "../pages/system/NotFoundPage";
 import { ROUTES } from "../constants/routes";
+import LoadingScreen from "../pages/system/LoadingScreen";
 import ProtectedRoute from "./ProtectedRoute";
+
+const LoginPage = lazy(() => import("../pages/login/LoginPage"));
+const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"));
+const ProductPage = lazy(() => import("../pages/product/ProductPage"));
+const BarcodeLabelPage = lazy(
+  () => import("../pages/barcode-label/BarcodeLabelPage"),
+);
+const CashierPage = lazy(() => import("../pages/cashier/CashierPage"));
+const TransactionDetailPage = lazy(
+  () => import("../pages/transactions/TransactionDetailPage"),
+);
+const TransactionsPage = lazy(() => import("../pages/transactions/TransactionsPage"));
+const TransactionHistoryPage = lazy(
+  () => import("../pages/transaction-history/TransactionHistoryPage"),
+);
+const CategoryPage = lazy(() => import("../pages/category/CategoryPage"));
+const SupplierPage = lazy(() => import("../pages/supplier/SupplierPage"));
+const RestockPage = lazy(() => import("../pages/restock/RestockPage"));
+const StockHistoryPage = lazy(
+  () => import("../pages/stock-history/StockHistoryPage"),
+);
+const ReportPage = lazy(() => import("../pages/report/ReportPage"));
+const SettingPage = lazy(() => import("../pages/setting/SettingPage"));
+const HelpShortcutPage = lazy(() => import("../pages/help/HelpShortcutPage"));
+const NotificationsPage = lazy(
+  () => import("../pages/notifications/NotificationsPage"),
+);
+const NotFoundPage = lazy(() => import("../pages/system/NotFoundPage"));
 
 export default function AppRoutes() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path={ROUTES.login} element={<LoginPage />} />
+      <Suspense fallback={<LoadingScreen />}>
+        <Routes>
+          <Route path={ROUTES.login} element={<LoginPage />} />
 
-        <Route element={<ProtectedRoute />}>
-          <Route path={ROUTES.dashboard} element={<DashboardPage />} />
-          <Route path={ROUTES.product} element={<ProductPage />} />
-          <Route path={ROUTES.category} element={<CategoryPage />} />
-          <Route path={ROUTES.supplier} element={<SupplierPage />} />
-          <Route path={ROUTES.cashier} element={<CashierPage />} />
-          <Route
-            path={ROUTES.transactionHistory}
-            element={<TransactionHistoryPage />}
-          />
-          <Route path={ROUTES.report} element={<ReportPage />} />
-          <Route path={ROUTES.setting} element={<SettingPage />} />
-          <Route path={ROUTES.helpShortcut} element={<HelpShortcutPage />} />
-          <Route
-            path={ROUTES.notifications}
-            element={<NotificationsPage />}
-          />
-        </Route>
+          <Route element={<ProtectedRoute />}>
+            <Route path={ROUTES.dashboard} element={<DashboardPage />} />
+            <Route path={ROUTES.product} element={<ProductPage />} />
+            <Route path={ROUTES.barcodeLabels} element={<BarcodeLabelPage />} />
+            <Route path={ROUTES.category} element={<CategoryPage />} />
+            <Route path={ROUTES.supplier} element={<SupplierPage />} />
+            <Route path={ROUTES.restock} element={<RestockPage />} />
+            <Route path={ROUTES.stockHistory} element={<StockHistoryPage />} />
+            <Route path={ROUTES.cashier} element={<CashierPage />} />
+            <Route path={ROUTES.transactions} element={<TransactionsPage />} />
+            <Route
+              path={ROUTES.transactionDetail}
+              element={<TransactionDetailPage />}
+            />
+            <Route
+              path={ROUTES.transactionHistory}
+              element={<TransactionHistoryPage />}
+            />
+            <Route path={ROUTES.report} element={<ReportPage />} />
+            <Route path={ROUTES.setting} element={<SettingPage />} />
+            <Route path={ROUTES.helpShortcut} element={<HelpShortcutPage />} />
+            <Route
+              path={ROUTES.notifications}
+              element={<NotificationsPage />}
+            />
+          </Route>
 
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

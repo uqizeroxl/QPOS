@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Pencil, Trash2, Truck } from "lucide-react";
+import { Ban, ChevronLeft, ChevronRight, Pencil, Trash2, Truck } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import {
@@ -9,7 +9,7 @@ import {
   TableHeadCell,
   TableRow,
 } from "../../components/ui/Table";
-import type { Supplier } from "./SupplierTypes";
+import type { Supplier } from "../../types/supplier";
 
 type SupplierTableProps = {
   suppliers: Supplier[];
@@ -18,7 +18,8 @@ type SupplierTableProps = {
   totalSuppliers: number;
   onPageChange: (page: number) => void;
   onEdit: (supplier: Supplier) => void;
-  onDelete: (supplierId: number) => void;
+  onToggleStatus: (supplier: Supplier) => void;
+  onDelete: (supplier: Supplier) => void;
 };
 
 function formatDate(value: string) {
@@ -36,6 +37,7 @@ export default function SupplierTable({
   totalSuppliers,
   onPageChange,
   onEdit,
+  onToggleStatus,
   onDelete,
 }: SupplierTableProps) {
   const totalPages = Math.max(1, Math.ceil(totalSuppliers / rowsPerPage));
@@ -57,28 +59,35 @@ export default function SupplierTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="app-scrollbar max-h-[480px] overflow-auto scroll-smooth">
         <Table>
-          <TableHead>
+          <TableHead className="sticky top-0 z-[1]">
             <TableRow className="hover:bg-transparent">
               <TableHeadCell>Nama Supplier</TableHeadCell>
               <TableHeadCell>Telepon</TableHeadCell>
+              <TableHeadCell>Email</TableHeadCell>
               <TableHeadCell>Alamat</TableHeadCell>
               <TableHeadCell>Catatan</TableHeadCell>
+              <TableHeadCell>Status</TableHeadCell>
               <TableHeadCell>Dibuat</TableHeadCell>
               <TableHeadCell>Diubah</TableHeadCell>
-              <TableHeadCell className="text-right">Aksi</TableHeadCell>
+              <TableHeadCell className="sticky right-0 z-20 whitespace-nowrap bg-gray-50 text-right shadow-[-4px_0_8px_-6px_rgba(15,23,42,0.35)] dark:bg-slate-900">
+                Aksi
+              </TableHeadCell>
             </TableRow>
           </TableHead>
           <TableBody className="bg-white">
             {suppliers.length > 0 ? (
               suppliers.map((supplier) => (
-                <TableRow key={supplier.id}>
+                <TableRow key={supplier.id} className="group">
                   <TableCell className="whitespace-nowrap font-semibold text-gray-900">
                     {supplier.name}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm text-gray-600">
                     {supplier.phone || "-"}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-sm text-gray-600">
+                    {supplier.email || "-"}
                   </TableCell>
                   <TableCell className="min-w-80 text-sm text-gray-600">
                     {supplier.address || "-"}
@@ -86,28 +95,50 @@ export default function SupplierTable({
                   <TableCell className="min-w-64 text-sm text-gray-600">
                     {supplier.notes || "-"}
                   </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        supplier.isActive
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {supplier.isActive ? "Aktif" : "Nonaktif"}
+                    </span>
+                  </TableCell>
                   <TableCell className="whitespace-nowrap text-sm text-gray-600">
                     {formatDate(supplier.createdAt)}
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-sm text-gray-600">
                     {formatDate(supplier.updatedAt)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-right">
+                  <TableCell className="sticky right-0 z-10 whitespace-nowrap bg-white text-right shadow-[-4px_0_8px_-6px_rgba(15,23,42,0.35)] group-hover:bg-gray-50 dark:bg-slate-900 dark:group-hover:bg-slate-700">
                     <div className="inline-flex items-center gap-2">
                       <Button
-                        variant="icon"
+                        variant="compactSecondary"
                         onClick={() => onEdit(supplier)}
                         className="hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                         aria-label={`Edit ${supplier.name}`}
                       >
                         <Pencil className="h-4 w-4" />
+                        Edit
                       </Button>
                       <Button
-                        variant="dangerIcon"
-                        onClick={() => onDelete(supplier.id)}
-                        aria-label={`Hapus ${supplier.name}`}
+                        variant="compactSecondary"
+                        onClick={() => onToggleStatus(supplier)}
+                        aria-label={`${supplier.isActive ? "Nonaktifkan" : "Aktifkan"} ${supplier.name}`}
+                      >
+                        <Ban className="h-4 w-4" />
+                        {supplier.isActive ? "Nonaktifkan" : "Aktifkan"}
+                      </Button>
+                      <Button
+                        variant="compactSecondary"
+                        onClick={() => onDelete(supplier)}
+                        className="border-red-200 text-red-700 hover:bg-red-50"
+                        aria-label={`Hapus permanen ${supplier.name}`}
                       >
                         <Trash2 className="h-4 w-4" />
+                        Hapus Permanen
                       </Button>
                     </div>
                   </TableCell>
@@ -115,7 +146,7 @@ export default function SupplierTable({
               ))
             ) : (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={7} className="py-12 text-center">
+                <TableCell colSpan={9} className="py-12 text-center">
                   <p className="font-semibold text-gray-700">
                     Belum ada data.
                   </p>

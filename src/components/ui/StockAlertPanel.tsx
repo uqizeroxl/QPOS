@@ -1,7 +1,7 @@
 import Card from "./Card";
 
 type StockItem = {
-  id: number;
+  id: string;
   name: string;
   category: string;
   stock: number;

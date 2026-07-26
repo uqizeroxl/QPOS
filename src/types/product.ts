@@ -1,0 +1,70 @@
+import type { RecordStatus } from "./enums";
+
+export type ProductStatus = "Aktif" | "Nonaktif";
+
+export type Product = {
+  id: string;
+  barcode: string;
+  name: string;
+  categoryId?: string;
+  category: string;
+  purchasePrice: number | null;
+  sellingPrice: number;
+  stock: number;
+  status: ProductStatus;
+};
+
+export type ProductFormValues = Omit<Product, "id">;
+
+export type BulkProductDraft = Pick<
+  Product,
+  "id" | "name" | "barcode" | "purchasePrice" | "sellingPrice"
+>;
+
+export type BarcodeLabelSize = "small" | "medium" | "large";
+
+export type BarcodePrintSettings = {
+  labelSize: BarcodeLabelSize;
+  quantity: number;
+  showPrice: boolean;
+};
+
+export type BarcodePrintPayload = BarcodePrintSettings & {
+  barcode: string;
+  productName: string;
+  priceLabel: string;
+};
+
+export type CreateProductPayload = {
+  barcode: string;
+  name: string;
+  categoryId: string;
+  purchasePrice: number | null;
+  sellingPrice: number;
+  stock: number;
+  status: RecordStatus;
+  supplierId?: string | null;
+};
+
+export type UpdateProductPayload = CreateProductPayload;
+
+export type ProductApiItem = {
+  id: string;
+  barcode: string | null;
+  name: string;
+  categoryId: string;
+  category?: { id: string; name: string } | null;
+  supplierId?: string | null;
+  supplier?: { id: string; name: string } | null;
+  purchasePrice: string | number | null;
+  sellingPrice: string | number;
+  stock: number;
+  status: RecordStatus | "Aktif" | "Nonaktif";
+};
+
+export type ProductListParams = {
+  page: number;
+  limit: number;
+  search?: string;
+  category?: string;
+};

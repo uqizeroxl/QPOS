@@ -1,9 +1,12 @@
 import {
   BarChart3,
+  Barcode,
   CircleHelp,
   LayoutDashboard,
   Package,
+  PackagePlus,
   ReceiptText,
+  ScrollText,
   Settings,
   ShoppingCart,
   Tags,
@@ -14,27 +17,40 @@ import { NavLink } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import Button from "../ui/Button";
 import { ROUTES } from "../../constants/routes";
+import { useAuth } from "../../hooks/useAuth";
+import type { UserRole } from "../../services/authService";
+import { useTranslation } from "react-i18next";
 
 type SidebarMenuItem = {
-  label: string;
+  labelKey: string;
   path: string;
   icon: LucideIcon;
+  roles: UserRole[];
 };
 
+const allRoles: UserRole[] = ["OWNER", "ADMIN", "CASHIER", "WAREHOUSE"];
+const ownerAdminRoles: UserRole[] = ["OWNER", "ADMIN"];
+const inventoryRoles: UserRole[] = ["OWNER", "ADMIN", "WAREHOUSE"];
+const salesRoles: UserRole[] = ["OWNER", "ADMIN", "CASHIER"];
+
 const menuItems: SidebarMenuItem[] = [
-  { label: "Dashboard", path: ROUTES.dashboard, icon: LayoutDashboard },
-  { label: "Produk", path: ROUTES.product, icon: Package },
-  { label: "Kategori", path: ROUTES.category, icon: Tags },
-  { label: "Supplier", path: ROUTES.supplier, icon: Truck },
-  { label: "Kasir", path: ROUTES.cashier, icon: ShoppingCart },
+  { labelKey: "sidebar.menu.dashboard", path: ROUTES.dashboard, icon: LayoutDashboard, roles: allRoles },
+  { labelKey: "sidebar.menu.product", path: ROUTES.product, icon: Package, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.barcodeLabels", path: ROUTES.barcodeLabels, icon: Barcode, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.category", path: ROUTES.category, icon: Tags, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.supplier", path: ROUTES.supplier, icon: Truck, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.restock", path: ROUTES.restock, icon: PackagePlus, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.stockHistory", path: ROUTES.stockHistory, icon: ScrollText, roles: inventoryRoles },
+  { labelKey: "sidebar.menu.cashier", path: ROUTES.cashier, icon: ShoppingCart, roles: salesRoles },
   {
-    label: "Riwayat Transaksi",
-    path: ROUTES.transactionHistory,
+    labelKey: "sidebar.menu.transactions",
+    path: ROUTES.transactions,
     icon: ReceiptText,
+    roles: salesRoles,
   },
-  { label: "Laporan", path: ROUTES.report, icon: BarChart3 },
-  { label: "Pengaturan", path: ROUTES.setting, icon: Settings },
-  { label: "Bantuan & Shortcut", path: ROUTES.helpShortcut, icon: CircleHelp },
+  { labelKey: "sidebar.menu.report", path: ROUTES.report, icon: BarChart3, roles: ownerAdminRoles },
+  { labelKey: "sidebar.menu.setting", path: ROUTES.setting, icon: Settings, roles: ownerAdminRoles },
+  { labelKey: "sidebar.menu.help", path: ROUTES.helpShortcut, icon: CircleHelp, roles: allRoles },
 ];
 
 type SidebarProps = {
@@ -43,26 +59,34 @@ type SidebarProps = {
 };
 
 function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
+  const { user } = useAuth();
+  const { t } = useTranslation();
+  const visibleMenuItems = menuItems.filter(
+    (item) => user && item.roles.includes(user.role),
+  );
+
   return (
     <>
-      <div className="mb-8 flex items-center gap-3 px-2">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 text-lg font-extrabold tracking-wide text-white shadow-sm transition duration-200">
-          Q
-        </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="truncate bg-gradient-to-r from-white to-cyan-100 bg-clip-text text-2xl font-extrabold tracking-wide text-transparent transition duration-200 dark:from-blue-300 dark:to-cyan-300">
+      <div className="mb-8 flex min-h-12 items-center gap-[14px] px-2">
+        <img
+          src="/qpos-logo.png"
+          alt={t("sidebar.logoAlt")}
+          className="h-12 w-12 shrink-0 object-contain"
+        />
+        <div className="qpos-brand-type min-w-0 flex-1 overflow-hidden text-left transition-[width,opacity] duration-200 ease-out">
+          <h1 className="truncate text-[26px] font-bold leading-[1] tracking-[-0.03em] text-white">
             QPOS
           </h1>
-          <p className="text-xs font-medium text-blue-100 dark:text-slate-400">
-            Retail Management
+          <p className="mt-1 truncate text-[10px] font-medium leading-tight tracking-[0.045em] text-white/70">
+            {t("sidebar.tagline")}
           </p>
         </div>
 
         {onClose ? (
           <Button
             variant="icon"
-            className="lg:hidden"
-            aria-label="Tutup menu"
+            className="border-white/15 text-white hover:bg-white/20 lg:hidden"
+            aria-label={t("sidebar.closeMenu")}
             onClick={onClose}
           >
             <X className="h-5 w-5" />
@@ -71,7 +95,7 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
       </div>
 
       <nav className="space-y-1">
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const Icon = item.icon;
 
           return (
@@ -83,12 +107,12 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
                 `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                   isActive
                     ? "bg-white/15 text-white"
-                    : "text-blue-100 hover:bg-white/10 hover:text-white dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                    : "text-white hover:bg-white/20"
                 }`
               }
             >
               <Icon className="h-5 w-5" />
-              <span>{item.label}</span>
+              <span>{t(item.labelKey)}</span>
             </NavLink>
           );
         })}
@@ -98,9 +122,10 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
 }
 
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
+  const { t } = useTranslation();
   return (
     <>
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-blue-700 bg-blue-700 px-4 py-5 transition-colors duration-300 dark:border-slate-800 dark:bg-slate-950 lg:block">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-white/10 bg-gradient-to-b from-[#2F6BFF] to-[#214BCB] px-4 py-5 lg:block">
         <SidebarContent />
       </aside>
 
@@ -109,11 +134,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           <Button
             variant="unstyled"
             className="absolute inset-0 h-full w-full bg-gray-900/40"
-            aria-label="Tutup menu"
+            aria-label={t("sidebar.closeMenu")}
             onClick={onClose}
           />
 
-          <aside className="relative h-full w-72 max-w-[85vw] border-r border-blue-700 bg-blue-700 px-4 py-5 shadow-xl transition-colors duration-300 dark:border-slate-800 dark:bg-slate-950">
+          <aside className="relative h-full w-72 max-w-[85vw] border-r border-white/10 bg-gradient-to-b from-[#2F6BFF] to-[#214BCB] px-4 py-5 shadow-xl">
             <SidebarContent onClose={onClose} />
           </aside>
         </div>

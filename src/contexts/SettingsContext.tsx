@@ -1,57 +1,63 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { STORAGE_KEYS } from "../constants/app";
 import {
   defaultSettings,
   SettingsContext,
 } from "./settingsContextValue";
 import type { AppSettings } from "./settingsContextValue";
+import { getStoredSettings, storeSettings } from "../utils/settingsStorage";
+import { settingsService } from "../services/settingsService";
+import { useAuth } from "../hooks/useAuth";
 
 type SettingsProviderProps = {
   children: ReactNode;
 };
 
-function getStoredSettings(): AppSettings {
-  try {
-    const value = localStorage.getItem(STORAGE_KEYS.settings);
-    return value ? { ...defaultSettings, ...(JSON.parse(value) as AppSettings) } : defaultSettings;
-  } catch {
-    return defaultSettings;
-  }
-}
-
 export function SettingsProvider({ children }: SettingsProviderProps) {
-  const [settings, setSettings] = useState<AppSettings>(getStoredSettings);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const fetchSettings = useCallback(async () => {
-    setIsLoading(true);
-    setSettings(getStoredSettings());
-    setIsLoading(false);
-  }, []);
-
-  const saveSettings = useCallback(
-    async (nextSettings: AppSettings) => {
-      try {
-        const safeSettings: AppSettings = {
-          storeName: nextSettings.storeName.trim() || defaultSettings.storeName,
-          phone: nextSettings.phone.trim(),
-          address: nextSettings.address.trim(),
-        };
-        localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(safeSettings));
-        setSettings(safeSettings);
-        return { ok: true as const };
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Gagal menyimpan pengaturan";
-        return { ok: false as const, error: message };
-      }
-    },
-    [],
+  const { user } = useAuth();
+  const [settings, setSettings] = useState<AppSettings>(() =>
+    getStoredSettings(defaultSettings),
   );
 
+  const saveSettings = useCallback((nextSettings: AppSettings) => {
+    const safeSettings: AppSettings = {
+      storeName: nextSettings.storeName.trim() || defaultSettings.storeName,
+      phone: nextSettings.phone.trim(),
+      address: nextSettings.address.trim(),
+      receiptFooter:
+        nextSettings.receiptFooter.trim() || defaultSettings.receiptFooter,
+    };
+
+    setSettings(safeSettings);
+    storeSettings(safeSettings);
+  }, []);
+
+  const setReceiptFooter = useCallback((receiptFooter: string) => {
+    setSettings((currentSettings) => {
+      const nextSettings = { ...currentSettings, receiptFooter };
+      storeSettings(nextSettings);
+      return nextSettings;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    let isMounted = true;
+    void settingsService.getReceiptFooter().then((result) => {
+      if (isMounted) setReceiptFooter(result.receiptFooter);
+    }).catch(() => {
+      // Keep the cached/default footer while the API is unavailable.
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [setReceiptFooter, user]);
+
   const value = useMemo(
-    () => ({ settings, isLoading, fetchSettings, saveSettings }),
-    [settings, isLoading, fetchSettings, saveSettings],
+    () => ({ settings, saveSettings, setReceiptFooter }),
+    [saveSettings, setReceiptFooter, settings],
   );
 
   return (
