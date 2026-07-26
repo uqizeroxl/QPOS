@@ -4,7 +4,6 @@ import axiosInstance from "./api/axiosInstance";
 import type { SalesTransaction } from "../types/cashier";
 import type {
   TransactionListItem,
-  TransactionApiItem,
   TransactionApiResponse,
   TransactionListApiItem,
   GetTransactionsParams,
@@ -14,6 +13,8 @@ import type {
 import type { PaginationMeta } from "../types/api";
 
 export type { TransactionListItem, GetTransactionsParams, CreateTransactionPayload, ResetTransactionHistoryResult };
+
+export type TransactionPagination = PaginationMeta;
 
 type TransactionListApiResponse = {
   data: TransactionListApiItem[];

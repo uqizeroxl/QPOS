@@ -106,6 +106,16 @@ const activityNotificationMap: Record<
     type: "warning",
     category: "stock",
   },
+  "transaction-history-reset": {
+    title: "Riwayat Transaksi Direset",
+    type: "warning",
+    category: "sales",
+  },
+  "transaction-retention": {
+    title: "Retensi Transaksi",
+    type: "info",
+    category: "sales",
+  },
 };
 
 function getSafeCreatedAt(value?: string) {

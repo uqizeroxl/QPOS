@@ -47,7 +47,7 @@ function buildProductPayload(values: ProductFormValues): CreateProductPayload {
     purchasePrice: values.purchasePrice,
     sellingPrice: values.sellingPrice,
     stock: values.stock,
-    status: values.status,
+    status: values.status === "Aktif" ? "ACTIVE" : "INACTIVE",
   };
 }
 

@@ -2,6 +2,8 @@ import axios from "axios";
 import { apiService } from "./api/apiService";
 import type { DashboardData } from "../types/dashboard";
 
+export type { DashboardData } from "../types/dashboard";
+
 type DashboardApiData = Omit<
   DashboardData,
   "todayRevenue" | "topProducts" | "recentTransactions"

@@ -2,6 +2,7 @@ import { createContext } from "react";
 import type { ActivityLogItem, AddActivityPayload } from "../types/activity";
 
 export type { ActivityLogItem, AddActivityPayload } from "../types/activity";
+export type { ActivityType } from "../types/enums";
 
 export type ActivityContextValue = {
   activities: ActivityLogItem[];

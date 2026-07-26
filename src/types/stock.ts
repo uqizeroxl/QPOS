@@ -1,5 +1,6 @@
 import type { StockAdjustmentType, StockReferenceType } from "./enums";
 
+export type { StockAdjustmentType, StockReferenceType } from "./enums";
 export type StockAdjustmentPayload = {
   type: StockAdjustmentType;
   quantity: number;

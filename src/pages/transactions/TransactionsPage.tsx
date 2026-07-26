@@ -268,7 +268,7 @@ export default function TransactionsPage() {
                   transactions.map((transaction) => (
                     <TableRow key={transaction.id}>
                       <TableCell className="whitespace-nowrap font-semibold text-gray-900">
-                        {transaction.invoiceNumber}
+                        {transaction.transactionNumber}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm text-gray-600">
                         {formatDateTime(transaction.createdAt)}

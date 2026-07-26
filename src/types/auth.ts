@@ -1,5 +1,7 @@
 import type { UserRole } from "./enums";
 
+export type { UserRole } from "./enums";
+
 export type AuthUser = {
   id: string;
   username: string;

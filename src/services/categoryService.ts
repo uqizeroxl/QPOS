@@ -6,7 +6,6 @@ import type {
   CreateCategoryPayload,
   UpdateCategoryPayload,
 } from "../types/category";
-import type { RecordStatus } from "../types/enums";
 
 export class CategoryApiError extends Error {
   public readonly status?: number;

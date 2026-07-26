@@ -2,7 +2,7 @@ import axios from "axios";
 import { apiService } from "./api/apiService";
 import type { AuthUser, AuthPayload } from "../types/auth";
 
-export type { AuthUser, AuthPayload } from "../types/auth";
+export type { AuthUser, AuthPayload, UserRole } from "../types/auth";
 
 export class AuthApiError extends Error {
   constructor(message: string) {

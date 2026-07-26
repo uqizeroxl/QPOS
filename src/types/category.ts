@@ -40,7 +40,7 @@ export type CategoryApiItem = {
 export type CreateCategoryPayload = {
   name: string;
   description?: string;
-  status?: RecordStatus;
+  status?: RecordStatus | CategoryStatus;
 };
 
 export type UpdateCategoryPayload = CreateCategoryPayload;
