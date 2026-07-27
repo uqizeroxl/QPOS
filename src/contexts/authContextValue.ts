@@ -1,7 +1,7 @@
 import { createContext } from "react";
-import type { AuthUser, LoginPayload } from "../types/auth";
+import type { AuthUser, LoginPayload, StoreInfo } from "../types/auth";
 
-export type { AuthUser, LoginPayload } from "../types/auth";
+export type { AuthUser, LoginPayload, StoreInfo } from "../types/auth";
 
 export type AuthContextValue = {
   user: AuthUser | null;
@@ -10,6 +10,8 @@ export type AuthContextValue = {
   isLoading: boolean;
   login: (payload: LoginPayload) => void;
   logout: () => Promise<void>;
+  stores: StoreInfo[];
+  switchStore: (storeId: string) => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextValue | undefined>(

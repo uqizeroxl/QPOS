@@ -83,6 +83,90 @@ const signToken = (user: AuthUser, role: StoreRole) =>
     }
   );
 
+type StoreMembershipItem = {
+  storeId: string;
+  storeName: string;
+  role: StoreRole;
+};
+
+export const listStores = async (accountId: string) => {
+  const memberships = await masterPrisma.storeMember.findMany({
+    where: {
+      accountId,
+      store: {
+        isActive: true
+      }
+    },
+    select: {
+      role: true,
+      storeId: true,
+      store: {
+        select: {
+          name: true
+        }
+      }
+    },
+    orderBy: {
+      createdAt: "asc"
+    }
+  });
+
+  return memberships.map((m) => ({
+    id: m.storeId,
+    name: m.store.name,
+    role: m.role
+  }));
+};
+
+export const switchStore = async (accountId: string, storeId: string) => {
+  const membership = await masterPrisma.storeMember.findFirst({
+    where: {
+      accountId,
+      storeId,
+      account: { isActive: true },
+      store: { isActive: true }
+    },
+    select: {
+      role: true,
+      storeId: true,
+      store: {
+        select: {
+          name: true,
+          isActive: true
+        }
+      },
+      account: {
+        select: {
+          id: true,
+          username: true,
+          name: true
+        }
+      }
+    }
+  });
+
+  if (!membership) {
+    throw new StoreMembershipRequiredError();
+  }
+
+  if (!membership.store.isActive) {
+    throw new StoreInactiveError();
+  }
+
+  const authUser = sanitizeUser({
+    id: membership.account.id,
+    username: membership.account.username,
+    name: membership.account.name,
+    role: mapStoreRoleToLegacyRole(membership.role),
+    storeId: membership.storeId
+  });
+
+  return {
+    token: signToken(authUser, membership.role),
+    user: authUser
+  };
+};
+
 export const login = async (username: string, password: string) => {
   const account = await masterPrisma.account.findUnique({
     where: {
@@ -104,6 +188,7 @@ export const login = async (username: string, password: string) => {
           store: {
             select: {
               id: true,
+              name: true,
               isActive: true
             }
           }
@@ -147,9 +232,16 @@ export const login = async (username: string, password: string) => {
     storeId: membership.storeId
   });
 
+  const stores = account.memberships.map((m) => ({
+    id: m.store.id,
+    name: m.store.name,
+    role: m.role
+  }));
+
   return {
     token: signToken(authUser, membership.role),
-    user: authUser
+    user: authUser,
+    stores
   };
 };
 

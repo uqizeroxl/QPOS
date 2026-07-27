@@ -7,11 +7,19 @@ export type AuthUser = {
   username: string;
   name: string;
   role: UserRole;
+  storeId: string;
+};
+
+export type StoreInfo = {
+  id: string;
+  name: string;
+  role: string;
 };
 
 export type AuthPayload = {
   token: string;
   user: AuthUser;
+  stores?: StoreInfo[];
 };
 
 export type LoginPayload = {

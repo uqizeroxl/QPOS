@@ -1,8 +1,8 @@
 import axios from "axios";
 import { apiService } from "./api/apiService";
-import type { AuthUser, AuthPayload } from "../types/auth";
+import type { AuthUser, AuthPayload, StoreInfo } from "../types/auth";
 
-export type { AuthUser, AuthPayload, UserRole } from "../types/auth";
+export type { AuthUser, AuthPayload, StoreInfo, UserRole } from "../types/auth";
 
 export class AuthApiError extends Error {
   constructor(message: string) {
@@ -49,6 +49,25 @@ export const authService = {
   logout: async () => {
     try {
       await apiService.post("/auth/logout");
+    } catch (error) {
+      return handleAuthError(error);
+    }
+  },
+  listStores: async () => {
+    try {
+      const response = await apiService.get<StoreInfo[]>("/auth/stores");
+      return response.data;
+    } catch (error) {
+      return handleAuthError(error);
+    }
+  },
+  switchStore: async (storeId: string) => {
+    try {
+      const response = await apiService.post<
+        AuthPayload,
+        { storeId: string }
+      >("/auth/switch-store", { storeId });
+      return response.data;
     } catch (error) {
       return handleAuthError(error);
     }

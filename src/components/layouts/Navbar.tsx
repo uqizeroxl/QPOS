@@ -8,6 +8,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useSettings } from "../../hooks/useSettings";
 import { useTheme } from "../../hooks/useTheme";
 import LanguageSwitcher from "../navbar/LanguageSwitcher";
+import StoreSwitcher from "../navbar/StoreSwitcher";
 
 type NavbarProps = {
   onMenuClick: () => void;
@@ -57,9 +58,6 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           </Button>
 
           <div className="min-w-0">
-            <p className="truncate text-sm text-gray-500 dark:text-slate-400">
-              {settings.storeName}
-            </p>
             <h2 className="truncate text-lg font-semibold text-gray-900 dark:text-slate-100">
               {pageTitle}
             </h2>
@@ -87,6 +85,8 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           <LanguageSwitcher />
 
           <NotificationBell />
+
+          <StoreSwitcher />
 
           <div className="hidden items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 transition-colors duration-300 dark:border-slate-700 sm:flex">
             <UserRound className="h-4 w-4 text-gray-500 dark:text-slate-400" />

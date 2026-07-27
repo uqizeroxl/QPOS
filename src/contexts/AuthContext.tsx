@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { STORAGE_KEYS } from "../constants/app";
 import { authService } from "../services/authService";
+import type { StoreInfo } from "../services/authService";
 import { AuthContext } from "./authContextValue";
 import type { AuthContextValue, AuthUser, LoginPayload } from "./authContextValue";
 
@@ -37,17 +38,29 @@ function getInitialAuthState(): AuthState {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [{ user, token }, setAuthState] = useState(getInitialAuthState);
   const [isLoading, setIsLoading] = useState(Boolean(token));
+  const [stores, setStores] = useState<StoreInfo[]>([]);
+
+  const fetchStores = useCallback(async () => {
+    try {
+      const data = await authService.listStores();
+      setStores(data);
+    } catch {
+      setStores([]);
+    }
+  }, []);
 
   const login = useCallback(({ token: nextToken, user: nextUser }: LoginPayload) => {
     localStorage.setItem(STORAGE_KEYS.authToken, nextToken);
     localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(nextUser));
     setAuthState({ token: nextToken, user: nextUser });
-  }, []);
+    void fetchStores();
+  }, [fetchStores]);
 
   const clearAuth = useCallback(() => {
     localStorage.removeItem(STORAGE_KEYS.authToken);
     localStorage.removeItem(STORAGE_KEYS.authUser);
     setAuthState({ token: null, user: null });
+    setStores([]);
   }, []);
 
   const logout = useCallback(async () => {
@@ -59,6 +72,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       clearAuth();
     }
   }, [clearAuth]);
+
+  const switchStore = useCallback(async (storeId: string) => {
+    const data = await authService.switchStore(storeId);
+    localStorage.setItem(STORAGE_KEYS.authToken, data.token);
+    localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(data.user));
+    setAuthState({ token: data.token, user: data.user });
+    await fetchStores();
+  }, [fetchStores]);
 
   useEffect(() => {
     if (!token) {
@@ -76,6 +97,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(profile));
         setAuthState({ token, user: profile });
+        await fetchStores();
       } catch {
         if (isMounted) {
           clearAuth();
@@ -92,18 +114,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => {
       isMounted = false;
     };
-  }, [clearAuth, token]);
+  }, [clearAuth, fetchStores, token]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
       token,
+      stores,
       isAuthenticated: Boolean(token && user),
       isLoading,
       login,
       logout,
+      switchStore,
     }),
-    [isLoading, login, logout, token, user],
+    [isLoading, login, logout, switchStore, token, user, stores],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
