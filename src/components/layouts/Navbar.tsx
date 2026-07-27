@@ -9,6 +9,7 @@ import { useSettings } from "../../hooks/useSettings";
 import { useTheme } from "../../hooks/useTheme";
 import LanguageSwitcher from "../navbar/LanguageSwitcher";
 import StoreSwitcher from "../navbar/StoreSwitcher";
+import ConnectionStatus from "../navbar/ConnectionStatus";
 
 type NavbarProps = {
   onMenuClick: () => void;
@@ -83,6 +84,8 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           </Button>
 
           <LanguageSwitcher />
+
+          <ConnectionStatus />
 
           <NotificationBell />
 
