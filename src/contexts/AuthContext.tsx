@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { STORAGE_KEYS } from "../constants/app";
 import { authService } from "../services/authService";
+import { cacheService } from "../services/storage/cache.service";
 import type { StoreInfo } from "../services/authService";
 import { AuthContext } from "./authContextValue";
 import type { AuthContextValue, AuthUser, LoginPayload } from "./authContextValue";
@@ -64,6 +65,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem(STORAGE_KEYS.authUser);
     setAuthState({ token: null, user: null });
     setStores([]);
+    void cacheService.clear();
   }, []);
 
   const logout = useCallback(async () => {

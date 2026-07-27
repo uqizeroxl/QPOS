@@ -13,6 +13,7 @@ import {
 } from "../../services/transactionService";
 import { ProductApiError, productService } from "../../services/productService";
 import { formatRupiah, parseRupiah } from "../../utils/currency";
+import { networkService } from "../../services/storage/network.service";
 import MainLayout from "../../layouts/MainLayout";
 import BarcodeInput from "./BarcodeInput";
 import CartTable from "./CartTable";
@@ -265,9 +266,11 @@ export default function CashierPage() {
       return "Nominal pembayaran belum mencukupi.";
     }
 
-    for (const item of cartItems) {
-      if (item.stock < item.quantity) {
-        return `Stok ${item.name} tidak mencukupi.`;
+    if (networkService.isOnline()) {
+      for (const item of cartItems) {
+        if (item.stock < item.quantity) {
+          return `Stok ${item.name} tidak mencukupi.`;
+        }
       }
     }
 
@@ -348,7 +351,9 @@ export default function CashierPage() {
       const message =
         error instanceof TransactionApiError
           ? error.message
-          : "Terjadi kesalahan pada server.";
+          : error instanceof Error
+            ? error.message
+            : "Terjadi kesalahan pada server.";
 
       setTransactionMessage(message);
       showToast(message, "error");

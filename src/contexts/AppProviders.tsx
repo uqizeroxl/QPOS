@@ -10,6 +10,7 @@ import { SettingsProvider } from "./SettingsContext";
 import { ThemeProvider } from "./ThemeContext";
 import { ToastProvider } from "./ToastContext";
 import { TransactionProvider } from "./TransactionContext";
+import { NetworkProvider } from "./NetworkContext";
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -30,7 +31,9 @@ export default function AppProviders({ children }: AppProvidersProps) {
                   <ProductProvider>
                     <CategoryProvider>
                       <SupplierProvider>
-                        <TransactionProvider>{children}</TransactionProvider>
+                        <TransactionProvider>
+                    <NetworkProvider>{children}</NetworkProvider>
+                  </TransactionProvider>
                       </SupplierProvider>
                     </CategoryProvider>
                   </ProductProvider>

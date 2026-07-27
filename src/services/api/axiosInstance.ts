@@ -2,6 +2,31 @@ import axios from "axios";
 import { API_BASE_URL, API_TIMEOUT } from "../../constants/api";
 import { STORAGE_KEYS } from "../../constants/app";
 import { authService } from "../authService";
+import { cacheService } from "../storage/cache.service";
+import { syncService } from "../storage/sync.service";
+
+const CACHE_TTL = 5 * 60 * 1000;
+
+const AUTH_PREFIXES = ["/auth/login", "/auth/refresh", "/auth/google", "/auth/apple"];
+
+function shouldCache(url: string): boolean {
+  return !AUTH_PREFIXES.some((prefix) => url.startsWith(prefix));
+}
+
+function shouldEnqueueOnOffline(method: string | undefined, url: string): boolean {
+  if (method === "GET") return false;
+  if (method === "POST" && url.endsWith("/logout")) return false;
+  return !AUTH_PREFIXES.some((prefix) => url.startsWith(prefix));
+}
+
+function stripOrigin(fullUrl: string): string {
+  try {
+    const u = new URL(fullUrl);
+    return u.pathname + u.search;
+  } catch {
+    return fullUrl;
+  }
+}
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -40,54 +65,87 @@ function processQueue(error: unknown) {
 }
 
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  async (response) => {
+    if (response.config.method === "get" && shouldCache(response.config.url ?? "")) {
+      const cacheKey = stripOrigin(response.config.url ?? "");
+      await cacheService.set(cacheKey, response.data, CACHE_TTL);
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+    const isNetworkError = !error.response;
+    const method = originalRequest?.method?.toLowerCase();
+    const url = stripOrigin(originalRequest?.url ?? "");
 
-    if (error.response?.status !== 401 || originalRequest._retry) {
-      return Promise.reject(error);
-    }
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      const refreshToken = localStorage.getItem(STORAGE_KEYS.authRefreshToken);
 
-    const refreshToken = localStorage.getItem(STORAGE_KEYS.authRefreshToken);
+      if (refreshToken) {
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          }).then(() => {
+            originalRequest.headers.Authorization = `Bearer ${localStorage.getItem(STORAGE_KEYS.authToken)}`;
+            return axiosInstance(originalRequest);
+          });
+        }
 
-    if (!refreshToken) {
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        try {
+          const data = await authService.refreshToken(refreshToken);
+
+          localStorage.setItem(STORAGE_KEYS.authToken, data.token);
+          localStorage.setItem(STORAGE_KEYS.authRefreshToken, data.refreshToken);
+          localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(data.user));
+
+          processQueue(null);
+          originalRequest.headers.Authorization = `Bearer ${data.token}`;
+          return axiosInstance(originalRequest);
+        } catch (refreshError) {
+          processQueue(refreshError);
+          localStorage.removeItem(STORAGE_KEYS.authToken);
+          localStorage.removeItem(STORAGE_KEYS.authRefreshToken);
+          localStorage.removeItem(STORAGE_KEYS.authUser);
+          return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
+        }
+      }
+
       localStorage.removeItem(STORAGE_KEYS.authToken);
       localStorage.removeItem(STORAGE_KEYS.authRefreshToken);
       localStorage.removeItem(STORAGE_KEYS.authUser);
       return Promise.reject(error);
     }
 
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      }).then(() => {
-        originalRequest.headers.Authorization = `Bearer ${localStorage.getItem(STORAGE_KEYS.authToken)}`;
-        return axiosInstance(originalRequest);
-      });
+    if (isNetworkError && method === "get" && shouldCache(url)) {
+      const cached = await cacheService.get<unknown>(url);
+      if (cached !== null) {
+        return { data: cached };
+      }
     }
 
-    originalRequest._retry = true;
-    isRefreshing = true;
+    if (isNetworkError && shouldEnqueueOnOffline(originalRequest?.method, url)) {
+      const token = localStorage.getItem(STORAGE_KEYS.authToken);
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
 
-    try {
-      const data = await authService.refreshToken(refreshToken);
+      await syncService.enqueue(
+        url,
+        originalRequest.method as "POST" | "PUT" | "DELETE",
+        originalRequest.data ? JSON.parse(originalRequest.data) : undefined,
+        headers,
+      );
 
-      localStorage.setItem(STORAGE_KEYS.authToken, data.token);
-      localStorage.setItem(STORAGE_KEYS.authRefreshToken, data.refreshToken);
-      localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(data.user));
-
-      processQueue(null);
-      originalRequest.headers.Authorization = `Bearer ${data.token}`;
-      return axiosInstance(originalRequest);
-    } catch (refreshError) {
-      processQueue(refreshError);
-      localStorage.removeItem(STORAGE_KEYS.authToken);
-      localStorage.removeItem(STORAGE_KEYS.authRefreshToken);
-      localStorage.removeItem(STORAGE_KEYS.authUser);
-      return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
+      return Promise.reject(new Error("Anda sedang offline. Transaksi akan diproses saat koneksi tersedia."));
     }
+
+    return Promise.reject(error);
   },
 );
 

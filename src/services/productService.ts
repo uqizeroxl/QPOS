@@ -1,6 +1,7 @@
 import axios from "axios";
 import axiosInstance from "./api/axiosInstance";
 import { apiService } from "./api/apiService";
+import { productCacheService } from "./storage/product-cache.service";
 import type {
   Product,
   ProductFormValues,
@@ -125,8 +126,22 @@ export const productService = {
         },
       );
 
+      const products = response.data.data.map(mapProduct);
+
+      if (!search && !category) {
+        const cachedProducts = products.map((p) => ({
+          id: p.id,
+          barcode: p.barcode,
+          name: p.name,
+          category: p.category,
+          price: p.sellingPrice,
+          stock: p.stock,
+        }));
+        void productCacheService.setAll(cachedProducts);
+      }
+
       return {
-        products: response.data.data.map(mapProduct),
+        products,
         total: response.data.total,
         page: response.data.page,
         limit: response.data.limit,
@@ -290,6 +305,22 @@ export const productService = {
 
       return response.data.map(mapProduct);
     } catch (error) {
+      if (axios.isAxiosError(error) && !error.response) {
+        const cached = await productCacheService.search(keyword);
+        return cached.map((p) => ({
+          id: p.id,
+          barcode: p.barcode,
+          name: p.name,
+          category: p.category,
+          sellingPrice: p.price,
+          stock: p.stock,
+          purchasePrice: null,
+          categoryId: "",
+          status: "Aktif" as const,
+          createdAt: "",
+          updatedAt: "",
+        }));
+      }
       handleProductError(error);
     }
   },

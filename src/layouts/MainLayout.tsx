@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import Sidebar from "../components/layouts/Sidebar";
 import Navbar from "../components/layouts/Navbar";
+import OfflineBanner from "../components/OfflineBanner";
 
 type MainLayoutProps = {
   children: ReactNode;
@@ -20,8 +21,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <div className="min-w-0 flex-1">
         <Navbar onMenuClick={() => setIsSidebarOpen(true)} />
 
-        <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+        <main className="p-4 sm:p-6 lg:p-8 pb-16">{children}</main>
       </div>
+
+      <OfflineBanner />
     </div>
   );
 }
