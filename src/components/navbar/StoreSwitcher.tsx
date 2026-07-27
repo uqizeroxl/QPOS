@@ -1,9 +1,11 @@
 import { Building2, ChevronDown, Loader2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../hooks/useAuth";
+import { useToast } from "../../hooks/useToast";
 
 export default function StoreSwitcher() {
   const { stores, user, switchStore } = useAuth();
+  const { showToast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -32,7 +34,9 @@ export default function StoreSwitcher() {
 
     setIsSwitching(true);
     try {
+      const targetStore = stores.find((s) => s.id === storeId);
       await switchStore(storeId);
+      showToast(`Berhasil pindah ke toko ${targetStore?.name ?? ""}`);
       window.location.reload();
     } catch {
       // error handled by context

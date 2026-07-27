@@ -12,6 +12,7 @@ import { Input } from "../../components/ui/Input";
 import { ROUTES } from "../../constants/routes";
 import { useAuth } from "../../hooks/useAuth";
 import { useSettings } from "../../hooks/useSettings";
+import { useToast } from "../../hooks/useToast";
 import { AuthApiError, authService } from "../../services/authService";
 import { useTranslation } from "react-i18next";
 
@@ -24,6 +25,7 @@ type LocationState = {
 export default function LoginPage() {
   const { isAuthenticated, login } = useAuth();
   const { settings } = useSettings();
+  const { showToast } = useToast();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,6 +55,8 @@ export default function LoginPage() {
         }
 
         login(auth);
+        const storeName = auth.stores?.[0]?.name;
+        showToast(`Selamat datang, ${auth.user.name}${storeName ? `, di ${storeName}` : ""}`);
         navigate(redirectPath, { replace: true });
       } catch (error) {
         setErrorMessage(
@@ -78,6 +82,8 @@ export default function LoginPage() {
       const auth = await authService.login(username, password);
 
       login(auth);
+      const storeName = auth.stores?.[0]?.name;
+      showToast(`Selamat datang, ${auth.user.name}${storeName ? `, di ${storeName}` : ""}`);
       navigate(redirectPath, { replace: true });
     } catch (error) {
       setErrorMessage(

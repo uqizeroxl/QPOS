@@ -18,6 +18,7 @@ import { useCategories } from "../../hooks/useCategories";
 import { useSettings } from "../../hooks/useSettings";
 import { useSuppliers } from "../../hooks/useSuppliers";
 import { useTheme } from "../../hooks/useTheme";
+import { useToast } from "../../hooks/useToast";
 import MainLayout from "../../layouts/MainLayout";
 import type { ThemePreference } from "../../contexts/themeContextValue";
 import {
@@ -43,7 +44,7 @@ export default function SettingPage() {
   const { fetchSuppliers } = useSuppliers();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [storeInfo, setStoreInfo] = useState(settings);
-  const [message, setMessage] = useState("");
+  const { showToast } = useToast();
   const [datasetFile, setDatasetFile] = useState<File | null>(null);
   const [datasetPreview, setDatasetPreview] =
     useState<ProductDatasetPreview | null>(null);
@@ -60,8 +61,6 @@ export default function SettingPage() {
   const [receiptFooter, setReceiptFooterInput] = useState(
     settings.receiptFooter,
   );
-  const [receiptFooterMessage, setReceiptFooterMessage] = useState("");
-  const [receiptFooterError, setReceiptFooterError] = useState("");
   const [isSavingReceiptFooter, setIsSavingReceiptFooter] = useState(false);
 
   useEffect(() => {
@@ -70,28 +69,27 @@ export default function SettingPage() {
 
   const handleSave = () => {
     saveSettings(storeInfo);
-    setMessage("Pengaturan toko berhasil disimpan.");
+    showToast("Pengaturan toko berhasil disimpan.");
   };
 
   const handleBackup = () => {
-    setMessage("Backup data lokal berhasil dibuat.");
+    showToast("Backup data lokal berhasil dibuat.");
   };
 
   const handleSaveReceiptFooter = async () => {
     setIsSavingReceiptFooter(true);
-    setReceiptFooterMessage("");
-    setReceiptFooterError("");
 
     try {
       const result = await settingsService.updateReceiptFooter(receiptFooter);
       setReceiptFooterInput(result.receiptFooter);
       setReceiptFooter(result.receiptFooter);
-      setReceiptFooterMessage("Footer struk berhasil disimpan.");
+      showToast("Footer struk berhasil disimpan.");
     } catch (error) {
-      setReceiptFooterError(
+      showToast(
         error instanceof SettingsApiError
           ? error.message
           : "Footer struk gagal disimpan.",
+        "error"
       );
     } finally {
       setIsSavingReceiptFooter(false);
@@ -104,7 +102,7 @@ export default function SettingPage() {
 
     try {
       await productService.exportDataset();
-      setMessage("Dataset produk berhasil diexport.");
+      showToast("Dataset produk berhasil diexport.");
     } catch (error) {
       setDatasetError(
         error instanceof ProductApiError
@@ -257,8 +255,6 @@ export default function SettingPage() {
                     const value = event.target.value.replace(/\r\n?/g, "\n");
                     if (value.split("\n").length <= 5) {
                       setReceiptFooterInput(value);
-                      setReceiptFooterMessage("");
-                      setReceiptFooterError("");
                     }
                   }}
                   placeholder="Terima kasih"
@@ -278,17 +274,6 @@ export default function SettingPage() {
                   {receiptFooter.trim() || "Terima kasih"}
                 </p>
               </div>
-
-              {receiptFooterMessage ? (
-                <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-                  {receiptFooterMessage}
-                </p>
-              ) : null}
-              {receiptFooterError ? (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-                  {receiptFooterError}
-                </p>
-              ) : null}
 
               <div className="flex justify-end border-t border-gray-200 pt-5">
                 <Button
@@ -372,12 +357,6 @@ export default function SettingPage() {
               </Select>
             </label>
           </div>
-
-          {message ? (
-            <p className="mt-5 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-              {message}
-            </p>
-          ) : null}
 
           <div className="mt-5 flex flex-col gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
             <Button
