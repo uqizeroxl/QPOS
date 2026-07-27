@@ -2,10 +2,16 @@ import { NextFunction, Request, Response } from "express";
 
 import * as authService from "../services/auth.service";
 import type { AuthenticatedRequest } from "../middleware/auth.middleware";
+import { OAuthProviderNotConfiguredError } from "../services/oauth.service";
 
 type LoginRequestBody = {
   username?: string;
   password?: string;
+};
+
+type OAuthRequestBody = {
+  accessToken?: string;
+  authorizationCode?: string;
 };
 
 export const login = async (
@@ -67,6 +73,108 @@ export const logout = (_req: Request, res: Response) => {
     success: true,
     message: "Logout berhasil."
   });
+};
+
+export const googleLogin = async (
+  req: Request<unknown, unknown, OAuthRequestBody>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const accessToken = req.body.accessToken?.trim() ?? "";
+
+    if (!accessToken) {
+      res.status(400).json({
+        success: false,
+        message: "Google Access Token wajib dikirim."
+      });
+      return;
+    }
+
+    const auth = await authService.loginWithGoogle(accessToken);
+
+    res.status(200).json({
+      success: true,
+      message: "Login dengan Google berhasil.",
+      data: auth
+    });
+  } catch (error) {
+    if (
+      error instanceof OAuthProviderNotConfiguredError
+    ) {
+      res.status(501).json({
+        success: false,
+        message: error.message
+      });
+      return;
+    }
+
+    if (
+      error instanceof authService.StoreMembershipRequiredError ||
+      error instanceof authService.UserInactiveError ||
+      error instanceof authService.StoreInactiveError
+    ) {
+      res.status(401).json({
+        success: false,
+        message: error.message
+      });
+      return;
+    }
+
+    console.error("Unexpected error while logging in with Google:", error);
+    next(error);
+  }
+};
+
+export const appleLogin = async (
+  req: Request<unknown, unknown, OAuthRequestBody>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authorizationCode = req.body.authorizationCode?.trim() ?? "";
+
+    if (!authorizationCode) {
+      res.status(400).json({
+        success: false,
+        message: "Apple Authorization Code wajib dikirim."
+      });
+      return;
+    }
+
+    const auth = await authService.loginWithApple(authorizationCode);
+
+    res.status(200).json({
+      success: true,
+      message: "Login dengan Apple berhasil.",
+      data: auth
+    });
+  } catch (error) {
+    if (
+      error instanceof OAuthProviderNotConfiguredError
+    ) {
+      res.status(501).json({
+        success: false,
+        message: error.message
+      });
+      return;
+    }
+
+    if (
+      error instanceof authService.StoreMembershipRequiredError ||
+      error instanceof authService.UserInactiveError ||
+      error instanceof authService.StoreInactiveError
+    ) {
+      res.status(401).json({
+        success: false,
+        message: error.message
+      });
+      return;
+    }
+
+    console.error("Unexpected error while logging in with Apple:", error);
+    next(error);
+  }
 };
 
 export const listStores = async (

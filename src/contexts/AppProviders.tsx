@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "./AuthContext";
 import { ActivityProvider } from "./ActivityContext";
 import { CategoryProvider } from "./CategoryContext";
@@ -14,8 +15,11 @@ type AppProvidersProps = {
   children: ReactNode;
 };
 
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
+
 export default function AppProviders({ children }: AppProvidersProps) {
-  return (
+  const content = (
     <ThemeProvider>
       <AuthProvider>
         <SettingsProvider>
@@ -35,5 +39,15 @@ export default function AppProviders({ children }: AppProvidersProps) {
         </SettingsProvider>
       </AuthProvider>
     </ThemeProvider>
+  );
+
+  if (!GOOGLE_CLIENT_ID) {
+    return content;
+  }
+
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      {content}
+    </GoogleOAuthProvider>
   );
 }

@@ -14,5 +14,10 @@ export const appConfig = {
   transactionRetentionDays: Math.max(
     1,
     Number(process.env.TRANSACTION_RETENTION_DAYS) || 14
-  )
+  ),
+  googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+  appleClientId: process.env.APPLE_CLIENT_ID || "",
+  appleTeamId: process.env.APPLE_TEAM_ID || "",
+  appleKeyId: process.env.APPLE_KEY_ID || "",
+  applePrivateKey: (process.env.APPLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
 };

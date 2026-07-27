@@ -4,10 +4,11 @@ import {
   Smartphone,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FaApple, FaWhatsapp } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useGoogleLogin } from "@react-oauth/google";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
@@ -94,6 +95,75 @@ export default function LoginPage() {
   if (isAuthenticated) {
     return <Navigate to={ROUTES.dashboard} replace />;
   }
+
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (credentialResponse) => {
+      if (!credentialResponse.access_token) return;
+      setErrorMessage("");
+      setIsSubmitting(true);
+      try {
+        const auth = await authService.loginWithGoogle(credentialResponse.access_token);
+        login(auth);
+        navigate(redirectPath, { replace: true });
+      } catch (error) {
+        setErrorMessage(
+          error instanceof AuthApiError
+            ? error.message
+            : t("common.serverError"),
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    onError: () => {
+      setErrorMessage("Login dengan Google gagal.");
+    },
+    flow: "implicit",
+  });
+
+  const handleAppleLogin = useCallback(async () => {
+    try {
+      const appleId = (window as unknown as Record<string, unknown>).AppleID;
+      if (!appleId) {
+        const script = document.createElement("script");
+        script.src = "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js";
+        script.async = true;
+        document.body.appendChild(script);
+        await new Promise((resolve) => { script.onload = resolve; });
+      }
+
+      const AppleID = (window as unknown as Record<string, unknown>).AppleID as {
+        auth: {
+          init: (config: { clientId: string; scope: string; redirectURI: string; usePopup: boolean }) => void;
+          signIn: () => Promise<{ authorization: { code: string } }>;
+        };
+      };
+
+      AppleID.auth.init({
+        clientId: import.meta.env.VITE_APPLE_CLIENT_ID ?? "",
+        scope: "name email",
+        redirectURI: window.location.origin,
+        usePopup: true,
+      });
+
+      const response = await AppleID.auth.signIn();
+      const authorizationCode = response.authorization.code;
+
+      setErrorMessage("");
+      setIsSubmitting(true);
+      const auth = await authService.loginWithApple(authorizationCode);
+      login(auth);
+      navigate(redirectPath, { replace: true });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof AuthApiError
+          ? error.message
+          : "Login dengan Apple gagal.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [login, navigate, redirectPath]);
 
   const handleLogin = async () => {
     setErrorMessage("");
@@ -200,7 +270,8 @@ export default function LoginPage() {
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="secondary"
-              onClick={() => showProviderDialog("Google")}
+              onClick={() => handleGoogleLogin()}
+              disabled={isSubmitting}
               className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               <FcGoogle className="h-5 w-5 shrink-0" aria-hidden="true" />
@@ -208,7 +279,8 @@ export default function LoginPage() {
             </Button>
             <Button
               variant="secondary"
-              onClick={() => showProviderDialog("Apple")}
+              onClick={handleAppleLogin}
+              disabled={isSubmitting}
               className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               <FaApple

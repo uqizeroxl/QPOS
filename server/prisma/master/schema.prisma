@@ -24,13 +24,18 @@ model Account {
   id           String        @id @default(cuid())
   username     String        @unique @db.VarChar(80)
   name         String        @db.VarChar(120)
-  passwordHash String        @db.VarChar(255)
+  passwordHash String        @default("") @db.VarChar(255)
+  email        String?       @unique @db.VarChar(255)
+  googleId     String?       @unique @db.VarChar(255)
+  appleId      String?       @unique @db.VarChar(255)
+  avatarUrl    String?       @db.Text
   isActive     Boolean       @default(true)
   memberships  StoreMember[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
   @@index([username])
+  @@index([email])
   @@map("accounts")
 }
 

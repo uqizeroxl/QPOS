@@ -5,6 +5,11 @@ import { StoreRole } from "../generated/master-prisma/client";
 import { UserRole } from "../generated/prisma/client";
 import { appConfig } from "../config/app.config";
 import { masterPrisma } from "../utils/master-prisma";
+import {
+  verifyGoogleToken,
+  verifyAppleToken,
+  OAuthProviderNotConfiguredError,
+} from "./oauth.service";
 
 export type AuthUser = {
   id: string;
@@ -243,6 +248,141 @@ export const login = async (username: string, password: string) => {
     user: authUser,
     stores
   };
+};
+
+const findOrCreateOAuthAccount = async (params: {
+  providerId: string;
+  providerField: "googleId" | "appleId";
+  email: string;
+  name: string;
+  avatarUrl?: string;
+}) => {
+  const existingByProvider = await masterPrisma.account.findFirst({
+    where: { [params.providerField]: params.providerId },
+  });
+
+  if (existingByProvider) {
+    return existingByProvider;
+  }
+
+  if (params.email) {
+    const existingByEmail = await masterPrisma.account.findUnique({
+      where: { email: params.email },
+    });
+
+    if (existingByEmail) {
+      return masterPrisma.account.update({
+        where: { id: existingByEmail.id },
+        data: { [params.providerField]: params.providerId },
+      });
+    }
+  }
+
+  const baseUsername = params.email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "_").slice(0, 60);
+  let username = baseUsername;
+  let suffix = 1;
+
+  while (await masterPrisma.account.findUnique({ where: { username } })) {
+    username = `${baseUsername}_${suffix}`;
+    suffix++;
+  }
+
+  return masterPrisma.account.create({
+    data: {
+      username,
+      name: params.name,
+      email: params.email,
+      [params.providerField]: params.providerId,
+      avatarUrl: params.avatarUrl,
+      passwordHash: "",
+    },
+  });
+};
+
+const loginWithOAuthAccount = async (account: { id: string; username: string; name: string }) => {
+  const membership = await masterPrisma.storeMember.findFirst({
+    where: {
+      accountId: account.id,
+      store: { isActive: true },
+    },
+    include: {
+      store: { select: { id: true, name: true, isActive: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (!membership) {
+    throw new StoreMembershipRequiredError();
+  }
+
+  if (!membership.store.isActive) {
+    throw new StoreInactiveError();
+  }
+
+  const authUser = sanitizeUser({
+    id: account.id,
+    username: account.username,
+    name: account.name,
+    role: mapStoreRoleToLegacyRole(membership.role),
+    storeId: membership.storeId,
+  });
+
+  const memberships = await masterPrisma.storeMember.findMany({
+    where: { accountId: account.id, store: { isActive: true } },
+    select: {
+      role: true,
+      storeId: true,
+      store: { select: { name: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const stores = memberships.map((m) => ({
+    id: m.storeId,
+    name: m.store.name,
+    role: m.role,
+  }));
+
+  return {
+    token: signToken(authUser, membership.role),
+    user: authUser,
+    stores,
+  };
+};
+
+export const loginWithGoogle = async (accessToken: string) => {
+  const googlePayload = await verifyGoogleToken(accessToken);
+
+  const account = await findOrCreateOAuthAccount({
+    providerId: googlePayload.sub,
+    providerField: "googleId",
+    email: googlePayload.email,
+    name: googlePayload.name,
+    avatarUrl: googlePayload.picture,
+  });
+
+  if (!account.isActive) {
+    throw new UserInactiveError();
+  }
+
+  return loginWithOAuthAccount(account);
+};
+
+export const loginWithApple = async (authorizationCode: string) => {
+  const applePayload = await verifyAppleToken(authorizationCode);
+
+  const account = await findOrCreateOAuthAccount({
+    providerId: applePayload.sub,
+    providerField: "appleId",
+    email: applePayload.email,
+    name: applePayload.email.split("@")[0],
+  });
+
+  if (!account.isActive) {
+    throw new UserInactiveError();
+  }
+
+  return loginWithOAuthAccount(account);
 };
 
 export const verifyToken = async (token: string) => {

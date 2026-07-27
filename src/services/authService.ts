@@ -72,4 +72,26 @@ export const authService = {
       return handleAuthError(error);
     }
   },
+  loginWithGoogle: async (accessToken: string) => {
+    try {
+      const response = await apiService.post<
+        AuthPayload,
+        { accessToken: string }
+      >("/auth/google", { accessToken });
+      return response.data;
+    } catch (error) {
+      return handleAuthError(error);
+    }
+  },
+  loginWithApple: async (authorizationCode: string) => {
+    try {
+      const response = await apiService.post<
+        AuthPayload,
+        { authorizationCode: string }
+      >("/auth/apple", { authorizationCode });
+      return response.data;
+    } catch (error) {
+      return handleAuthError(error);
+    }
+  },
 };
