@@ -13,6 +13,7 @@ import { ROUTES } from "../../constants/routes";
 import { useAuth } from "../../hooks/useAuth";
 import { useSettings } from "../../hooks/useSettings";
 import { useToast } from "../../hooks/useToast";
+import type { AuthPayload } from "../../types/auth";
 import { AuthApiError, authService } from "../../services/authService";
 import { useTranslation } from "react-i18next";
 
@@ -54,8 +55,8 @@ export default function LoginPage() {
           return;
         }
 
-        login(auth);
-        const storeName = auth.stores?.[0]?.name;
+        login(auth as AuthPayload);
+        const storeName = (auth as AuthPayload).stores?.[0]?.name;
         showToast(`Selamat datang, ${auth.user.name}${storeName ? `, di ${storeName}` : ""}`);
         navigate(redirectPath, { replace: true });
       } catch (error) {
