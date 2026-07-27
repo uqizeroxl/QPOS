@@ -57,7 +57,7 @@ All domain types are defined in `src/types/` as the single source of truth, deri
 | `supplier.ts` | `Supplier`, `SupplierFormValues`, `SupplierApiItem` |
 | `transaction.ts` | `TransactionListItem`, `TransactionApiResponse`, `CreateTransactionPayload`, `GetTransactionsParams` |
 | `cashier.ts` | `CashierProduct`, `CartItem`, `TransactionItem`, `SalesTransaction` |
-| `auth.ts` | `AuthUser`, `AuthPayload`, `LoginPayload` |
+| `auth.ts` | `AuthUser`, `AuthPayload`, `LoginPayload`, `OAuthLoginResponse`, `OAuthRegistrationPayload`, `StoreInfo` |
 | `settings.ts` | `AppSettings`, `defaultSettings` |
 | `activity.ts` | `ActivityLogItem`, `AddActivityPayload` |
 | `notification.ts` | `AppNotification`, `AddNotificationPayload` |
@@ -292,6 +292,10 @@ PostgreSQL folds unquoted identifiers to lowercase. Prisma quotes column names a
 
 The ESLint config includes `react-hooks/set-state-in-effect` and `react-hooks/preserve-manual-memoization` rules from React Compiler. These produce ~19 warnings across the codebase but are safe to ignore — they are common patterns in React 19 codebases.
 
+### TypeScript 6 Union Narrowing with `in` Operator
+
+TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAuthRegistrationPayload`) after a `"needsRegistration" in auth` guard with early return. The `in` type guard should exclude union members missing the property, but TS 6 fails to apply this narrowing. Workaround: use `as AuthPayload` assertions after the guard.
+
 ### Frontend Type Mismatches
 
 - `SalesTransaction.transactionNumber` (frontend) maps from `Transaction.invoiceNumber` (backend API) — intentional alias
@@ -318,4 +322,9 @@ The ESLint config includes `react-hooks/set-state-in-effect` and `react-hooks/pr
 **Pending:**
 - VPS: `sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.master.config.ts` (adds OAuth columns to `accounts` table)
 - Vercel: set `VITE_GOOGLE_CLIENT_ID` and redeploy
+
+**2026-07-27 — TS 6 build fix**
+
+- `npm run build` failed with TS 6 error: `OAuthLoginResponse` union not narrowed after `"needsRegistration" in auth` check in `LoginPage.tsx:57-58`
+- Fix: added `as AuthPayload` type assertions on `login()` and `stores` access after the early return guard
 
