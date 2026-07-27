@@ -4,8 +4,8 @@ import {
   Smartphone,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { FaApple, FaWhatsapp } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import { FaWhatsapp } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -127,56 +127,6 @@ export default function LoginPage() {
     flow: "implicit",
   });
 
-  const handleAppleLogin = useCallback(async () => {
-    try {
-      const appleId = (window as unknown as Record<string, unknown>).AppleID;
-      if (!appleId) {
-        const script = document.createElement("script");
-        script.src = "https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js";
-        script.async = true;
-        document.body.appendChild(script);
-        await new Promise((resolve) => { script.onload = resolve; });
-      }
-
-      const AppleID = (window as unknown as Record<string, unknown>).AppleID as {
-        auth: {
-          init: (config: { clientId: string; scope: string; redirectURI: string; usePopup: boolean }) => void;
-          signIn: () => Promise<{ authorization: { code: string } }>;
-        };
-      };
-
-      AppleID.auth.init({
-        clientId: import.meta.env.VITE_APPLE_CLIENT_ID ?? "",
-        scope: "name email",
-        redirectURI: window.location.origin,
-        usePopup: true,
-      });
-
-      const response = await AppleID.auth.signIn();
-      const authorizationCode = response.authorization.code;
-
-      setErrorMessage("");
-      setIsSubmitting(true);
-      const auth = await authService.loginWithApple(authorizationCode);
-
-      if ("needsRegistration" in auth && auth.needsRegistration) {
-        navigate("/register", { state: { registrationToken: auth.registrationToken, user: auth.user } });
-        return;
-      }
-
-      login(auth);
-      navigate(redirectPath, { replace: true });
-    } catch (error) {
-      setErrorMessage(
-        error instanceof AuthApiError
-          ? error.message
-          : "Login dengan Apple gagal.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [login, navigate, redirectPath]);
-
   const handleLogin = async () => {
     setErrorMessage("");
     setIsSubmitting(true);
@@ -288,18 +238,6 @@ export default function LoginPage() {
             >
               <FcGoogle className="h-5 w-5 shrink-0" aria-hidden="true" />
               Google
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={handleAppleLogin}
-              disabled={isSubmitting}
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-            >
-              <FaApple
-                className="h-5 w-5 shrink-0 text-black dark:text-white"
-                aria-hidden="true"
-              />
-              Apple
             </Button>
             <Button
               variant="secondary"
