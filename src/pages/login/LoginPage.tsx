@@ -1,11 +1,8 @@
 import {
   Eye,
   EyeOff,
-  Smartphone,
-  X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { FaWhatsapp } from "react-icons/fa";
+import { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -24,58 +21,6 @@ type LocationState = {
   };
 };
 
-type PlaceholderDialog = {
-  title: string;
-  message: string;
-};
-
-function FutureAuthDialog({
-  dialog,
-  onClose,
-}: {
-  dialog: PlaceholderDialog | null;
-  onClose: () => void;
-}) {
-  useEffect(() => {
-    if (!dialog) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [dialog, onClose]);
-
-  if (!dialog) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="future-auth-dialog-title"
-    >
-      <Card className="w-full max-w-sm border-0 shadow-xl">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h2 id="future-auth-dialog-title" className="font-semibold text-gray-900">
-            {dialog.title}
-          </h2>
-          <Button variant="icon" onClick={onClose} aria-label="Tutup dialog">
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-        <div className="p-5">
-          <p className="text-sm leading-6 text-gray-600">{dialog.message}</p>
-          <div className="mt-5 flex justify-end border-t border-gray-200 pt-4">
-            <Button onClick={onClose}>Mengerti</Button>
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
 export default function LoginPage() {
   const { isAuthenticated, login } = useAuth();
   const { settings } = useSettings();
@@ -87,8 +32,6 @@ export default function LoginPage() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [placeholderDialog, setPlaceholderDialog] =
-    useState<PlaceholderDialog | null>(null);
   const state = location.state as LocationState | null;
   const redirectPath = state?.from?.pathname ?? ROUTES.dashboard;
 
@@ -145,20 +88,6 @@ export default function LoginPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const showProviderDialog = (provider: string) => {
-    setPlaceholderDialog({
-      title: "Segera Hadir",
-      message: `Fitur Login dengan ${provider} sedang dalam pengembangan dan akan tersedia pada update QPOS berikutnya.`,
-    });
-  };
-
-  const showRegisterDialog = () => {
-    setPlaceholderDialog({
-      title: "Segera Hadir",
-      message: "Fitur pendaftaran sedang dikembangkan.",
-    });
   };
 
   return (
@@ -239,46 +168,9 @@ export default function LoginPage() {
               <FcGoogle className="h-5 w-5 shrink-0" aria-hidden="true" />
               Google
             </Button>
-            <Button
-              variant="secondary"
-              onClick={() => showProviderDialog("WhatsApp")}
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-            >
-              <FaWhatsapp
-                className="h-5 w-5 shrink-0 text-[#25D366]"
-                aria-hidden="true"
-              />
-              WhatsApp
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => showProviderDialog("Nomor HP")}
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-            >
-              <Smartphone
-                className="h-5 w-5 shrink-0 text-blue-600"
-                aria-hidden="true"
-              />
-              Nomor HP
-            </Button>
           </div>
-
-          <p className="text-center text-sm text-gray-600">
-            Belum punya akun?{" "}
-            <Button
-              variant="unstyled"
-              onClick={showRegisterDialog}
-              className="font-semibold text-blue-600 hover:text-blue-700"
-            >
-              Daftar Sekarang
-            </Button>
-          </p>
         </div>
       </Card>
-      <FutureAuthDialog
-        dialog={placeholderDialog}
-        onClose={() => setPlaceholderDialog(null)}
-      />
     </div>
   );
 }
