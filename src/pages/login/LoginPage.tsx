@@ -158,17 +158,15 @@ export default function LoginPage() {
             <span className="h-px flex-1 bg-gray-200" />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => handleGoogleLogin()}
-              disabled={isSubmitting}
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-            >
-              <FcGoogle className="h-5 w-5 shrink-0" aria-hidden="true" />
-              Google
-            </Button>
-          </div>
+          <Button
+            variant="secondary"
+            onClick={() => handleGoogleLogin()}
+            disabled={isSubmitting}
+            className="w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            <FcGoogle className="h-5 w-5 shrink-0" aria-hidden="true" />
+            Google
+          </Button>
         </div>
       </Card>
     </div>
