@@ -19,35 +19,27 @@ const GOOGLE_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
 
 export default function AppProviders({ children }: AppProvidersProps) {
-  const content = (
-    <ThemeProvider>
-      <AuthProvider>
-        <SettingsProvider>
-          <ToastProvider>
-            <NotificationProvider>
-              <ActivityProvider>
-                <ProductProvider>
-                  <CategoryProvider>
-                    <SupplierProvider>
-                      <TransactionProvider>{children}</TransactionProvider>
-                    </SupplierProvider>
-                  </CategoryProvider>
-                </ProductProvider>
-              </ActivityProvider>
-            </NotificationProvider>
-          </ToastProvider>
-        </SettingsProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  );
-
-  if (!GOOGLE_CLIENT_ID) {
-    return content;
-  }
-
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      {content}
+      <ThemeProvider>
+        <AuthProvider>
+          <SettingsProvider>
+            <ToastProvider>
+              <NotificationProvider>
+                <ActivityProvider>
+                  <ProductProvider>
+                    <CategoryProvider>
+                      <SupplierProvider>
+                        <TransactionProvider>{children}</TransactionProvider>
+                      </SupplierProvider>
+                    </CategoryProvider>
+                  </ProductProvider>
+                </ActivityProvider>
+              </NotificationProvider>
+            </ToastProvider>
+          </SettingsProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </GoogleOAuthProvider>
   );
 }
