@@ -28,10 +28,6 @@ export class OAuthProviderNotConfiguredError extends Error {
 export const verifyGoogleToken = async (
   accessToken: string
 ): Promise<GoogleTokenPayload> => {
-  if (!appConfig.googleClientId) {
-    throw new OAuthProviderNotConfiguredError("Google");
-  }
-
   try {
     const tokenInfoResponse = await fetch(
       `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${accessToken}`
@@ -72,10 +68,6 @@ export const verifyGoogleToken = async (
       picture: userInfo.picture ?? "",
     };
   } catch (error) {
-    if (error instanceof OAuthProviderNotConfiguredError) {
-      throw error;
-    }
-
     throw new OAuthTokenInvalidError();
   }
 };
