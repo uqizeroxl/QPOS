@@ -26,3 +26,15 @@ export type LoginPayload = {
   token: string;
   user: AuthUser;
 };
+
+export type OAuthRegistrationPayload = {
+  needsRegistration: true;
+  registrationToken: string;
+  user: {
+    id: string;
+    username: string;
+    name: string;
+  };
+};
+
+export type OAuthLoginResponse = AuthPayload | OAuthRegistrationPayload;

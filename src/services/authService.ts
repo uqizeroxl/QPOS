@@ -1,8 +1,8 @@
 import axios from "axios";
 import { apiService } from "./api/apiService";
-import type { AuthUser, AuthPayload, StoreInfo } from "../types/auth";
+import type { AuthUser, AuthPayload, StoreInfo, OAuthLoginResponse } from "../types/auth";
 
-export type { AuthUser, AuthPayload, StoreInfo, UserRole } from "../types/auth";
+export type { AuthUser, AuthPayload, StoreInfo, UserRole, OAuthLoginResponse } from "../types/auth";
 
 export class AuthApiError extends Error {
   constructor(message: string) {
@@ -75,7 +75,7 @@ export const authService = {
   loginWithGoogle: async (accessToken: string) => {
     try {
       const response = await apiService.post<
-        AuthPayload,
+        OAuthLoginResponse,
         { accessToken: string }
       >("/auth/google", { accessToken });
       return response.data;
@@ -86,9 +86,20 @@ export const authService = {
   loginWithApple: async (authorizationCode: string) => {
     try {
       const response = await apiService.post<
-        AuthPayload,
+        OAuthLoginResponse,
         { authorizationCode: string }
       >("/auth/apple", { authorizationCode });
+      return response.data;
+    } catch (error) {
+      return handleAuthError(error);
+    }
+  },
+  completeRegistration: async (registrationToken: string, storeName: string) => {
+    try {
+      const response = await apiService.post<
+        AuthPayload,
+        { registrationToken: string; storeName: string }
+      >("/auth/complete-registration", { registrationToken, storeName });
       return response.data;
     } catch (error) {
       return handleAuthError(error);

@@ -1,5 +1,6 @@
 export const ROUTES = {
   login: "/",
+  register: "/register",
   dashboard: "/dashboard",
   product: "/product",
   barcodeLabels: "/barcode-labels",

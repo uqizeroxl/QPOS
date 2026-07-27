@@ -103,6 +103,12 @@ export default function LoginPage() {
       setIsSubmitting(true);
       try {
         const auth = await authService.loginWithGoogle(credentialResponse.access_token);
+
+        if ("needsRegistration" in auth && auth.needsRegistration) {
+          navigate("/register", { state: { registrationToken: auth.registrationToken, user: auth.user } });
+          return;
+        }
+
         login(auth);
         navigate(redirectPath, { replace: true });
       } catch (error) {
@@ -152,6 +158,12 @@ export default function LoginPage() {
       setErrorMessage("");
       setIsSubmitting(true);
       const auth = await authService.loginWithApple(authorizationCode);
+
+      if ("needsRegistration" in auth && auth.needsRegistration) {
+        navigate("/register", { state: { registrationToken: auth.registrationToken, user: auth.user } });
+        return;
+      }
+
       login(auth);
       navigate(redirectPath, { replace: true });
     } catch (error) {

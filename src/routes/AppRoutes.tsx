@@ -6,6 +6,7 @@ import LoadingScreen from "../pages/system/LoadingScreen";
 import ProtectedRoute from "./ProtectedRoute";
 
 const LoginPage = lazy(() => import("../pages/login/LoginPage"));
+const RegisterPage = lazy(() => import("../pages/register/RegisterPage"));
 const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"));
 const ProductPage = lazy(() => import("../pages/product/ProductPage"));
 const BarcodeLabelPage = lazy(
@@ -39,6 +40,7 @@ export default function AppRoutes() {
       <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path={ROUTES.login} element={<LoginPage />} />
+          <Route path={ROUTES.register} element={<RegisterPage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path={ROUTES.dashboard} element={<DashboardPage />} />

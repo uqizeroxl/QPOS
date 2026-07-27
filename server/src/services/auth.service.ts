@@ -312,7 +312,7 @@ const loginWithOAuthAccount = async (account: { id: string; username: string; na
   });
 
   if (!membership) {
-    throw new StoreMembershipRequiredError();
+    return null;
   }
 
   if (!membership.store.isActive) {
@@ -350,6 +350,13 @@ const loginWithOAuthAccount = async (account: { id: string; username: string; na
   };
 };
 
+const signRegistrationToken = (accountId: string) =>
+  jwt.sign(
+    { sub: accountId, purpose: "registration" },
+    appConfig.jwtSecret,
+    { expiresIn: "15m" }
+  );
+
 export const loginWithGoogle = async (accessToken: string) => {
   const googlePayload = await verifyGoogleToken(accessToken);
 
@@ -365,7 +372,22 @@ export const loginWithGoogle = async (accessToken: string) => {
     throw new UserInactiveError();
   }
 
-  return loginWithOAuthAccount(account);
+  const result = await loginWithOAuthAccount(account);
+
+  if (!result) {
+    const registrationToken = signRegistrationToken(account.id);
+    return {
+      needsRegistration: true,
+      registrationToken,
+      user: {
+        id: account.id,
+        username: account.username,
+        name: account.name,
+      },
+    };
+  }
+
+  return result;
 };
 
 export const loginWithApple = async (authorizationCode: string) => {
@@ -382,7 +404,90 @@ export const loginWithApple = async (authorizationCode: string) => {
     throw new UserInactiveError();
   }
 
-  return loginWithOAuthAccount(account);
+  const result = await loginWithOAuthAccount(account);
+
+  if (!result) {
+    const registrationToken = signRegistrationToken(account.id);
+    return {
+      needsRegistration: true,
+      registrationToken,
+      user: {
+        id: account.id,
+        username: account.username,
+        name: account.name,
+      },
+    };
+  }
+
+  return result;
+};
+
+export const completeOAuthRegistration = async (params: {
+  registrationToken: string;
+  storeName: string;
+}) => {
+  const payload = jwt.verify(params.registrationToken, appConfig.jwtSecret) as {
+    sub: string;
+    purpose: string;
+  };
+
+  if (payload.purpose !== "registration") {
+    throw new AuthTokenInvalidError();
+  }
+
+  const account = await masterPrisma.account.findUnique({
+    where: { id: payload.sub },
+  });
+
+  if (!account || !account.isActive) {
+    throw new AuthTokenInvalidError();
+  }
+
+  const existingMembership = await masterPrisma.storeMember.findFirst({
+    where: { accountId: account.id },
+  });
+
+  if (existingMembership) {
+    const authUser = sanitizeUser({
+      id: account.id,
+      username: account.username,
+      name: account.name,
+      role: mapStoreRoleToLegacyRole(existingMembership.role),
+      storeId: existingMembership.storeId,
+    });
+
+    return {
+      token: signToken(authUser, existingMembership.role),
+      user: authUser,
+    };
+  }
+
+  const store = await masterPrisma.store.create({
+    data: {
+      name: params.storeName,
+    },
+  });
+
+  const membership = await masterPrisma.storeMember.create({
+    data: {
+      accountId: account.id,
+      storeId: store.id,
+      role: StoreRole.OWNER,
+    },
+  });
+
+  const authUser = sanitizeUser({
+    id: account.id,
+    username: account.username,
+    name: account.name,
+    role: mapStoreRoleToLegacyRole(membership.role),
+    storeId: membership.storeId,
+  });
+
+  return {
+    token: signToken(authUser, membership.role),
+    user: authUser,
+  };
 };
 
 export const verifyToken = async (token: string) => {

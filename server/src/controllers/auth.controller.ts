@@ -14,6 +14,11 @@ type OAuthRequestBody = {
   authorizationCode?: string;
 };
 
+type CompleteRegistrationBody = {
+  registrationToken?: string;
+  storeName?: string;
+};
+
 export const login = async (
   req: Request<unknown, unknown, LoginRequestBody>,
   res: Response,
@@ -93,6 +98,15 @@ export const googleLogin = async (
 
     const auth = await authService.loginWithGoogle(accessToken);
 
+    if (auth && "needsRegistration" in auth && auth.needsRegistration) {
+      res.status(200).json({
+        success: true,
+        message: "Lanjutkan pendaftaran toko.",
+        data: auth
+      });
+      return;
+    }
+
     res.status(200).json({
       success: true,
       message: "Login dengan Google berhasil.",
@@ -110,7 +124,6 @@ export const googleLogin = async (
     }
 
     if (
-      error instanceof authService.StoreMembershipRequiredError ||
       error instanceof authService.UserInactiveError ||
       error instanceof authService.StoreInactiveError
     ) {
@@ -144,6 +157,15 @@ export const appleLogin = async (
 
     const auth = await authService.loginWithApple(authorizationCode);
 
+    if (auth && "needsRegistration" in auth && auth.needsRegistration) {
+      res.status(200).json({
+        success: true,
+        message: "Lanjutkan pendaftaran toko.",
+        data: auth
+      });
+      return;
+    }
+
     res.status(200).json({
       success: true,
       message: "Login dengan Apple berhasil.",
@@ -161,7 +183,6 @@ export const appleLogin = async (
     }
 
     if (
-      error instanceof authService.StoreMembershipRequiredError ||
       error instanceof authService.UserInactiveError ||
       error instanceof authService.StoreInactiveError
     ) {
@@ -173,6 +194,47 @@ export const appleLogin = async (
     }
 
     console.error("Unexpected error while logging in with Apple:", error);
+    next(error);
+  }
+};
+
+export const completeRegistration = async (
+  req: Request<unknown, unknown, CompleteRegistrationBody>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const registrationToken = req.body.registrationToken?.trim() ?? "";
+    const storeName = req.body.storeName?.trim() ?? "";
+
+    if (!registrationToken || !storeName) {
+      res.status(400).json({
+        success: false,
+        message: "Token registrasi dan nama toko wajib diisi."
+      });
+      return;
+    }
+
+    const auth = await authService.completeOAuthRegistration({
+      registrationToken,
+      storeName,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Pendaftaran toko berhasil.",
+      data: auth
+    });
+  } catch (error) {
+    if (error instanceof authService.AuthTokenInvalidError) {
+      res.status(401).json({
+        success: false,
+        message: error.message
+      });
+      return;
+    }
+
+    console.error("Unexpected error while completing registration:", error);
     next(error);
   }
 };
