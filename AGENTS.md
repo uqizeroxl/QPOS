@@ -303,3 +303,19 @@ The ESLint config includes `react-hooks/set-state-in-effect` and `react-hooks/pr
 
 - `b02e28d` — `refactor: consolidate pos-web and qpos-server into root project` (initial consolidation)
 - `2db06b6` — `fix: resolve all TypeScript build errors from type consolidation`
+
+### Session History
+
+**2026-07-27 — Multi-store, OAuth, Toast refactor**
+
+- Multi-store OWNER support: `GET /auth/stores`, `POST /auth/switch-store`, `StoreSwitcher` component in navbar
+- Google OAuth login (`@react-oauth/google`): implicit flow, `/register` page for new OAuth users to set store name + create tenant DB
+- Removed Apple, WhatsApp, phone login buttons (Apple requires paid Developer Program)
+- `useToast()` system existed but not used everywhere — applied to `SettingPage`, `LoginPage`, `StoreSwitcher`
+- Welcome toast on login: `"Selamat datang, {name}, di {store}"`
+- Switch-store toast: `"Berhasil pindah ke toko {name}"`
+
+**Pending:**
+- VPS: `sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.master.config.ts` (adds OAuth columns to `accounts` table)
+- Vercel: set `VITE_GOOGLE_CLIENT_ID` and redeploy
+
