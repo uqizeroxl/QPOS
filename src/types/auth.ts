@@ -18,12 +18,14 @@ export type StoreInfo = {
 
 export type AuthPayload = {
   token: string;
+  refreshToken: string;
   user: AuthUser;
   stores?: StoreInfo[];
 };
 
 export type LoginPayload = {
   token: string;
+  refreshToken: string;
   user: AuthUser;
 };
 

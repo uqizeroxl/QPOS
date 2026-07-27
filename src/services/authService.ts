@@ -53,6 +53,18 @@ export const authService = {
       return handleAuthError(error);
     }
   },
+  refreshToken: async (refreshTokenValue: string) => {
+    try {
+      const response = await apiService.post<
+        AuthPayload,
+        { refreshToken: string }
+      >("/auth/refresh", { refreshToken: refreshTokenValue });
+
+      return response.data;
+    } catch (error) {
+      return handleAuthError(error);
+    }
+  },
   listStores: async () => {
     try {
       const response = await apiService.get<StoreInfo[]>("/auth/stores");

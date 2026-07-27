@@ -20,8 +20,18 @@ export type AccountModel = runtime.Types.Result.DefaultSelection<Prisma.$Account
 
 export type AggregateAccount = {
   _count: AccountCountAggregateOutputType | null
+  _avg: AccountAvgAggregateOutputType | null
+  _sum: AccountSumAggregateOutputType | null
   _min: AccountMinAggregateOutputType | null
   _max: AccountMaxAggregateOutputType | null
+}
+
+export type AccountAvgAggregateOutputType = {
+  tokenVersion: number | null
+}
+
+export type AccountSumAggregateOutputType = {
+  tokenVersion: number | null
 }
 
 export type AccountMinAggregateOutputType = {
@@ -29,7 +39,12 @@ export type AccountMinAggregateOutputType = {
   username: string | null
   name: string | null
   passwordHash: string | null
+  email: string | null
+  googleId: string | null
+  appleId: string | null
+  avatarUrl: string | null
   isActive: boolean | null
+  tokenVersion: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -39,7 +54,12 @@ export type AccountMaxAggregateOutputType = {
   username: string | null
   name: string | null
   passwordHash: string | null
+  email: string | null
+  googleId: string | null
+  appleId: string | null
+  avatarUrl: string | null
   isActive: boolean | null
+  tokenVersion: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -49,19 +69,37 @@ export type AccountCountAggregateOutputType = {
   username: number
   name: number
   passwordHash: number
+  email: number
+  googleId: number
+  appleId: number
+  avatarUrl: number
   isActive: number
+  tokenVersion: number
   createdAt: number
   updatedAt: number
   _all: number
 }
 
 
+export type AccountAvgAggregateInputType = {
+  tokenVersion?: true
+}
+
+export type AccountSumAggregateInputType = {
+  tokenVersion?: true
+}
+
 export type AccountMinAggregateInputType = {
   id?: true
   username?: true
   name?: true
   passwordHash?: true
+  email?: true
+  googleId?: true
+  appleId?: true
+  avatarUrl?: true
   isActive?: true
+  tokenVersion?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -71,7 +109,12 @@ export type AccountMaxAggregateInputType = {
   username?: true
   name?: true
   passwordHash?: true
+  email?: true
+  googleId?: true
+  appleId?: true
+  avatarUrl?: true
   isActive?: true
+  tokenVersion?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -81,7 +124,12 @@ export type AccountCountAggregateInputType = {
   username?: true
   name?: true
   passwordHash?: true
+  email?: true
+  googleId?: true
+  appleId?: true
+  avatarUrl?: true
   isActive?: true
+  tokenVersion?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -125,6 +173,18 @@ export type AccountAggregateArgs<ExtArgs extends runtime.Types.Extensions.Intern
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: AccountAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: AccountSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: AccountMinAggregateInputType
@@ -155,6 +215,8 @@ export type AccountGroupByArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   _count?: AccountCountAggregateInputType | true
+  _avg?: AccountAvgAggregateInputType
+  _sum?: AccountSumAggregateInputType
   _min?: AccountMinAggregateInputType
   _max?: AccountMaxAggregateInputType
 }
@@ -164,10 +226,17 @@ export type AccountGroupByOutputType = {
   username: string
   name: string
   passwordHash: string
+  email: string | null
+  googleId: string | null
+  appleId: string | null
+  avatarUrl: string | null
   isActive: boolean
+  tokenVersion: number
   createdAt: Date
   updatedAt: Date
   _count: AccountCountAggregateOutputType | null
+  _avg: AccountAvgAggregateOutputType | null
+  _sum: AccountSumAggregateOutputType | null
   _min: AccountMinAggregateOutputType | null
   _max: AccountMaxAggregateOutputType | null
 }
@@ -195,7 +264,12 @@ export type AccountWhereInput = {
   username?: Prisma.StringFilter<"Account"> | string
   name?: Prisma.StringFilter<"Account"> | string
   passwordHash?: Prisma.StringFilter<"Account"> | string
+  email?: Prisma.StringNullableFilter<"Account"> | string | null
+  googleId?: Prisma.StringNullableFilter<"Account"> | string | null
+  appleId?: Prisma.StringNullableFilter<"Account"> | string | null
+  avatarUrl?: Prisma.StringNullableFilter<"Account"> | string | null
   isActive?: Prisma.BoolFilter<"Account"> | boolean
+  tokenVersion?: Prisma.IntFilter<"Account"> | number
   createdAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   memberships?: Prisma.StoreMemberListRelationFilter
@@ -206,7 +280,12 @@ export type AccountOrderByWithRelationInput = {
   username?: Prisma.SortOrder
   name?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
+  email?: Prisma.SortOrderInput | Prisma.SortOrder
+  googleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  appleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  tokenVersion?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   memberships?: Prisma.StoreMemberOrderByRelationAggregateInput
@@ -215,28 +294,40 @@ export type AccountOrderByWithRelationInput = {
 export type AccountWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   username?: string
+  email?: string
+  googleId?: string
+  appleId?: string
   AND?: Prisma.AccountWhereInput | Prisma.AccountWhereInput[]
   OR?: Prisma.AccountWhereInput[]
   NOT?: Prisma.AccountWhereInput | Prisma.AccountWhereInput[]
   name?: Prisma.StringFilter<"Account"> | string
   passwordHash?: Prisma.StringFilter<"Account"> | string
+  avatarUrl?: Prisma.StringNullableFilter<"Account"> | string | null
   isActive?: Prisma.BoolFilter<"Account"> | boolean
+  tokenVersion?: Prisma.IntFilter<"Account"> | number
   createdAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   memberships?: Prisma.StoreMemberListRelationFilter
-}, "id" | "username">
+}, "id" | "username" | "email" | "googleId" | "appleId">
 
 export type AccountOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   username?: Prisma.SortOrder
   name?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
+  email?: Prisma.SortOrderInput | Prisma.SortOrder
+  googleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  appleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  tokenVersion?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.AccountCountOrderByAggregateInput
+  _avg?: Prisma.AccountAvgOrderByAggregateInput
   _max?: Prisma.AccountMaxOrderByAggregateInput
   _min?: Prisma.AccountMinOrderByAggregateInput
+  _sum?: Prisma.AccountSumOrderByAggregateInput
 }
 
 export type AccountScalarWhereWithAggregatesInput = {
@@ -247,7 +338,12 @@ export type AccountScalarWhereWithAggregatesInput = {
   username?: Prisma.StringWithAggregatesFilter<"Account"> | string
   name?: Prisma.StringWithAggregatesFilter<"Account"> | string
   passwordHash?: Prisma.StringWithAggregatesFilter<"Account"> | string
+  email?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
+  googleId?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
+  appleId?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
+  avatarUrl?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"Account"> | boolean
+  tokenVersion?: Prisma.IntWithAggregatesFilter<"Account"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Account"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Account"> | Date | string
 }
@@ -256,8 +352,13 @@ export type AccountCreateInput = {
   id?: string
   username: string
   name: string
-  passwordHash: string
+  passwordHash?: string
+  email?: string | null
+  googleId?: string | null
+  appleId?: string | null
+  avatarUrl?: string | null
   isActive?: boolean
+  tokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.StoreMemberCreateNestedManyWithoutAccountInput
@@ -267,8 +368,13 @@ export type AccountUncheckedCreateInput = {
   id?: string
   username: string
   name: string
-  passwordHash: string
+  passwordHash?: string
+  email?: string | null
+  googleId?: string | null
+  appleId?: string | null
+  avatarUrl?: string | null
   isActive?: boolean
+  tokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.StoreMemberUncheckedCreateNestedManyWithoutAccountInput
@@ -279,7 +385,12 @@ export type AccountUpdateInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.StoreMemberUpdateManyWithoutAccountNestedInput
@@ -290,7 +401,12 @@ export type AccountUncheckedUpdateInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.StoreMemberUncheckedUpdateManyWithoutAccountNestedInput
@@ -300,8 +416,13 @@ export type AccountCreateManyInput = {
   id?: string
   username: string
   name: string
-  passwordHash: string
+  passwordHash?: string
+  email?: string | null
+  googleId?: string | null
+  appleId?: string | null
+  avatarUrl?: string | null
   isActive?: boolean
+  tokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -311,7 +432,12 @@ export type AccountUpdateManyMutationInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -321,7 +447,12 @@ export type AccountUncheckedUpdateManyInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -331,9 +462,18 @@ export type AccountCountOrderByAggregateInput = {
   username?: Prisma.SortOrder
   name?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
+  email?: Prisma.SortOrder
+  googleId?: Prisma.SortOrder
+  appleId?: Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  tokenVersion?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type AccountAvgOrderByAggregateInput = {
+  tokenVersion?: Prisma.SortOrder
 }
 
 export type AccountMaxOrderByAggregateInput = {
@@ -341,7 +481,12 @@ export type AccountMaxOrderByAggregateInput = {
   username?: Prisma.SortOrder
   name?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
+  email?: Prisma.SortOrder
+  googleId?: Prisma.SortOrder
+  appleId?: Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  tokenVersion?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -351,9 +496,18 @@ export type AccountMinOrderByAggregateInput = {
   username?: Prisma.SortOrder
   name?: Prisma.SortOrder
   passwordHash?: Prisma.SortOrder
+  email?: Prisma.SortOrder
+  googleId?: Prisma.SortOrder
+  appleId?: Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  tokenVersion?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type AccountSumOrderByAggregateInput = {
+  tokenVersion?: Prisma.SortOrder
 }
 
 export type AccountScalarRelationFilter = {
@@ -365,8 +519,20 @@ export type StringFieldUpdateOperationsInput = {
   set?: string
 }
 
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
+}
+
 export type BoolFieldUpdateOperationsInput = {
   set?: boolean
+}
+
+export type IntFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
 }
 
 export type DateTimeFieldUpdateOperationsInput = {
@@ -391,8 +557,13 @@ export type AccountCreateWithoutMembershipsInput = {
   id?: string
   username: string
   name: string
-  passwordHash: string
+  passwordHash?: string
+  email?: string | null
+  googleId?: string | null
+  appleId?: string | null
+  avatarUrl?: string | null
   isActive?: boolean
+  tokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -401,8 +572,13 @@ export type AccountUncheckedCreateWithoutMembershipsInput = {
   id?: string
   username: string
   name: string
-  passwordHash: string
+  passwordHash?: string
+  email?: string | null
+  googleId?: string | null
+  appleId?: string | null
+  avatarUrl?: string | null
   isActive?: boolean
+  tokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -428,7 +604,12 @@ export type AccountUpdateWithoutMembershipsInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -438,7 +619,12 @@ export type AccountUncheckedUpdateWithoutMembershipsInput = {
   username?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -479,7 +665,12 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   username?: boolean
   name?: boolean
   passwordHash?: boolean
+  email?: boolean
+  googleId?: boolean
+  appleId?: boolean
+  avatarUrl?: boolean
   isActive?: boolean
+  tokenVersion?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   memberships?: boolean | Prisma.Account$membershipsArgs<ExtArgs>
@@ -491,7 +682,12 @@ export type AccountSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   username?: boolean
   name?: boolean
   passwordHash?: boolean
+  email?: boolean
+  googleId?: boolean
+  appleId?: boolean
+  avatarUrl?: boolean
   isActive?: boolean
+  tokenVersion?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["account"]>
@@ -501,7 +697,12 @@ export type AccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   username?: boolean
   name?: boolean
   passwordHash?: boolean
+  email?: boolean
+  googleId?: boolean
+  appleId?: boolean
+  avatarUrl?: boolean
   isActive?: boolean
+  tokenVersion?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["account"]>
@@ -511,12 +712,17 @@ export type AccountSelectScalar = {
   username?: boolean
   name?: boolean
   passwordHash?: boolean
+  email?: boolean
+  googleId?: boolean
+  appleId?: boolean
+  avatarUrl?: boolean
   isActive?: boolean
+  tokenVersion?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "name" | "passwordHash" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["account"]>
+export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "name" | "passwordHash" | "email" | "googleId" | "appleId" | "avatarUrl" | "isActive" | "tokenVersion" | "createdAt" | "updatedAt", ExtArgs["result"]["account"]>
 export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   memberships?: boolean | Prisma.Account$membershipsArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
@@ -534,7 +740,12 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     username: string
     name: string
     passwordHash: string
+    email: string | null
+    googleId: string | null
+    appleId: string | null
+    avatarUrl: string | null
     isActive: boolean
+    tokenVersion: number
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["account"]>
@@ -965,7 +1176,12 @@ export interface AccountFieldRefs {
   readonly username: Prisma.FieldRef<"Account", 'String'>
   readonly name: Prisma.FieldRef<"Account", 'String'>
   readonly passwordHash: Prisma.FieldRef<"Account", 'String'>
+  readonly email: Prisma.FieldRef<"Account", 'String'>
+  readonly googleId: Prisma.FieldRef<"Account", 'String'>
+  readonly appleId: Prisma.FieldRef<"Account", 'String'>
+  readonly avatarUrl: Prisma.FieldRef<"Account", 'String'>
   readonly isActive: Prisma.FieldRef<"Account", 'Boolean'>
+  readonly tokenVersion: Prisma.FieldRef<"Account", 'Int'>
   readonly createdAt: Prisma.FieldRef<"Account", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Account", 'DateTime'>
 }

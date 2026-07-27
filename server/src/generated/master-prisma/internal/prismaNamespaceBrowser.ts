@@ -78,7 +78,12 @@ export const AccountScalarFieldEnum = {
   username: 'username',
   name: 'name',
   passwordHash: 'passwordHash',
+  email: 'email',
+  googleId: 'googleId',
+  appleId: 'appleId',
+  avatarUrl: 'avatarUrl',
   isActive: 'isActive',
+  tokenVersion: 'tokenVersion',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

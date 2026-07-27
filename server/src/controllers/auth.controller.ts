@@ -19,6 +19,10 @@ type CompleteRegistrationBody = {
   storeName?: string;
 };
 
+type RefreshRequestBody = {
+  refreshToken?: string;
+};
+
 export const login = async (
   req: Request<unknown, unknown, LoginRequestBody>,
   res: Response,
@@ -73,11 +77,57 @@ export const profile = (
   });
 };
 
-export const logout = (_req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    message: "Logout berhasil."
-  });
+export const logout = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await authService.logout(req.user.id);
+
+    res.status(200).json({
+      success: true,
+      message: "Logout berhasil."
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const refresh = async (
+  req: Request<unknown, unknown, RefreshRequestBody>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const refreshTokenValue = req.body.refreshToken?.trim() ?? "";
+
+    if (!refreshTokenValue) {
+      res.status(400).json({
+        success: false,
+        message: "Refresh token wajib dikirim."
+      });
+      return;
+    }
+
+    const auth = await authService.refreshToken(refreshTokenValue);
+
+    res.status(200).json({
+      success: true,
+      message: "Token berhasil diperbarui.",
+      data: auth
+    });
+  } catch (error) {
+    if (error instanceof authService.AuthTokenInvalidError) {
+      res.status(401).json({
+        success: false,
+        message: error.message
+      });
+      return;
+    }
+
+    next(error);
+  }
 };
 
 export const googleLogin = async (

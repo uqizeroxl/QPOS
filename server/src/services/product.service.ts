@@ -8,6 +8,7 @@ import {
   StockAdjustmentType,
   StockReferenceType
 } from "../generated/prisma/client";
+import { trimAndStrip } from "../utils/escape";
 
 export type CreateProductInput = {
   barcode?: string | null;
@@ -290,12 +291,17 @@ export const createProduct = async (
   data: CreateProductInput,
   userName?: string
 ) => {
-  const categoryId = await getCategoryId(prisma, data);
+  const sanitizedData = {
+    ...data,
+    name: trimAndStrip(data.name),
+    barcode: data.barcode ? trimAndStrip(data.barcode) : null,
+  };
+  const categoryId = await getCategoryId(prisma, sanitizedData);
 
-  const existingProduct = data.barcode
+  const existingProduct = sanitizedData.barcode
     ? await prisma.product.findUnique({
         where: {
-          barcode: data.barcode
+          barcode: sanitizedData.barcode
         }
       })
     : null;
@@ -308,14 +314,14 @@ export const createProduct = async (
     return await prisma.$transaction(async (tx) => {
       const product = await tx.product.create({
         data: {
-          barcode: data.barcode,
-          name: data.name,
-          purchasePrice: data.purchasePrice,
-          sellingPrice: data.sellingPrice,
-          stock: data.stock,
-          status: data.status,
+          barcode: sanitizedData.barcode,
+          name: sanitizedData.name,
+          purchasePrice: sanitizedData.purchasePrice,
+          sellingPrice: sanitizedData.sellingPrice,
+          stock: sanitizedData.stock,
+          status: sanitizedData.status,
           categoryId,
-          supplierId: data.supplierId
+          supplierId: sanitizedData.supplierId
         },
         include: {
           category: true
@@ -369,7 +375,12 @@ export const updateProduct = async (
   data: UpdateProductInput,
   userName?: string
 ) => {
-  const categoryId = await getCategoryId(prisma, data);
+  const sanitizedData = {
+    ...data,
+    name: trimAndStrip(data.name),
+    barcode: data.barcode ? trimAndStrip(data.barcode) : null,
+  };
+  const categoryId = await getCategoryId(prisma, sanitizedData);
 
   const currentProduct = await prisma.product.findUnique({
     where: {
@@ -381,10 +392,10 @@ export const updateProduct = async (
     throw new ProductNotFoundError();
   }
 
-  const existingProduct = data.barcode
+  const existingProduct = sanitizedData.barcode
     ? await prisma.product.findFirst({
         where: {
-          barcode: data.barcode,
+          barcode: sanitizedData.barcode,
           id: {
             not: productId
           }
@@ -403,8 +414,8 @@ export const updateProduct = async (
           id: productId
         },
         data: {
-          barcode: data.barcode,
-          name: data.name,
+          barcode: sanitizedData.barcode,
+          name: sanitizedData.name,
           purchasePrice: data.purchasePrice,
           sellingPrice: data.sellingPrice,
           stock: data.stock,
@@ -555,7 +566,9 @@ export const bulkUpdateProducts = async (
   }
 
   for (const item of updates) {
-    if (!item.name.trim()) throw new InvalidProductDataError("Nama produk tidak boleh kosong.");
+    item.name = trimAndStrip(item.name);
+    item.barcode = item.barcode ? trimAndStrip(item.barcode) : null;
+    if (!item.name) throw new InvalidProductDataError("Nama produk tidak boleh kosong.");
     if (item.purchasePrice === null || !Number.isFinite(item.purchasePrice) || item.purchasePrice < 0) {
       throw new InvalidProductDataError("Harga beli harus lebih besar atau sama dengan 0.");
     }
@@ -564,7 +577,7 @@ export const bulkUpdateProducts = async (
     }
   }
 
-  const barcodes = updates.map((item) => item.barcode?.trim()).filter((value): value is string => Boolean(value));
+  const barcodes = updates.map((item) => item.barcode).filter((value): value is string => Boolean(value));
   if (new Set(barcodes).size !== barcodes.length) throw new BarcodeAlreadyExistsError();
 
   return prisma.$transaction(async (tx) => {
@@ -590,8 +603,8 @@ export const bulkUpdateProducts = async (
       tx.product.update({
         where: { id: item.id },
         data: {
-          name: item.name.trim(),
-          barcode: item.barcode?.trim() || null,
+          name: item.name,
+          barcode: item.barcode,
           purchasePrice: item.purchasePrice,
           sellingPrice: item.sellingPrice
         },

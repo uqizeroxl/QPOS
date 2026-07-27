@@ -23,6 +23,14 @@ type JwtPayload = {
   sub: string;
   storeId: string;
   role: StoreRole;
+  tokenVersion: number;
+};
+
+type RefreshJwtPayload = {
+  sub: string;
+  storeId: string;
+  type: "refresh";
+  tokenVersion: number;
 };
 
 export class InvalidCredentialsError extends Error {
@@ -75,18 +83,48 @@ const sanitizeUser = (user: AuthUser) => ({
   storeId: user.storeId
 });
 
-const signToken = (user: AuthUser, role: StoreRole) =>
+const signAccessToken = (user: AuthUser, role: StoreRole, tokenVersion: number) =>
   jwt.sign(
     {
       storeId: user.storeId,
-      role
+      role,
+      tokenVersion
     },
     appConfig.jwtSecret,
     {
       subject: user.id,
-      expiresIn: appConfig.jwtExpiresIn as jwt.SignOptions["expiresIn"]
+      expiresIn: "15m"
     }
   );
+
+const signRefreshToken = (user: AuthUser, tokenVersion: number) =>
+  jwt.sign(
+    {
+      sub: user.id,
+      storeId: user.storeId,
+      type: "refresh",
+      tokenVersion
+    },
+    appConfig.jwtSecret,
+    {
+      expiresIn: "7d"
+    }
+  );
+
+const issueTokens = async (user: AuthUser, role: StoreRole) => {
+  const account = await masterPrisma.account.findUnique({
+    where: { id: user.id },
+    select: { tokenVersion: true }
+  });
+
+  const tokenVersion = account?.tokenVersion ?? 0;
+
+  return {
+    token: signAccessToken(user, role, tokenVersion),
+    refreshToken: signRefreshToken(user, tokenVersion),
+    user
+  };
+};
 
 type StoreMembershipItem = {
   storeId: string;
@@ -166,10 +204,7 @@ export const switchStore = async (accountId: string, storeId: string) => {
     storeId: membership.storeId
   });
 
-  return {
-    token: signToken(authUser, membership.role),
-    user: authUser
-  };
+  return issueTokens(authUser, membership.role);
 };
 
 export const login = async (username: string, password: string) => {
@@ -243,9 +278,10 @@ export const login = async (username: string, password: string) => {
     role: m.role
   }));
 
+  const tokens = await issueTokens(authUser, membership.role);
+
   return {
-    token: signToken(authUser, membership.role),
-    user: authUser,
+    ...tokens,
     stores
   };
 };
@@ -343,9 +379,10 @@ const loginWithOAuthAccount = async (account: { id: string; username: string; na
     role: m.role,
   }));
 
+  const tokens = await issueTokens(authUser, membership.role);
+
   return {
-    token: signToken(authUser, membership.role),
-    user: authUser,
+    ...tokens,
     stores,
   };
 };
@@ -456,10 +493,7 @@ export const completeOAuthRegistration = async (params: {
       storeId: existingMembership.storeId,
     });
 
-    return {
-      token: signToken(authUser, existingMembership.role),
-      user: authUser,
-    };
+    return issueTokens(authUser, existingMembership.role);
   }
 
   const store = await masterPrisma.store.create({
@@ -484,10 +518,7 @@ export const completeOAuthRegistration = async (params: {
     storeId: membership.storeId,
   });
 
-  return {
-    token: signToken(authUser, membership.role),
-    user: authUser,
-  };
+  return issueTokens(authUser, membership.role);
 };
 
 export const verifyToken = async (token: string) => {
@@ -516,13 +547,18 @@ export const verifyToken = async (token: string) => {
           select: {
             id: true,
             username: true,
-            name: true
+            name: true,
+            tokenVersion: true
           }
         }
       }
     });
 
     if (!membership) {
+      throw new AuthTokenInvalidError();
+    }
+
+    if (membership.account.tokenVersion !== payload.tokenVersion) {
       throw new AuthTokenInvalidError();
     }
 
@@ -540,6 +576,72 @@ export const verifyToken = async (token: string) => {
 
     throw new AuthTokenInvalidError();
   }
+};
+
+export const refreshToken = async (refreshTokenValue: string) => {
+  try {
+    const payload = jwt.verify(refreshTokenValue, appConfig.jwtSecret) as RefreshJwtPayload;
+
+    if (payload.type !== "refresh" || !payload.sub || !payload.storeId) {
+      throw new AuthTokenInvalidError();
+    }
+
+    const account = await masterPrisma.account.findUnique({
+      where: { id: payload.sub },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        isActive: true,
+        tokenVersion: true,
+        memberships: {
+          where: {
+            storeId: payload.storeId,
+            store: { isActive: true }
+          },
+          select: {
+            role: true,
+            storeId: true
+          }
+        }
+      }
+    });
+
+    if (!account || !account.isActive || account.memberships.length === 0) {
+      throw new AuthTokenInvalidError();
+    }
+
+    if (account.tokenVersion !== payload.tokenVersion) {
+      throw new AuthTokenInvalidError();
+    }
+
+    const membership = account.memberships[0];
+
+    const authUser = sanitizeUser({
+      id: account.id,
+      username: account.username,
+      name: account.name,
+      role: mapStoreRoleToLegacyRole(membership.role),
+      storeId: membership.storeId
+    });
+
+    return issueTokens(authUser, membership.role);
+  } catch (error) {
+    if (error instanceof AuthTokenInvalidError) {
+      throw error;
+    }
+
+    throw new AuthTokenInvalidError();
+  }
+};
+
+export const logout = async (accountId: string) => {
+  await masterPrisma.account.update({
+    where: { id: accountId },
+    data: {
+      tokenVersion: { increment: 1 }
+    }
+  });
 };
 
 export { UserRole };

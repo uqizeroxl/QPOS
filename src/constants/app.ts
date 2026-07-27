@@ -1,5 +1,6 @@
 export const STORAGE_KEYS = {
   authToken: "smartpos.auth.token",
+  authRefreshToken: "smartpos.auth.refreshToken",
   authUser: "smartpos.auth.user",
   categories: "smartpos.categories",
   settings: "smartpos.settings",

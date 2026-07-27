@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient, RecordStatus } from "../generated/prisma/client";
+import { trimAndStrip } from "../utils/escape";
 
 export type SupplierInput = {
   name: string;
@@ -34,11 +35,11 @@ export class SupplierInUseError extends Error {
 }
 
 const sanitizeSupplier = (data: SupplierInput) => ({
-  name: data.name.trim(),
-  phone: data.phone?.trim() || null,
-  email: data.email?.trim() || null,
-  address: data.address?.trim() || null,
-  notes: data.note?.trim() || null,
+  name: trimAndStrip(data.name),
+  phone: data.phone ? trimAndStrip(data.phone) : null,
+  email: data.email ? trimAndStrip(data.email) : null,
+  address: data.address ? trimAndStrip(data.address) : null,
+  notes: data.note ? trimAndStrip(data.note) : null,
   isActive: data.isActive ?? true
 });
 

@@ -1,4 +1,5 @@
 import type { PrismaClient } from "../generated/prisma/client";
+import { stripHtml } from "../utils/escape";
 
 const DEFAULT_RECEIPT_FOOTER = "Terima kasih";
 const MAX_RECEIPT_FOOTER_LENGTH = 250;
@@ -11,7 +12,7 @@ const normalizeReceiptFooter = (value: unknown) => {
     throw new ReceiptFooterValidationError("Footer struk harus berupa teks.");
   }
 
-  const footer = value.replace(/\r\n?/g, "\n").trim();
+  const footer = stripHtml(value).replace(/\r\n?/g, "\n").trim();
 
   if (footer.length > MAX_RECEIPT_FOOTER_LENGTH) {
     throw new ReceiptFooterValidationError(

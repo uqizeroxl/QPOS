@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient, RecordStatus } from "../generated/prisma/client";
+import { trimAndStrip } from "../utils/escape";
 
 export type CreateCategoryInput = {
   name: string;
@@ -60,7 +61,7 @@ export const createCategory = async (
   prisma: PrismaClient,
   data: CreateCategoryInput
 ) => {
-  const name = data.name.trim().toUpperCase();
+  const name = trimAndStrip(data.name).toUpperCase();
 
   if (!name) {
     throw new CategoryNameRequiredError();
@@ -80,7 +81,7 @@ export const createCategory = async (
     return await prisma.category.create({
       data: {
         name,
-        description: data.description?.trim() ?? "",
+        description: data.description ? trimAndStrip(data.description) : "",
         status: data.status ?? RecordStatus.ACTIVE
       }
     });
@@ -101,7 +102,7 @@ export const updateCategory = async (
   categoryId: string,
   data: UpdateCategoryInput
 ) => {
-  const name = data.name.trim().toUpperCase();
+  const name = trimAndStrip(data.name).toUpperCase();
 
   if (!name) {
     throw new CategoryNameRequiredError();
@@ -137,7 +138,7 @@ export const updateCategory = async (
       },
       data: {
         name,
-        description: data.description?.trim() ?? "",
+        description: data.description ? trimAndStrip(data.description) : "",
         status: data.status ?? RecordStatus.ACTIVE
       }
     });

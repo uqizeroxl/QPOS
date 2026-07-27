@@ -30,6 +30,7 @@ function getInitialAuthState(): AuthState {
     };
   } catch {
     localStorage.removeItem(STORAGE_KEYS.authToken);
+    localStorage.removeItem(STORAGE_KEYS.authRefreshToken);
     localStorage.removeItem(STORAGE_KEYS.authUser);
     return { user: null, token: null };
   }
@@ -49,8 +50,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  const login = useCallback(({ token: nextToken, user: nextUser }: LoginPayload) => {
+  const login = useCallback(({ token: nextToken, refreshToken: nextRefreshToken, user: nextUser }: LoginPayload) => {
     localStorage.setItem(STORAGE_KEYS.authToken, nextToken);
+    localStorage.setItem(STORAGE_KEYS.authRefreshToken, nextRefreshToken);
     localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(nextUser));
     setAuthState({ token: nextToken, user: nextUser });
     void fetchStores();
@@ -58,6 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const clearAuth = useCallback(() => {
     localStorage.removeItem(STORAGE_KEYS.authToken);
+    localStorage.removeItem(STORAGE_KEYS.authRefreshToken);
     localStorage.removeItem(STORAGE_KEYS.authUser);
     setAuthState({ token: null, user: null });
     setStores([]);
@@ -76,6 +79,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const switchStore = useCallback(async (storeId: string) => {
     const data = await authService.switchStore(storeId);
     localStorage.setItem(STORAGE_KEYS.authToken, data.token);
+    localStorage.setItem(STORAGE_KEYS.authRefreshToken, data.refreshToken);
     localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(data.user));
     setAuthState({ token: data.token, user: data.user });
     await fetchStores();
