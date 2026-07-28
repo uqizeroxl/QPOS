@@ -328,3 +328,17 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - `npm run build` failed with TS 6 error: `OAuthLoginResponse` union not narrowed after `"needsRegistration" in auth` check in `LoginPage.tsx:57-58`
 - Fix: added `as AuthPayload` type assertions on `login()` and `stores` access after the early return guard
 
+**2026-07-28 — Onboarding wizard, Role management, Store switcher gate, Trust proxy**
+
+- Multi-step registration wizard (`RegisterPage.tsx`): 4-step onboarding (Google bind → Profile → Store → Success) with progress bar; Google binding mandatory as step 1
+- Role management (`RoleManagementPage.tsx`): OWNER-only CRUD for store members with cross-store account search/import; backend `GET/POST /api/members`, `PATCH/DELETE /api/members/:memberId`, `GET /api/members/search?q=xxx`
+- Store switcher: now restricted to `OWNER` role only (`StoreSwitcher.tsx:27`)
+- Sidebar: "Peran Anggota" link in main store sidebar (not account settings panel)
+- Express `app.set("trust proxy", 1)` for rate limiter behind nginx reverse proxy
+- New files: `server/src/services/member.service.ts`, `server/src/controllers/member.controller.ts`, `server/src/routes/member.routes.ts`, `src/services/memberService.ts`, `src/types/member.ts`, `src/pages/role-management/RoleManagementPage.tsx`
+
+**Pending (VPS):**
+- Master DB migration skipped but `accounts.tokenVersion` column missing — run `sudo docker compose run --rm qpos-server npx prisma db push --config prisma.master.config.ts` to force sync
+- Then restart server: `sudo docker compose up -d --build`
+- Vercer: ensure `VITE_API_URL=https://api.qpos.shop/api` is set and redeploy
+
