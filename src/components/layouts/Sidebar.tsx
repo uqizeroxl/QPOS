@@ -55,7 +55,7 @@ const menuItems: SidebarMenuItem[] = [
   },
   { labelKey: "sidebar.menu.report", path: ROUTES.report, icon: BarChart3, roles: ownerAdminRoles },
   { labelKey: "sidebar.menu.setting", path: ROUTES.setting, icon: Settings, roles: ownerAdminRoles },
-  { labelKey: "sidebar.menu.roleManagement", path: ROUTES.roleManagement, icon: Users, roles: [UserRole.OWNER] },
+  { labelKey: "sidebar.menu.roleManagement", path: ROUTES.roleManagement, icon: Users, roles: ["OWNER"] },
   { labelKey: "sidebar.menu.help", path: ROUTES.helpShortcut, icon: CircleHelp, roles: allRoles },
 ];
 
