@@ -177,7 +177,7 @@ export default function RoleManagementPage() {
                       </td>
                       <td className="py-3 text-right">
                         <Button
-                          variant="secondary"
+                          variant="danger"
                           onClick={() => void handleRemove(member.id)}
                           disabled={removingId === member.id}
                         >
