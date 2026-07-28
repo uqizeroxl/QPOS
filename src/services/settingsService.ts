@@ -55,4 +55,49 @@ export const settingsService = {
       throw error;
     }
   },
+  inviteOwner: async (email: string) => {
+    try {
+      const response = await apiService.post<{
+        inviteLink: string;
+        email: string;
+        expiresAt: string;
+      }>("/settings/invite-owner", { email });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        throw new SettingsApiError(
+          error.response?.data?.message ?? "Gagal membuat undangan.",
+        );
+      }
+      throw error;
+    }
+  },
+  changeStoreOwner: async (username: string, password: string) => {
+    try {
+      const response = await apiService.post<{ newOwnerName: string }>(
+        "/settings/change-owner",
+        { username, password },
+      );
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        throw new SettingsApiError(
+          error.response?.data?.message ?? "Gagal mengubah kepemilikan toko.",
+        );
+      }
+      throw error;
+    }
+  },
+  deleteCompany: async (confirmation: string) => {
+    try {
+      await apiService.post("/settings/delete-company", { confirmation });
+    } catch (error) {
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        throw new SettingsApiError(
+          error.response?.data?.message ?? "Gagal menghapus perusahaan.",
+        );
+      }
+      throw error;
+    }
+  },
 };

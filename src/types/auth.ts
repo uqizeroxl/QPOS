@@ -14,6 +14,7 @@ export type StoreInfo = {
   id: string;
   name: string;
   role: string;
+  registeredAt?: string;
 };
 
 export type AuthPayload = {

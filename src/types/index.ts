@@ -12,3 +12,4 @@ export * from "./notification";
 export * from "./stock";
 export * from "./dashboard";
 export * from "./report";
+export * from "./member";

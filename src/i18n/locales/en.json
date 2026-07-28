@@ -54,7 +54,11 @@
       "transactions": "Transaction History",
       "report": "Reports",
       "setting": "Settings",
-      "help": "Help & Shortcuts"
+      "help": "Help & Shortcuts",
+      "backToStore": "Back to Store",
+      "accountSettings": "Account Settings",
+      "storeManagement": "Store Management",
+      "roleManagement": "Member Roles"
     }
   },
   "login": {

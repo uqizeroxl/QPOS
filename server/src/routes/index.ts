@@ -4,6 +4,7 @@ import authRoutes from "./auth.routes";
 import categoryRoutes from "./category.routes";
 import dashboardRoutes from "./dashboard.routes";
 import healthRoutes from "./health.routes";
+import memberRoutes from "./member.routes";
 import productRoutes from "./product.routes";
 import reportRoutes from "./report.routes";
 import settingsRoutes from "./settings.routes";
@@ -28,6 +29,7 @@ router.use("/api/categories", authenticate, authorize(ownerAdminWarehouse), cate
 router.use("/api/dashboard", authenticate, authorize(allRoles), dashboardRoutes);
 router.use("/api/products", authenticate, productRoutes);
 router.use("/api/reports", authenticate, authorize([UserRole.OWNER, UserRole.ADMIN]), reportRoutes);
+router.use("/api/members", authenticate, memberRoutes);
 router.use("/api/settings", authenticate, settingsRoutes);
 router.use("/api/suppliers", authenticate, authorize(ownerAdminWarehouse), supplierRoutes);
 router.use("/api/transactions", authenticate, authorize(ownerAdminCashier), transactionRoutes);

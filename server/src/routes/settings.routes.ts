@@ -1,6 +1,9 @@
 import { Router } from "express";
 
 import {
+  changeStoreOwnerHandler,
+  deleteStoreHandler,
+  inviteOwnerHandler,
   getReceiptFooter,
   resetProductDataset,
   updateReceiptFooter
@@ -16,6 +19,21 @@ router.post(
   "/product-dataset/reset",
   authorize([UserRole.OWNER]),
   resetProductDataset
+);
+router.post(
+  "/change-owner",
+  authorize([UserRole.OWNER]),
+  changeStoreOwnerHandler
+);
+router.post(
+  "/delete-company",
+  authorize([UserRole.OWNER]),
+  deleteStoreHandler
+);
+router.post(
+  "/invite-owner",
+  authorize([UserRole.OWNER]),
+  inviteOwnerHandler
 );
 
 export default router;

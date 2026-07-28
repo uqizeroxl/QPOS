@@ -2,10 +2,12 @@ import {
   AlertTriangle,
   DatabaseBackup,
   FileSpreadsheet,
+  Mail,
   Save,
   Settings,
   Trash2,
   Upload,
+  Users,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
@@ -32,7 +34,6 @@ import {
   settingsService,
   type ProductDatasetResetResult,
 } from "../../services/settingsService";
-
 const resetConfirmationText = "HAPUS SEMUA";
 
 export default function SettingPage() {
@@ -62,6 +63,19 @@ export default function SettingPage() {
     settings.receiptFooter,
   );
   const [isSavingReceiptFooter, setIsSavingReceiptFooter] = useState(false);
+  const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
+  const [changeOwnerEmail, setChangeOwnerEmail] = useState("");
+  const [changeOwnerStoreName, setChangeOwnerStoreName] = useState("");
+  const [changeOwnerStatement, setChangeOwnerStatement] = useState("");
+  const [changeOwnerError, setChangeOwnerError] = useState("");
+  const [isChangingOwner, setIsChangingOwner] = useState(false);
+  const [changeOwnerResult, setChangeOwnerResult] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState("");
+  const [isDeleteCompanyDialogOpen, setIsDeleteCompanyDialogOpen] = useState(false);
+  const [deleteCompanyStoreName, setDeleteCompanyStoreName] = useState("");
+  const [deleteCompanyStatement, setDeleteCompanyStatement] = useState("");
+  const [deleteCompanyError, setDeleteCompanyError] = useState("");
+  const [isDeletingCompany, setIsDeletingCompany] = useState(false);
 
   useEffect(() => {
     setReceiptFooterInput(settings.receiptFooter);
@@ -165,6 +179,85 @@ export default function SettingPage() {
       );
     } finally {
       setIsDatasetLoading(false);
+    }
+  };
+
+  const closeChangeOwnerDialog = () => {
+    if (isChangingOwner) return;
+    setIsChangeOwnerDialogOpen(false);
+    setChangeOwnerEmail("");
+    setChangeOwnerStoreName("");
+    setChangeOwnerStatement("");
+    setChangeOwnerError("");
+    setInviteLink("");
+  };
+
+  const handleSendInvitation = async () => {
+    if (
+      !changeOwnerEmail ||
+      changeOwnerStoreName !== settings.storeName ||
+      changeOwnerStatement !== "Saya mengerti dan ingin melanjutkan"
+    ) {
+      return;
+    }
+
+    setIsChangingOwner(true);
+    setChangeOwnerError("");
+
+    try {
+      const result = await settingsService.inviteOwner(changeOwnerEmail);
+      setInviteLink(result.inviteLink);
+      setChangeOwnerResult(result.email);
+    } catch (error) {
+      setChangeOwnerError(
+        error instanceof SettingsApiError
+          ? error.message
+          : "Gagal membuat undangan.",
+      );
+    } finally {
+      setIsChangingOwner(false);
+    }
+  };
+
+  const openGmailCompose = () => {
+    const subject = encodeURIComponent("Undangan Kepemilikan Toko");
+    const body = encodeURIComponent(
+      `Halo,\n\nAnda telah diundang untuk menjadi pemilik toko.\n\nKlik link berikut untuk menerima:\n${inviteLink}\n\nLink ini berlaku selama 48 jam.`
+    );
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(changeOwnerResult || changeOwnerEmail)}&su=${subject}&body=${body}`, "_blank");
+  };
+
+  const closeDeleteCompanyDialog = () => {
+    if (isDeletingCompany) return;
+    setIsDeleteCompanyDialogOpen(false);
+    setDeleteCompanyStoreName("");
+    setDeleteCompanyStatement("");
+    setDeleteCompanyError("");
+  };
+
+  const handleDeleteCompany = async () => {
+    if (
+      deleteCompanyStoreName !== settings.storeName ||
+      deleteCompanyStatement !== "Saya mengerti dan ingin melanjutkan"
+    ) {
+      return;
+    }
+
+    setIsDeletingCompany(true);
+    setDeleteCompanyError("");
+
+    try {
+      await settingsService.deleteCompany("HAPUS PERUSAHAAN");
+      setIsDeleteCompanyDialogOpen(false);
+      window.location.href = "/login";
+    } catch (error) {
+      setDeleteCompanyError(
+        error instanceof SettingsApiError
+          ? error.message
+          : "Gagal menghapus perusahaan.",
+      );
+    } finally {
+      setIsDeletingCompany(false);
     }
   };
 
@@ -488,6 +581,81 @@ export default function SettingPage() {
           ) : null}
         </Card>
 
+        {user?.role === "OWNER" ? (
+          <Card as="section" className="border-2 border-red-300 p-5">
+            <div className="border-b border-red-200 pb-4">
+              <h2 className="text-lg font-semibold text-red-800">
+                Danger Zone
+              </h2>
+              <p className="mt-1 text-sm text-red-600">
+                Tindakan berbahaya yang mempengaruhi kepemilikan dan keberadaan toko.
+              </p>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div className="rounded-lg border border-red-200 bg-gray-50 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold text-red-900">
+                      Alihkan Kepemilikan Toko
+                    </h3>
+                    <p className="mt-1 text-sm text-red-700">
+                      Transfer kepemilikan toko ke pengguna lain. Anda akan
+                      menjadi Manajer setelah dialihkan.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChangeOwnerResult(null);
+                      setChangeOwnerError("");
+                      setIsChangeOwnerDialogOpen(true);
+                    }}
+                    className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                  >
+                    <Users className="h-4 w-4" />
+                    Alihkan
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-red-200 bg-gray-50 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold text-red-900">
+                      Hapus Perusahaan
+                    </h3>
+                    <p className="mt-1 text-sm text-red-700">
+                      Hapus toko dan seluruh data secara permanen. Tindakan ini
+                      tidak dapat dibatalkan.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteCompanyError("");
+                      setIsDeleteCompanyDialogOpen(true);
+                    }}
+                    className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Hapus
+                  </button>
+                </div>
+              </div>
+
+              {changeOwnerResult ? (
+                <div className="rounded-lg bg-emerald-50 px-3 py-3 text-sm text-emerald-700">
+                  <p className="font-semibold">Kepemilikan berhasil dialihkan.</p>
+                  <p className="mt-1">
+                    Pemilik baru: {changeOwnerResult}. Silakan login ulang.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </Card>
+        ) : null}
+
         {isResetDialogOpen ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4">
             <div
@@ -536,6 +704,237 @@ export default function SettingPage() {
                 >
                   <Trash2 className="h-4 w-4" />
                   {isResetting ? "Menghapus..." : "Hapus Dataset"}
+                </button>
+              </div>
+            </div>
+          </div>
+          ) : null}
+
+        {isChangeOwnerDialogOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="change-owner-title"
+              className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl"
+            >
+              <h2
+                id="change-owner-title"
+                className="text-lg font-semibold text-gray-900"
+              >
+                Alihkan Kepemilikan Toko
+              </h2>
+
+              {inviteLink ? (
+                <>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Undangan berhasil dibuat. Kirim link ini ke pemilik baru
+                    melalui Gmail.
+                  </p>
+
+                  <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <p className="text-xs font-medium text-gray-500">
+                      Link Undangan
+                    </p>
+                    <p className="mt-1 break-all text-sm text-blue-600">
+                      {inviteLink}
+                    </p>
+                  </div>
+
+                  {changeOwnerError ? (
+                    <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                      {changeOwnerError}
+                    </p>
+                  ) : null}
+
+                  <div className="mt-5 flex justify-end gap-3">
+                    <Button
+                      variant="secondary"
+                      onClick={closeChangeOwnerDialog}
+                    >
+                      Tutup
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={openGmailCompose}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700"
+                    >
+                      <Mail className="h-4 w-4" />
+                      Kirim via Gmail
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Masukkan email pemilik baru dan konfirmasi untuk membuat
+                    undangan kepemilikan.
+                  </p>
+
+                  <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4">
+                    <p className="text-sm font-semibold text-red-800">
+                      Konfirmasi
+                    </p>
+                    <div className="mt-3 space-y-3">
+                      <label className="block space-y-1">
+                        <span className="text-sm font-medium text-gray-700">
+                          Ketik nama toko{" "}
+                          <strong>{settings.storeName}</strong>
+                        </span>
+                        <Input
+                          value={changeOwnerStoreName}
+                          onChange={(event) =>
+                            setChangeOwnerStoreName(event.target.value)
+                          }
+                          placeholder={settings.storeName}
+                        />
+                      </label>
+                      <label className="block space-y-1">
+                        <span className="text-sm font-medium text-gray-700">
+                          Ketik{" "}
+                          <strong>
+                            Saya mengerti dan ingin melanjutkan
+                          </strong>
+                        </span>
+                        <Input
+                          value={changeOwnerStatement}
+                          onChange={(event) =>
+                            setChangeOwnerStatement(event.target.value)
+                          }
+                          placeholder="Saya mengerti dan ingin melanjutkan"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block space-y-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Email Pemilik Baru
+                      </span>
+                      <Input
+                        value={changeOwnerEmail}
+                        onChange={(event) =>
+                          setChangeOwnerEmail(event.target.value)
+                        }
+                        placeholder="contoh@email.com"
+                      />
+                    </label>
+                  </div>
+
+                  {changeOwnerError ? (
+                    <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                      {changeOwnerError}
+                    </p>
+                  ) : null}
+
+                  <div className="mt-5 flex justify-end gap-3">
+                    <Button
+                      variant="secondary"
+                      onClick={closeChangeOwnerDialog}
+                      disabled={isChangingOwner}
+                    >
+                      Batal
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => void handleSendInvitation()}
+                      disabled={
+                        isChangingOwner ||
+                        changeOwnerStoreName !== settings.storeName ||
+                        changeOwnerStatement !==
+                          "Saya mengerti dan ingin melanjutkan" ||
+                        !changeOwnerEmail
+                      }
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Users className="h-4 w-4" />
+                      {isChangingOwner
+                        ? "Membuat Undangan..."
+                        : "Buat Undangan"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        ) : null}
+
+        {isDeleteCompanyDialogOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-company-title"
+              className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl"
+            >
+              <h2
+                id="delete-company-title"
+                className="text-lg font-semibold text-gray-900"
+              >
+                Hapus Perusahaan
+              </h2>
+              <p className="mt-2 text-sm text-gray-600">
+                Tindakan ini tidak dapat dibatalkan. Seluruh data toko akan
+                dihapus permanen. Isi kolom di bawah untuk konfirmasi.
+              </p>
+
+              <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4">
+                <p className="text-sm font-semibold text-red-800">Konfirmasi</p>
+                <div className="mt-3 space-y-3">
+                  <label className="block space-y-1">
+                    <span className="text-sm font-medium text-gray-700">
+                      Ketik nama toko <strong>{settings.storeName}</strong>
+                    </span>
+                    <Input
+                      value={deleteCompanyStoreName}
+                      onChange={(event) =>
+                        setDeleteCompanyStoreName(event.target.value)
+                      }
+                      placeholder={settings.storeName}
+                      autoFocus
+                    />
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-sm font-medium text-gray-700">
+                      Ketik <strong>Saya mengerti dan ingin melanjutkan</strong>
+                    </span>
+                    <Input
+                      value={deleteCompanyStatement}
+                      onChange={(event) =>
+                        setDeleteCompanyStatement(event.target.value)
+                      }
+                      placeholder="Saya mengerti dan ingin melanjutkan"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {deleteCompanyError ? (
+                <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {deleteCompanyError}
+                </p>
+              ) : null}
+              <div className="mt-5 flex justify-end gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={closeDeleteCompanyDialog}
+                  disabled={isDeletingCompany}
+                >
+                  Batal
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteCompany()}
+                  disabled={
+                    isDeletingCompany ||
+                    deleteCompanyStoreName !== settings.storeName ||
+                    deleteCompanyStatement !== "Saya mengerti dan ingin melanjutkan"
+                  }
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isDeletingCompany ? "Menghapus..." : "Hapus Perusahaan"}
                 </button>
               </div>
             </div>

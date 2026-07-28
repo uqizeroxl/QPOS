@@ -24,7 +24,7 @@ export default function StoreSwitcher() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (stores.length === 0) return null;
+  if (stores.length === 0 || user?.role !== "OWNER") return null;
 
   const handleSwitch = async (storeId: string) => {
     if (storeId === user?.storeId) {

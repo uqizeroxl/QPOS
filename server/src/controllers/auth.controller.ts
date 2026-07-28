@@ -2,7 +2,11 @@ import { NextFunction, Request, Response } from "express";
 
 import * as authService from "../services/auth.service";
 import type { AuthenticatedRequest } from "../middleware/auth.middleware";
-import { OAuthProviderNotConfiguredError } from "../services/oauth.service";
+import { OAuthProviderNotConfiguredError, OAuthTokenInvalidError } from "../services/oauth.service";
+
+type AcceptOwnershipBody = {
+  token?: string;
+};
 
 type LoginRequestBody = {
   username?: string;
@@ -342,6 +346,98 @@ export const switchStore = async (
       return;
     }
 
+    next(error);
+  }
+};
+
+export const acceptOwnership = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const body = req.body as AcceptOwnershipBody;
+    const token = body.token?.trim() ?? "";
+
+    if (!token) {
+      res.status(400).json({
+        success: false,
+        message: "Token undangan wajib dikirim."
+      });
+      return;
+    }
+
+    await authService.acceptOwnerInvitation(token, req.user.id);
+
+    res.status(200).json({
+      success: true,
+      message: "Kepemilikan toko berhasil diterima. Silakan login ulang."
+    });
+  } catch (error) {
+    if (
+      error instanceof authService.InvitationNotFoundError ||
+      error instanceof authService.InvitationEmailMismatchError
+    ) {
+      res.status(400).json({ success: false, message: error.message });
+      return;
+    }
+    next(error);
+  }
+};
+
+export const accountInfo = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const info = await authService.getAccountInfo(req.user.id);
+    res.status(200).json({
+      success: true,
+      data: info
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+type BindGoogleBody = {
+  accessToken?: string;
+};
+
+export const bindGoogle = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const body = req.body as BindGoogleBody;
+    const accessToken = body.accessToken?.trim() ?? "";
+
+    if (!accessToken) {
+      res.status(400).json({
+        success: false,
+        message: "Google Access Token wajib dikirim."
+      });
+      return;
+    }
+
+    const result = await authService.bindGoogleAccount(req.user.id, accessToken);
+
+    res.status(200).json({
+      success: true,
+      message: `Akun Google (${result.email}) berhasil terhubung.`,
+      data: result
+    });
+  } catch (error) {
+    if (
+      error instanceof OAuthProviderNotConfiguredError ||
+      error instanceof OAuthTokenInvalidError ||
+      error instanceof authService.GoogleAlreadyBoundError
+    ) {
+      res.status(400).json({ success: false, message: error.message });
+      return;
+    }
     next(error);
   }
 };

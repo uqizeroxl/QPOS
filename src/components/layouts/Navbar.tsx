@@ -91,12 +91,16 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
 
           <StoreSwitcher />
 
-          <div className="hidden items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 transition-colors duration-300 dark:border-slate-700 sm:flex">
+          <button
+            type="button"
+            onClick={() => navigate(ROUTES.userSettings)}
+            className="hidden items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 transition-colors duration-300 hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 sm:flex"
+          >
             <UserRound className="h-4 w-4 text-gray-500 dark:text-slate-400" />
             <span className="text-sm font-medium text-gray-700 dark:text-slate-300">
               {user?.name ?? t("navbar.userFallback")} · {user?.role ?? "-"}
             </span>
-          </div>
+          </button>
 
           <Button
             variant="unstyled"

@@ -5,6 +5,9 @@ import { ROUTES } from "../constants/routes";
 import LoadingScreen from "../pages/system/LoadingScreen";
 import ProtectedRoute from "./ProtectedRoute";
 
+const AcceptOwnershipPage = lazy(
+  () => import("../pages/accept-ownership/AcceptOwnershipPage"),
+);
 const LoginPage = lazy(() => import("../pages/login/LoginPage"));
 const RegisterPage = lazy(() => import("../pages/register/RegisterPage"));
 const DashboardPage = lazy(() => import("../pages/dashboard/DashboardPage"));
@@ -28,6 +31,15 @@ const StockHistoryPage = lazy(
 );
 const ReportPage = lazy(() => import("../pages/report/ReportPage"));
 const SettingPage = lazy(() => import("../pages/setting/SettingPage"));
+const UserSettingsPage = lazy(
+  () => import("../pages/user-settings/UserSettingsPage"),
+);
+const StoreManagementPage = lazy(
+  () => import("../pages/store-management/StoreManagementPage"),
+);
+const RoleManagementPage = lazy(
+  () => import("../pages/role-management/RoleManagementPage"),
+);
 const HelpShortcutPage = lazy(() => import("../pages/help/HelpShortcutPage"));
 const NotificationsPage = lazy(
   () => import("../pages/notifications/NotificationsPage"),
@@ -41,6 +53,7 @@ export default function AppRoutes() {
         <Routes>
           <Route path={ROUTES.login} element={<LoginPage />} />
           <Route path={ROUTES.register} element={<RegisterPage />} />
+          <Route path={ROUTES.acceptOwnership} element={<AcceptOwnershipPage />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path={ROUTES.dashboard} element={<DashboardPage />} />
@@ -62,6 +75,18 @@ export default function AppRoutes() {
             />
             <Route path={ROUTES.report} element={<ReportPage />} />
             <Route path={ROUTES.setting} element={<SettingPage />} />
+            <Route
+              path={ROUTES.userSettings}
+              element={<UserSettingsPage />}
+            />
+            <Route
+              path={ROUTES.storeManagement}
+              element={<StoreManagementPage />}
+            />
+            <Route
+              path={ROUTES.roleManagement}
+              element={<RoleManagementPage />}
+            />
             <Route path={ROUTES.helpShortcut} element={<HelpShortcutPage />} />
             <Route
               path={ROUTES.notifications}

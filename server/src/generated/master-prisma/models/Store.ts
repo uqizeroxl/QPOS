@@ -183,6 +183,7 @@ export type StoreWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Store"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Store"> | Date | string
   members?: Prisma.StoreMemberListRelationFilter
+  invitations?: Prisma.StoreInvitationListRelationFilter
   tenantRegistry?: Prisma.XOR<Prisma.TenantDatabaseRegistryNullableScalarRelationFilter, Prisma.TenantDatabaseRegistryWhereInput> | null
 }
 
@@ -193,6 +194,7 @@ export type StoreOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   members?: Prisma.StoreMemberOrderByRelationAggregateInput
+  invitations?: Prisma.StoreInvitationOrderByRelationAggregateInput
   tenantRegistry?: Prisma.TenantDatabaseRegistryOrderByWithRelationInput
 }
 
@@ -206,6 +208,7 @@ export type StoreWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Store"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Store"> | Date | string
   members?: Prisma.StoreMemberListRelationFilter
+  invitations?: Prisma.StoreInvitationListRelationFilter
   tenantRegistry?: Prisma.XOR<Prisma.TenantDatabaseRegistryNullableScalarRelationFilter, Prisma.TenantDatabaseRegistryWhereInput> | null
 }, "id">
 
@@ -238,6 +241,7 @@ export type StoreCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.StoreMemberCreateNestedManyWithoutStoreInput
+  invitations?: Prisma.StoreInvitationCreateNestedManyWithoutStoreInput
   tenantRegistry?: Prisma.TenantDatabaseRegistryCreateNestedOneWithoutStoreInput
 }
 
@@ -248,6 +252,7 @@ export type StoreUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.StoreMemberUncheckedCreateNestedManyWithoutStoreInput
+  invitations?: Prisma.StoreInvitationUncheckedCreateNestedManyWithoutStoreInput
   tenantRegistry?: Prisma.TenantDatabaseRegistryUncheckedCreateNestedOneWithoutStoreInput
 }
 
@@ -258,6 +263,7 @@ export type StoreUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.StoreMemberUpdateManyWithoutStoreNestedInput
+  invitations?: Prisma.StoreInvitationUpdateManyWithoutStoreNestedInput
   tenantRegistry?: Prisma.TenantDatabaseRegistryUpdateOneWithoutStoreNestedInput
 }
 
@@ -268,6 +274,7 @@ export type StoreUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.StoreMemberUncheckedUpdateManyWithoutStoreNestedInput
+  invitations?: Prisma.StoreInvitationUncheckedUpdateManyWithoutStoreNestedInput
   tenantRegistry?: Prisma.TenantDatabaseRegistryUncheckedUpdateOneWithoutStoreNestedInput
 }
 
@@ -352,12 +359,27 @@ export type StoreUpdateOneRequiredWithoutTenantRegistryNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.StoreUpdateToOneWithWhereWithoutTenantRegistryInput, Prisma.StoreUpdateWithoutTenantRegistryInput>, Prisma.StoreUncheckedUpdateWithoutTenantRegistryInput>
 }
 
+export type StoreCreateNestedOneWithoutInvitationsInput = {
+  create?: Prisma.XOR<Prisma.StoreCreateWithoutInvitationsInput, Prisma.StoreUncheckedCreateWithoutInvitationsInput>
+  connectOrCreate?: Prisma.StoreCreateOrConnectWithoutInvitationsInput
+  connect?: Prisma.StoreWhereUniqueInput
+}
+
+export type StoreUpdateOneRequiredWithoutInvitationsNestedInput = {
+  create?: Prisma.XOR<Prisma.StoreCreateWithoutInvitationsInput, Prisma.StoreUncheckedCreateWithoutInvitationsInput>
+  connectOrCreate?: Prisma.StoreCreateOrConnectWithoutInvitationsInput
+  upsert?: Prisma.StoreUpsertWithoutInvitationsInput
+  connect?: Prisma.StoreWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StoreUpdateToOneWithWhereWithoutInvitationsInput, Prisma.StoreUpdateWithoutInvitationsInput>, Prisma.StoreUncheckedUpdateWithoutInvitationsInput>
+}
+
 export type StoreCreateWithoutMembersInput = {
   id?: string
   name: string
   isActive?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  invitations?: Prisma.StoreInvitationCreateNestedManyWithoutStoreInput
   tenantRegistry?: Prisma.TenantDatabaseRegistryCreateNestedOneWithoutStoreInput
 }
 
@@ -367,6 +389,7 @@ export type StoreUncheckedCreateWithoutMembersInput = {
   isActive?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
+  invitations?: Prisma.StoreInvitationUncheckedCreateNestedManyWithoutStoreInput
   tenantRegistry?: Prisma.TenantDatabaseRegistryUncheckedCreateNestedOneWithoutStoreInput
 }
 
@@ -392,6 +415,7 @@ export type StoreUpdateWithoutMembersInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invitations?: Prisma.StoreInvitationUpdateManyWithoutStoreNestedInput
   tenantRegistry?: Prisma.TenantDatabaseRegistryUpdateOneWithoutStoreNestedInput
 }
 
@@ -401,6 +425,7 @@ export type StoreUncheckedUpdateWithoutMembersInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  invitations?: Prisma.StoreInvitationUncheckedUpdateManyWithoutStoreNestedInput
   tenantRegistry?: Prisma.TenantDatabaseRegistryUncheckedUpdateOneWithoutStoreNestedInput
 }
 
@@ -411,6 +436,7 @@ export type StoreCreateWithoutTenantRegistryInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.StoreMemberCreateNestedManyWithoutStoreInput
+  invitations?: Prisma.StoreInvitationCreateNestedManyWithoutStoreInput
 }
 
 export type StoreUncheckedCreateWithoutTenantRegistryInput = {
@@ -420,6 +446,7 @@ export type StoreUncheckedCreateWithoutTenantRegistryInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.StoreMemberUncheckedCreateNestedManyWithoutStoreInput
+  invitations?: Prisma.StoreInvitationUncheckedCreateNestedManyWithoutStoreInput
 }
 
 export type StoreCreateOrConnectWithoutTenantRegistryInput = {
@@ -445,6 +472,7 @@ export type StoreUpdateWithoutTenantRegistryInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.StoreMemberUpdateManyWithoutStoreNestedInput
+  invitations?: Prisma.StoreInvitationUpdateManyWithoutStoreNestedInput
 }
 
 export type StoreUncheckedUpdateWithoutTenantRegistryInput = {
@@ -454,6 +482,63 @@ export type StoreUncheckedUpdateWithoutTenantRegistryInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.StoreMemberUncheckedUpdateManyWithoutStoreNestedInput
+  invitations?: Prisma.StoreInvitationUncheckedUpdateManyWithoutStoreNestedInput
+}
+
+export type StoreCreateWithoutInvitationsInput = {
+  id?: string
+  name: string
+  isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.StoreMemberCreateNestedManyWithoutStoreInput
+  tenantRegistry?: Prisma.TenantDatabaseRegistryCreateNestedOneWithoutStoreInput
+}
+
+export type StoreUncheckedCreateWithoutInvitationsInput = {
+  id?: string
+  name: string
+  isActive?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.StoreMemberUncheckedCreateNestedManyWithoutStoreInput
+  tenantRegistry?: Prisma.TenantDatabaseRegistryUncheckedCreateNestedOneWithoutStoreInput
+}
+
+export type StoreCreateOrConnectWithoutInvitationsInput = {
+  where: Prisma.StoreWhereUniqueInput
+  create: Prisma.XOR<Prisma.StoreCreateWithoutInvitationsInput, Prisma.StoreUncheckedCreateWithoutInvitationsInput>
+}
+
+export type StoreUpsertWithoutInvitationsInput = {
+  update: Prisma.XOR<Prisma.StoreUpdateWithoutInvitationsInput, Prisma.StoreUncheckedUpdateWithoutInvitationsInput>
+  create: Prisma.XOR<Prisma.StoreCreateWithoutInvitationsInput, Prisma.StoreUncheckedCreateWithoutInvitationsInput>
+  where?: Prisma.StoreWhereInput
+}
+
+export type StoreUpdateToOneWithWhereWithoutInvitationsInput = {
+  where?: Prisma.StoreWhereInput
+  data: Prisma.XOR<Prisma.StoreUpdateWithoutInvitationsInput, Prisma.StoreUncheckedUpdateWithoutInvitationsInput>
+}
+
+export type StoreUpdateWithoutInvitationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.StoreMemberUpdateManyWithoutStoreNestedInput
+  tenantRegistry?: Prisma.TenantDatabaseRegistryUpdateOneWithoutStoreNestedInput
+}
+
+export type StoreUncheckedUpdateWithoutInvitationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.StoreMemberUncheckedUpdateManyWithoutStoreNestedInput
+  tenantRegistry?: Prisma.TenantDatabaseRegistryUncheckedUpdateOneWithoutStoreNestedInput
 }
 
 
@@ -463,10 +548,12 @@ export type StoreUncheckedUpdateWithoutTenantRegistryInput = {
 
 export type StoreCountOutputType = {
   members: number
+  invitations: number
 }
 
 export type StoreCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | StoreCountOutputTypeCountMembersArgs
+  invitations?: boolean | StoreCountOutputTypeCountInvitationsArgs
 }
 
 /**
@@ -486,6 +573,13 @@ export type StoreCountOutputTypeCountMembersArgs<ExtArgs extends runtime.Types.E
   where?: Prisma.StoreMemberWhereInput
 }
 
+/**
+ * StoreCountOutputType without action
+ */
+export type StoreCountOutputTypeCountInvitationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.StoreInvitationWhereInput
+}
+
 
 export type StoreSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -494,6 +588,7 @@ export type StoreSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   createdAt?: boolean
   updatedAt?: boolean
   members?: boolean | Prisma.Store$membersArgs<ExtArgs>
+  invitations?: boolean | Prisma.Store$invitationsArgs<ExtArgs>
   tenantRegistry?: boolean | Prisma.Store$tenantRegistryArgs<ExtArgs>
   _count?: boolean | Prisma.StoreCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["store"]>
@@ -525,6 +620,7 @@ export type StoreSelectScalar = {
 export type StoreOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["store"]>
 export type StoreInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | Prisma.Store$membersArgs<ExtArgs>
+  invitations?: boolean | Prisma.Store$invitationsArgs<ExtArgs>
   tenantRegistry?: boolean | Prisma.Store$tenantRegistryArgs<ExtArgs>
   _count?: boolean | Prisma.StoreCountOutputTypeDefaultArgs<ExtArgs>
 }
@@ -535,6 +631,7 @@ export type $StorePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   name: "Store"
   objects: {
     members: Prisma.$StoreMemberPayload<ExtArgs>[]
+    invitations: Prisma.$StoreInvitationPayload<ExtArgs>[]
     tenantRegistry: Prisma.$TenantDatabaseRegistryPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -938,6 +1035,7 @@ readonly fields: StoreFieldRefs;
 export interface Prisma__StoreClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   members<T extends Prisma.Store$membersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Store$membersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StoreMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  invitations<T extends Prisma.Store$invitationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Store$invitationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StoreInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tenantRegistry<T extends Prisma.Store$tenantRegistryArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Store$tenantRegistryArgs<ExtArgs>>): Prisma.Prisma__TenantDatabaseRegistryClient<runtime.Types.Result.GetResult<Prisma.$TenantDatabaseRegistryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1387,6 +1485,30 @@ export type Store$membersArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   distinct?: Prisma.StoreMemberScalarFieldEnum | Prisma.StoreMemberScalarFieldEnum[]
+}
+
+/**
+ * Store.invitations
+ */
+export type Store$invitationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StoreInvitation
+   */
+  select?: Prisma.StoreInvitationSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the StoreInvitation
+   */
+  omit?: Prisma.StoreInvitationOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.StoreInvitationInclude<ExtArgs> | null
+  where?: Prisma.StoreInvitationWhereInput
+  orderBy?: Prisma.StoreInvitationOrderByWithRelationInput | Prisma.StoreInvitationOrderByWithRelationInput[]
+  cursor?: Prisma.StoreInvitationWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.StoreInvitationScalarFieldEnum | Prisma.StoreInvitationScalarFieldEnum[]
 }
 
 /**

@@ -13,6 +13,12 @@ enum StoreRole {
   CASHIER
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
 enum TenantMigrationStatus {
   PENDING
   RUNNING
@@ -45,6 +51,7 @@ model Store {
   name           String                  @db.VarChar(150)
   isActive       Boolean                 @default(true)
   members        StoreMember[]
+  invitations    StoreInvitation[]
   tenantRegistry TenantDatabaseRegistry?
   createdAt      DateTime                @default(now())
   updatedAt      DateTime                @updatedAt
@@ -83,4 +90,22 @@ model TenantDatabaseRegistry {
 
   @@index([migrationStatus])
   @@map("tenant_database_registries")
+}
+
+model StoreInvitation {
+  id        String           @id @default(cuid())
+  storeId   String
+  email     String           @db.VarChar(255)
+  token     String           @unique @db.VarChar(255)
+  status    InvitationStatus @default(PENDING)
+  expiresAt DateTime
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  store     Store            @relation(fields: [storeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([storeId])
+  @@index([token])
+  @@index([email])
+  @@map("store_invitations")
 }

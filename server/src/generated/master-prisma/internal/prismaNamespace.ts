@@ -400,7 +400,8 @@ export const ModelName = {
   Account: 'Account',
   Store: 'Store',
   StoreMember: 'StoreMember',
-  TenantDatabaseRegistry: 'TenantDatabaseRegistry'
+  TenantDatabaseRegistry: 'TenantDatabaseRegistry',
+  StoreInvitation: 'StoreInvitation'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -416,7 +417,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "account" | "store" | "storeMember" | "tenantDatabaseRegistry"
+    modelProps: "account" | "store" | "storeMember" | "tenantDatabaseRegistry" | "storeInvitation"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -716,6 +717,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    StoreInvitation: {
+      payload: Prisma.$StoreInvitationPayload<ExtArgs>
+      fields: Prisma.StoreInvitationFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.StoreInvitationFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StoreInvitationPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.StoreInvitationFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StoreInvitationPayload>
+        }
+        findFirst: {
+          args: Prisma.StoreInvitationFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StoreInvitationPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.StoreInvitationFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StoreInvitationPayload>
+        }
+        findMany: {
+          args: Prisma.StoreInvitationFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StoreInvitationPayload>[]
+        }
+        create: {
+          args: Prisma.StoreInvitationCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StoreInvitationPayload>
+        }
+        createMany: {
+          args: Prisma.StoreInvitationCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.StoreInvitationCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StoreInvitationPayload>[]
+        }
+        delete: {
+          args: Prisma.StoreInvitationDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StoreInvitationPayload>
+        }
+        update: {
+          args: Prisma.StoreInvitationUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StoreInvitationPayload>
+        }
+        deleteMany: {
+          args: Prisma.StoreInvitationDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.StoreInvitationUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.StoreInvitationUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StoreInvitationPayload>[]
+        }
+        upsert: {
+          args: Prisma.StoreInvitationUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$StoreInvitationPayload>
+        }
+        aggregate: {
+          args: Prisma.StoreInvitationAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateStoreInvitation>
+        }
+        groupBy: {
+          args: Prisma.StoreInvitationGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StoreInvitationGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.StoreInvitationCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.StoreInvitationCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -808,6 +883,20 @@ export const TenantDatabaseRegistryScalarFieldEnum = {
 } as const
 
 export type TenantDatabaseRegistryScalarFieldEnum = (typeof TenantDatabaseRegistryScalarFieldEnum)[keyof typeof TenantDatabaseRegistryScalarFieldEnum]
+
+
+export const StoreInvitationScalarFieldEnum = {
+  id: 'id',
+  storeId: 'storeId',
+  email: 'email',
+  token: 'token',
+  status: 'status',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type StoreInvitationScalarFieldEnum = (typeof StoreInvitationScalarFieldEnum)[keyof typeof StoreInvitationScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -914,6 +1003,20 @@ export type EnumTenantMigrationStatusFieldRefInput<$PrismaModel> = FieldRefInput
  * Reference to a field of type 'TenantMigrationStatus[]'
  */
 export type ListEnumTenantMigrationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TenantMigrationStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'InvitationStatus'
+ */
+export type EnumInvitationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'InvitationStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'InvitationStatus[]'
+ */
+export type ListEnumInvitationStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'InvitationStatus[]'>
     
 
 
@@ -1085,6 +1188,7 @@ export type GlobalOmitConfig = {
   store?: Prisma.StoreOmit
   storeMember?: Prisma.StoreMemberOmit
   tenantDatabaseRegistry?: Prisma.TenantDatabaseRegistryOmit
+  storeInvitation?: Prisma.StoreInvitationOmit
 }
 
 /* Types for Logging */

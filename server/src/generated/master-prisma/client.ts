@@ -59,3 +59,8 @@ export type StoreMember = Prisma.StoreMemberModel
  * 
  */
 export type TenantDatabaseRegistry = Prisma.TenantDatabaseRegistryModel
+/**
+ * Model StoreInvitation
+ * 
+ */
+export type StoreInvitation = Prisma.StoreInvitationModel

@@ -14,6 +14,10 @@ export const ROUTES = {
   transactionHistory: "/transaction-history",
   report: "/report",
   setting: "/setting",
+  userSettings: "/user-settings",
+  storeManagement: "/store-management",
+  roleManagement: "/role-management",
   helpShortcut: "/help",
   notifications: "/notifications",
+  acceptOwnership: "/accept-ownership",
 } as const;

@@ -1,4 +1,9 @@
+import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 import type { PrismaClient } from "../generated/prisma/client";
+import { InvitationStatus, StoreRole } from "../generated/master-prisma/client";
+import { appConfig } from "../config/app.config";
+import { masterPrisma } from "../utils/master-prisma";
 import { stripHtml } from "../utils/escape";
 
 const DEFAULT_RECEIPT_FOOTER = "Terima kasih";
@@ -77,3 +82,133 @@ export const resetProductDataset = async (
       suppliers: suppliers.count
     };
   });
+
+export class ChangeOwnerValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+export const changeStoreOwner = async (
+  prisma: PrismaClient,
+  storeId: string,
+  currentOwnerAccountId: string,
+  newOwnerUsername: string,
+  password: string
+) => {
+  const account = await masterPrisma.account.findUnique({
+    where: { id: currentOwnerAccountId },
+    select: { passwordHash: true }
+  });
+
+  if (!account) {
+    throw new ChangeOwnerValidationError("Akun tidak ditemukan.");
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, account.passwordHash);
+  if (!isPasswordValid) {
+    throw new ChangeOwnerValidationError("Password saat ini salah.");
+  }
+
+  const targetAccount = await masterPrisma.account.findUnique({
+    where: { username: newOwnerUsername },
+    select: { id: true, name: true }
+  });
+
+  if (!targetAccount) {
+    throw new ChangeOwnerValidationError(
+      `Akun dengan username "${newOwnerUsername}" tidak ditemukan.`
+    );
+  }
+
+  const targetMembership = await masterPrisma.storeMember.findUnique({
+    where: {
+      accountId_storeId: {
+        accountId: targetAccount.id,
+        storeId
+      }
+    },
+    select: { id: true, role: true }
+  });
+
+  if (!targetMembership) {
+    throw new ChangeOwnerValidationError(
+      `Akun "${newOwnerUsername}" bukan anggota toko ini.`
+    );
+  }
+
+  if (targetAccount.id === currentOwnerAccountId) {
+    throw new ChangeOwnerValidationError(
+      "Anda sudah menjadi pemilik toko ini."
+    );
+  }
+
+  await masterPrisma.$transaction([
+    masterPrisma.storeMember.update({
+      where: { id: targetMembership.id },
+      data: { role: StoreRole.OWNER }
+    }),
+    masterPrisma.storeMember.update({
+      where: { accountId_storeId: { accountId: currentOwnerAccountId, storeId } },
+      data: { role: StoreRole.MANAGER }
+    })
+  ]);
+
+  return { newOwnerName: targetAccount.name };
+};
+
+export const createOwnerInvitation = async (
+  storeId: string,
+  email: string,
+  origin: string
+) => {
+  const existingOwner = await masterPrisma.storeMember.findFirst({
+    where: { storeId, role: StoreRole.OWNER },
+    select: { account: { select: { id: true } } }
+  });
+
+  if (!existingOwner) {
+    throw new ChangeOwnerValidationError("Pemilik toko tidak ditemukan.");
+  }
+
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiresAt = new Date(
+    Date.now() + appConfig.invitationExpiryHours * 60 * 60 * 1000
+  );
+
+  await masterPrisma.storeInvitation.create({
+    data: {
+      storeId,
+      email,
+      token,
+      expiresAt
+    }
+  });
+
+  const inviteLink = `${origin}/accept-ownership?token=${token}`;
+
+  return { inviteLink, email, expiresAt };
+};
+
+export const deleteStore = async (
+  prisma: PrismaClient,
+  storeId: string
+) => {
+  await prisma.$transaction(async (tx) => {
+    await tx.stockHistory.deleteMany();
+    await tx.transactionItem.deleteMany();
+    await tx.transaction.deleteMany();
+    await tx.purchaseOrder.deleteMany();
+    await tx.product.deleteMany();
+    await tx.category.deleteMany();
+    await tx.supplier.deleteMany();
+    await tx.activityLog.deleteMany();
+    await tx.notification.deleteMany();
+    await tx.settings.deleteMany();
+    await tx.user.deleteMany();
+  });
+
+  await masterPrisma.store.delete({
+    where: { id: storeId }
+  });
+};

@@ -54,7 +54,8 @@ export const ModelName = {
   Account: 'Account',
   Store: 'Store',
   StoreMember: 'StoreMember',
-  TenantDatabaseRegistry: 'TenantDatabaseRegistry'
+  TenantDatabaseRegistry: 'TenantDatabaseRegistry',
+  StoreInvitation: 'StoreInvitation'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -126,6 +127,20 @@ export const TenantDatabaseRegistryScalarFieldEnum = {
 } as const
 
 export type TenantDatabaseRegistryScalarFieldEnum = (typeof TenantDatabaseRegistryScalarFieldEnum)[keyof typeof TenantDatabaseRegistryScalarFieldEnum]
+
+
+export const StoreInvitationScalarFieldEnum = {
+  id: 'id',
+  storeId: 'storeId',
+  email: 'email',
+  token: 'token',
+  status: 'status',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type StoreInvitationScalarFieldEnum = (typeof StoreInvitationScalarFieldEnum)[keyof typeof StoreInvitationScalarFieldEnum]
 
 
 export const SortOrder = {

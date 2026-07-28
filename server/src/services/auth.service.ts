@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-import { StoreRole } from "../generated/master-prisma/client";
+import { InvitationStatus, StoreRole } from "../generated/master-prisma/client";
 import { UserRole } from "../generated/prisma/client";
 import { appConfig } from "../config/app.config";
 import { masterPrisma } from "../utils/master-prisma";
@@ -143,6 +143,7 @@ export const listStores = async (accountId: string) => {
     select: {
       role: true,
       storeId: true,
+      createdAt: true,
       store: {
         select: {
           name: true
@@ -157,7 +158,8 @@ export const listStores = async (accountId: string) => {
   return memberships.map((m) => ({
     id: m.storeId,
     name: m.store.name,
-    role: m.role
+    role: m.role,
+    registeredAt: m.createdAt
   }));
 };
 
@@ -635,12 +637,165 @@ export const refreshToken = async (refreshTokenValue: string) => {
   }
 };
 
+export type AccountInfo = {
+  id: string;
+  username: string;
+  name: string;
+  email: string | null;
+  googleId: string | null;
+};
+
+export const getAccountInfo = async (accountId: string): Promise<AccountInfo> => {
+  const account = await masterPrisma.account.findUnique({
+    where: { id: accountId },
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      email: true,
+      googleId: true
+    }
+  });
+
+  if (!account) {
+    throw new AuthTokenInvalidError();
+  }
+
+  return account;
+};
+
+export class GoogleAlreadyBoundError extends Error {
+  constructor() {
+    super("Akun Google sudah terhubung ke pengguna lain.");
+  }
+}
+
+export const bindGoogleAccount = async (
+  accountId: string,
+  accessToken: string
+) => {
+  const googlePayload = await verifyGoogleToken(accessToken);
+
+  const existingByGoogleId = await masterPrisma.account.findFirst({
+    where: { googleId: googlePayload.sub, id: { not: accountId } }
+  });
+
+  if (existingByGoogleId) {
+    throw new GoogleAlreadyBoundError();
+  }
+
+  await masterPrisma.account.update({
+    where: { id: accountId },
+    data: {
+      googleId: googlePayload.sub,
+      email: googlePayload.email
+    }
+  });
+
+  return { email: googlePayload.email };
+};
+
 export const logout = async (accountId: string) => {
   await masterPrisma.account.update({
     where: { id: accountId },
     data: {
       tokenVersion: { increment: 1 }
     }
+  });
+};
+
+export class InvitationNotFoundError extends Error {
+  constructor() {
+    super("Undangan tidak ditemukan atau sudah kadaluwarsa.");
+  }
+}
+
+export class InvitationEmailMismatchError extends Error {
+  constructor() {
+    super("Email akun Anda tidak sesuai dengan undangan.");
+  }
+}
+
+export const acceptOwnerInvitation = async (
+  token: string,
+  accountId: string
+) => {
+  const invitation = await masterPrisma.storeInvitation.findUnique({
+    where: { token }
+  });
+
+  if (!invitation || invitation.status !== InvitationStatus.PENDING) {
+    throw new InvitationNotFoundError();
+  }
+
+  if (invitation.expiresAt < new Date()) {
+    await masterPrisma.storeInvitation.update({
+      where: { id: invitation.id },
+      data: { status: InvitationStatus.EXPIRED }
+    });
+    throw new InvitationNotFoundError();
+  }
+
+  const account = await masterPrisma.account.findUnique({
+    where: { id: accountId },
+    select: { email: true, googleId: true }
+  });
+
+  if (!account) {
+    throw new InvitationNotFoundError();
+  }
+
+  if (account.email !== invitation.email) {
+    throw new InvitationEmailMismatchError();
+  }
+
+  const currentOwnerMembership = await masterPrisma.storeMember.findFirst({
+    where: { storeId: invitation.storeId, role: StoreRole.OWNER },
+    select: { id: true }
+  });
+
+  await masterPrisma.$transaction(async (tx) => {
+    const targetMembership = await tx.storeMember.findUnique({
+      where: {
+        accountId_storeId: {
+          accountId,
+          storeId: invitation.storeId
+        }
+      },
+      select: { id: true }
+    });
+
+    if (targetMembership) {
+      await tx.storeMember.update({
+        where: { id: targetMembership.id },
+        data: { role: StoreRole.OWNER }
+      });
+    } else {
+      await tx.storeMember.create({
+        data: {
+          accountId,
+          storeId: invitation.storeId,
+          role: StoreRole.OWNER
+        }
+      });
+    }
+
+    if (currentOwnerMembership) {
+      await tx.storeMember.update({
+        where: { id: currentOwnerMembership.id },
+        data: { role: StoreRole.MANAGER }
+      });
+    }
+
+    await tx.storeInvitation.update({
+      where: { id: invitation.id },
+      data: { status: InvitationStatus.ACCEPTED }
+    });
+  });
+
+  await masterPrisma.account.update({
+    where: { id: accountId },
+    data: { tokenVersion: { increment: 1 } }
   });
 };
 

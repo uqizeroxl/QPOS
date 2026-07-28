@@ -16,6 +16,8 @@ export const appConfig = {
     1,
     Number(process.env.TRANSACTION_RETENTION_DAYS) || 14
   ),
+  appUrl: process.env.APP_URL || process.env.CORS_ORIGIN || "http://localhost:5173",
+  invitationExpiryHours: Math.max(1, Number(process.env.INVITATION_EXPIRY_HOURS) || 48),
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   appleClientId: process.env.APPLE_CLIENT_ID || "",
   appleTeamId: process.env.APPLE_TEAM_ID || "",

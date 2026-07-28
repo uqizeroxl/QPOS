@@ -1,6 +1,8 @@
 import {
+  ArrowLeft,
   BarChart3,
   Barcode,
+  Building2,
   CircleHelp,
   LayoutDashboard,
   Package,
@@ -11,9 +13,12 @@ import {
   ShoppingCart,
   Tags,
   Truck,
+  UserRound,
+  Users,
   X,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import { memo } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import Button from "../ui/Button";
 import { ROUTES } from "../../constants/routes";
@@ -50,6 +55,7 @@ const menuItems: SidebarMenuItem[] = [
   },
   { labelKey: "sidebar.menu.report", path: ROUTES.report, icon: BarChart3, roles: ownerAdminRoles },
   { labelKey: "sidebar.menu.setting", path: ROUTES.setting, icon: Settings, roles: ownerAdminRoles },
+  { labelKey: "sidebar.menu.roleManagement", path: ROUTES.roleManagement, icon: Users, roles: [UserRole.OWNER] },
   { labelKey: "sidebar.menu.help", path: ROUTES.helpShortcut, icon: CircleHelp, roles: allRoles },
 ];
 
@@ -58,9 +64,26 @@ type SidebarProps = {
   onClose?: () => void;
 };
 
-function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+    isActive
+      ? "bg-white/15 text-white"
+      : "text-white hover:bg-white/20"
+  }`;
+
+const accountSettingsItems = [
+  { labelKey: "sidebar.menu.accountSettings", path: ROUTES.userSettings, icon: UserRound },
+  { labelKey: "sidebar.menu.storeManagement", path: ROUTES.storeManagement, icon: Building2 },
+];
+
+const SidebarContent = memo(function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
   const { user } = useAuth();
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isAccountSettings =
+    location.pathname === ROUTES.userSettings ||
+    location.pathname === ROUTES.storeManagement;
   const visibleMenuItems = menuItems.filter(
     (item) => user && item.roles.includes(user.role),
   );
@@ -94,32 +117,72 @@ function SidebarContent({ onClose }: Pick<SidebarProps, "onClose">) {
         ) : null}
       </div>
 
-      <nav className="space-y-1">
-        {visibleMenuItems.map((item) => {
-          const Icon = item.icon;
+      <div className="relative">
+        <nav
+          className={`space-y-1 transition-all duration-300 ease-in-out ${
+            isAccountSettings
+              ? "-translate-x-4 opacity-0 pointer-events-none absolute inset-x-0"
+              : "translate-x-0 opacity-100"
+          }`}
+        >
+          {visibleMenuItems.map((item) => {
+            const Icon = item.icon;
 
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                  isActive
-                    ? "bg-white/15 text-white"
-                    : "text-white hover:bg-white/20"
-                }`
-              }
-            >
-              <Icon className="h-5 w-5" />
-              <span>{t(item.labelKey)}</span>
-            </NavLink>
-          );
-        })}
-      </nav>
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={onClose}
+                className={navLinkClass}
+              >
+                <Icon className="h-5 w-5" />
+                <span>{t(item.labelKey)}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        <nav
+          className={`space-y-1 transition-all duration-300 ease-in-out ${
+            isAccountSettings
+              ? "translate-x-0 opacity-100"
+              : "translate-x-4 opacity-0 pointer-events-none absolute inset-x-0"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              navigate(ROUTES.dashboard);
+              onClose?.();
+            }}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 transition hover:bg-white/20 hover:text-white"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span>{t("sidebar.menu.backToStore")}</span>
+          </button>
+
+          <hr className="border-white/20" />
+
+          {accountSettingsItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={onClose}
+                className={navLinkClass}
+              >
+                <Icon className="h-5 w-5" />
+                <span>{t(item.labelKey)}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
+      </div>
     </>
   );
-}
+});
 
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const { t } = useTranslation();

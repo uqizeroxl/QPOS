@@ -4,6 +4,14 @@ import type { AuthUser, AuthPayload, StoreInfo, OAuthLoginResponse } from "../ty
 
 export type { AuthUser, AuthPayload, StoreInfo, UserRole, OAuthLoginResponse } from "../types/auth";
 
+export type AccountInfo = {
+  id: string;
+  username: string;
+  name: string;
+  email: string | null;
+  googleId: string | null;
+};
+
 export class AuthApiError extends Error {
   constructor(message: string) {
     super(message);
@@ -112,6 +120,32 @@ export const authService = {
         AuthPayload,
         { registrationToken: string; storeName: string }
       >("/auth/complete-registration", { registrationToken, storeName });
+      return response.data;
+    } catch (error) {
+      return handleAuthError(error);
+    }
+  },
+  acceptOwnership: async (token: string) => {
+    try {
+      await apiService.post("/auth/accept-ownership", { token });
+    } catch (error) {
+      return handleAuthError(error);
+    }
+  },
+  getAccount: async () => {
+    try {
+      const response = await apiService.get<AccountInfo>("/auth/account");
+      return response.data;
+    } catch (error) {
+      return handleAuthError(error);
+    }
+  },
+  bindGoogle: async (accessToken: string) => {
+    try {
+      const response = await apiService.post<
+        { email: string },
+        { accessToken: string }
+      >("/auth/bind-google", { accessToken });
       return response.data;
     } catch (error) {
       return handleAuthError(error);

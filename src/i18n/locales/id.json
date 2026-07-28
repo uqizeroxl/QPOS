@@ -54,7 +54,11 @@
       "transactions": "Riwayat Transaksi",
       "report": "Laporan",
       "setting": "Pengaturan",
-      "help": "Bantuan & Shortcut"
+      "help": "Bantuan & Shortcut",
+      "backToStore": "Kembali ke Toko",
+      "accountSettings": "Pengaturan Akun",
+      "storeManagement": "Manajemen Toko",
+      "roleManagement": "Peran Anggota"
     }
   },
   "login": {
