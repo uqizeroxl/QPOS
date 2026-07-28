@@ -101,7 +101,6 @@ export default function RoleManagementPage() {
                 <Users className="h-5 w-5" />
               </div>
             </div>
-            <p className="text-sm text-gray-500">Statistik dihitung dari API</p>
           </div>
         </Card>
 
