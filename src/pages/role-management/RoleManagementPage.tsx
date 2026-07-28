@@ -1,9 +1,10 @@
-import { Loader2, Plus, Search, Trash2, UserRound, X } from "lucide-react";
+import { Loader2, Plus, Search, Trash2, UserRound, Users, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import MainLayout from "../../layouts/MainLayout";
+import StatCard from "../../components/ui/StatCard";
 import { useToast } from "../../hooks/useToast";
 import { memberService } from "../../services/memberService";
 import type { StoreMember, AccountSearchResult, StoreRole } from "../../types/member";
@@ -80,8 +81,8 @@ export default function RoleManagementPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <Card className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
-          <div>
+        <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+          <Card className="p-5">
             <p className="text-sm font-medium text-blue-600">Manajemen Peran</p>
             <h1 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
               Anggota Toko
@@ -89,13 +90,15 @@ export default function RoleManagementPage() {
             <p className="mt-1 text-gray-500">
               Kelola anggota dan peran dalam toko Anda.
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
-              {members.length} Anggota
-            </span>
-          </div>
-        </Card>
+          </Card>
+          <StatCard
+            title="Total Anggota"
+            value={members.length.toString()}
+            description="Statistik dihitung dari API"
+            icon={Users}
+            tone="blue"
+          />
+        </div>
 
         <Card as="section" className="p-5">
           <div className="flex items-center justify-between border-b border-gray-200 pb-4">
