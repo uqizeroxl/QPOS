@@ -8,7 +8,7 @@ export default function ConnectionStatus() {
   if (isOnline && pendingCount === 0) {
     return (
       <div className="group relative inline-flex">
-        <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 dark:border-slate-700 dark:text-slate-300">
+        <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-green-300 bg-green-50 text-green-600 dark:border-green-600 dark:bg-green-900/20 dark:text-green-400">
           <Wifi className="h-5 w-5" />
         </div>
         <div className="pointer-events-none absolute -bottom-1 left-1/ z-10 mb-2 w-max max-w-[200px] -translate-x-1/2 translate-y-full rounded-md bg-gray-900 px-3 py-1.5 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:bg-slate-700">
