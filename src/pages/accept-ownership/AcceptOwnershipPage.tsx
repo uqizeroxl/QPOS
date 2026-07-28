@@ -9,6 +9,7 @@ import { ROUTES } from "../../constants/routes";
 import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
 import { AuthApiError, authService } from "../../services/authService";
+import type { AuthPayload } from "../../types/auth";
 
 export default function AcceptOwnershipPage() {
   const [searchParams] = useSearchParams();
@@ -60,7 +61,7 @@ export default function AcceptOwnershipPage() {
           return;
         }
 
-        login(auth);
+        login(auth as AuthPayload);
         showToast("Login berhasil");
       } catch (error) {
         setStatus("error");
