@@ -30,7 +30,7 @@ services:
       - DATABASE_URL=postgres://qpos:qpos_secret@qpos-db:5432/qpos
       - MASTER_DATABASE_URL=postgres://qpos:qpos_secret@qpos-db:5432/qpos_master
       - NODE_ENV=production
-      - CORS_ORIGIN=https://www.qpos.shop
+      - CORS_ORIGIN=https://www.qpos.shop,http://localhost:5173
       - APP_URL=https://www.qpos.shop
     depends_on:
       qpos-db:
