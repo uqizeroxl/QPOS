@@ -177,7 +177,7 @@ export default function RoleManagementPage() {
                       </td>
                       <td className="py-3 text-right">
                         <Button
-                          variant="danger"
+                          variant="dangerIcon"
                           onClick={() => void handleRemove(member.id)}
                           disabled={removingId === member.id}
                         >
@@ -186,7 +186,6 @@ export default function RoleManagementPage() {
                           ) : (
                             <Trash2 className="h-4 w-4" />
                           )}
-                          Hapus
                         </Button>
                       </td>
                     </tr>
