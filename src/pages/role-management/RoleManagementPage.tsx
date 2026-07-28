@@ -7,7 +7,7 @@ import MainLayout from "../../layouts/MainLayout";
 import { useToast } from "../../hooks/useToast";
 import { memberService } from "../../services/memberService";
 import type { StoreMember, AccountSearchResult, StoreRole } from "../../types/member";
-import { ROLE_LABELS, ROLE_COLORS } from "../../types/member";
+import { ROLE_LABELS } from "../../types/member";
 
 const ROLE_OPTIONS: StoreRole[] = ["OWNER", "MANAGER", "CASHIER"];
 
@@ -163,9 +163,7 @@ export default function RoleManagementPage() {
                             )
                           }
                           disabled={updatingId === member.id}
-                          className={`rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${
-                            ROLE_COLORS[member.role]
-                          }`}
+                          className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-medium outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                         >
                           {ROLE_OPTIONS.map((role) => (
                             <option key={role} value={role}>

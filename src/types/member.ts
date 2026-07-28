@@ -24,8 +24,4 @@ export const ROLE_LABELS: Record<StoreRole, string> = {
   CASHIER: "Kasir",
 };
 
-export const ROLE_COLORS: Record<StoreRole, string> = {
-  OWNER: "bg-purple-100 text-purple-700",
-  MANAGER: "bg-blue-100 text-blue-700",
-  CASHIER: "bg-emerald-100 text-emerald-700",
-};
+
