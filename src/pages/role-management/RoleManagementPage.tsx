@@ -81,8 +81,8 @@ export default function RoleManagementPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-[1fr_auto]">
-          <Card className="p-5">
+        <Card className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-start">
+          <div>
             <p className="text-sm font-medium text-blue-600">Manajemen Peran</p>
             <h1 className="mt-2 text-2xl font-bold text-gray-900 sm:text-3xl">
               Anggota Toko
@@ -90,15 +90,20 @@ export default function RoleManagementPage() {
             <p className="mt-1 text-gray-500">
               Kelola anggota dan peran dalam toko Anda.
             </p>
-          </Card>
-          <StatCard
-            title="Total Anggota"
-            value={members.length.toString()}
-            description="Statistik dihitung dari API"
-            icon={Users}
-            tone="blue"
-          />
-        </div>
+          </div>
+          <div className="flex min-w-44 flex-col gap-1 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+            <p className="text-sm font-medium text-gray-500">Total Anggota</p>
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {members.length}
+              </h2>
+              <div className="rounded-lg bg-blue-50 p-3 text-blue-700 ring-1 ring-blue-100">
+                <Users className="h-5 w-5" />
+              </div>
+            </div>
+            <p className="text-sm text-gray-500">Statistik dihitung dari API</p>
+          </div>
+        </Card>
 
         <Card as="section" className="p-5">
           <div className="flex items-center justify-between border-b border-gray-200 pb-4">
