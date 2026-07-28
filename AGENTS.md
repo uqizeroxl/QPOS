@@ -340,5 +340,81 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 **Pending (VPS):**
 - Master DB migration skipped but `accounts.tokenVersion` column missing — run `sudo docker compose run --rm qpos-server npx prisma db push --config prisma.master.config.ts` to force sync
 - Then restart server: `sudo docker compose up -d --build`
-- Vercer: ensure `VITE_API_URL=https://api.qpos.shop/api` is set and redeploy
+- Vercel: ensure `VITE_API_URL=https://api.qpos.shop/api` is set and redeploy
+
+**2026-07-28 (continued) — Security hardening, Offline support, Store/User pages, Settings expansion**
+
+**Security hardening:**
+- Helmet CSP (`server/src/app.ts`): production-only with strict `default-src 'self'`, allowed Google domains for OAuth, `upgrade-insecure-requests`
+- CORS via `CORS_ORIGIN` env var (defaults to `http://localhost:5173`)
+- Rate limiting (`server/src/middleware/rate-limiter.middleware.ts`): `authLimiter` 10 req/min, `transactionLimiter` 30 req/min, `globalLimiter` 200 req/min
+- XSS defense (`server/src/utils/escape.ts`): `escapeHtml`, `stripHtml`, `trimAndStrip` — applied to receipt footer input
+- JSON body limit: `1mb`
+
+**Token refresh + logout invalidation:**
+- Access token: 15-min expiry with `{sub, storeId, role, tokenVersion}`
+- Refresh token: 7-day expiry with `{sub, storeId, type: "refresh", tokenVersion}`
+- `POST /auth/refresh` — validates `tokenVersion` from DB, issues new pair
+- `POST /auth/logout` — increments `accounts.tokenVersion`, invalidates all existing tokens
+- `verifyToken` middleware validates `tokenVersion` match on every request
+- Axios interceptor: auto-refresh on 401, queues concurrent requests during refresh, falls back to cached data if refresh fails offline
+
+**Offline support (IndexedDB via Dexie):**
+- `src/services/storage/db.ts`: `QPOSOffline` DB with `cache` and `pendingMutations` tables
+- `cache.service.ts`: generic `get<T>(url)`/`set(url, data, ttl=5min)` with auto-expiry
+- `product-cache.service.ts`: product-specific cache with barcode/name/category search
+- `sync.service.ts`: mutation queue with replay (up to 5 retries), `pruneOldEntries(7d)`
+- `network.service.ts`: `navigator.onLine` + `online`/`offline` event subscription
+- `NetworkContext.tsx`: provides `{isOnline, pendingCount}`, prunes cache every 30 min, auto-processes queue on reconnect, polls every 60s
+- `axiosInstance.ts`: cache GET on success, serve cached on GET failure when offline, enqueue mutations when offline (POST/PUT/DELETE), clear cache on logout
+- `ConnectionStatus.tsx`: green Wifi icon (Terhubung), yellow spinning RefreshCw (Menyinkronkan... {n}), red WifiOff (Anda sedang offline)
+
+**New pages:**
+- `StoreManagementPage` (`/store-management`): lists all member stores, switch active store with toast, currently-active badge
+- `UserSettingsPage` (`/user-settings`): account info display, Google account binding via `POST /auth/bind-google`
+- `AcceptOwnershipPage` (`/accept-ownership?token=xxx`): 4-state flow (idle/loading/success/error); if unauthenticated, triggers Google OAuth then auto-accepts; if authenticated, shows accept button
+
+**Owner invitation flow:**
+- `StoreInvitation` model in master DB: `{id, storeId, email, token (unique), status (PENDING/ACCEPTED/EXPIRED), expiresAt (48h)}`
+- `InvitationStatus` enum: `PENDING | ACCEPTED | EXPIRED`
+- `POST /settings/invite-owner` (OWNER) — creates invitation, returns invite link
+- `POST /auth/accept-ownership` — validates token, email match, expiry; demotes current OWNER to MANAGER; promotes invitee to OWNER; increments invitee's tokenVersion
+
+**Settings page expansion (`SettingPage.tsx`):**
+- Receipt footer: textarea with live preview, max 250 chars / 5 lines, save via `PUT /settings/receipt-footer`
+- Dataset import/export: export button, .xlsx file picker with preview (total/new/duplicates), import with results summary
+- Danger Zone (OWNER only):
+  - Reset product dataset (deletes all products, categories, suppliers, stock history) with "HAPUS SEMUA" confirmation
+  - Change store owner (invitation-based) with multi-step confirmation (type store name + "Saya mengerti dan ingin melanjutkan" + new owner email); shows invite link + "Kirim via Gmail"
+  - Delete company (irreversible) with same multi-step confirmation; redirects to `/login`
+
+**Sidebar restructuring:**
+- Account settings panel (separate `<nav>` from main navigation): contains `UserSettings` and `StoreManagement` links
+- CSS transition animation between main nav and account settings panel
+- "Back to Store" button (`ArrowLeft`) returns to `/dashboard`
+- "Peran Anggota" link added to main navigation (`Users` icon, OWNER only)
+
+**Navbar changes:**
+- User avatar/name button navigates to `/user-settings`
+- `<ConnectionStatus />` between LanguageSwitcher and NotificationBell
+
+**New files:**
+- Frontend: `src/pages/store-management/StoreManagementPage.tsx`, `src/pages/user-settings/UserSettingsPage.tsx`, `src/pages/accept-ownership/AcceptOwnershipPage.tsx`, `src/components/navbar/ConnectionStatus.tsx`, `src/contexts/NetworkContext.tsx`, `src/services/storage/{db,cache,product-cache,sync,network}.service.ts`, `src/types/member.ts`
+- Backend: `server/src/utils/escape.ts`, `server/src/middleware/rate-limiter.middleware.ts`
+- Backend migration: `server/prisma/master/migrations/20260728000000_add_store_invitations/`
+
+**Git commits (after 42e604d):**
+- `0bb799b` — `feat: security hardening (CSP, CORS, rate limiting) + XSS defense + token refresh + logout invalidation`
+- `9492190` — `feat: add connection status icon with hover tooltip in navbar`
+- `466ad44` — `feat: offline support with IndexedDB, cache service, sync queue, and network-aware UI`
+- `1c7914f` — `fix: connection icon green when online, red WifiOff when offline`
+- `2df2687` — `fix: use string literal instead of UserRole.OWNER (type-only import)`
+- `fb2c8a0` — `fix: enable Express trust proxy for rate limiter behind nginx reverse proxy`
+- `e7508cf` — `docs: update AGENTS.md with 2026-07-28 session history`
+
+**Pending (VPS):**
+- Run master DB migration: `sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.master.config.ts`
+- Then restart server: `sudo docker compose up -d --build`
+- Vercel: ensure `VITE_API_URL=https://api.qpos.shop/api` is set and redeploy
+- Vercel: set `VITE_GOOGLE_CLIENT_ID` and redeploy
 

@@ -14,6 +14,10 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(globalLimiter);
 
+const allowedOrigins: string[] = appConfig.corsOrigin
+  ? appConfig.corsOrigin.split(",").map((s) => s.trim()).filter(Boolean)
+  : [];
+
 app.use(
   helmet({
     contentSecurityPolicy:
@@ -25,6 +29,7 @@ app.use(
               styleSrc: ["'self'", "'unsafe-inline'"],
               connectSrc: [
                 "'self'",
+                ...allowedOrigins,
                 "https://api.qpos.shop",
                 "https://accounts.google.com",
                 "https://www.googleapis.com",
@@ -43,7 +48,13 @@ app.use(
 
 app.use(
   cors({
-    origin: appConfig.corsOrigin || "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
   }),
 );
 
