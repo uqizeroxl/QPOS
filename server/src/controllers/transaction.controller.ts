@@ -262,14 +262,6 @@ export const createTransaction = async (
       return;
     }
 
-    if (error instanceof transactionService.InsufficientStockError) {
-      res.status(400).json({
-        success: false,
-        message: error.message
-      });
-      return;
-    }
-
     if (error instanceof transactionService.IdempotencyConflictError) {
       res.status(409).json({
         success: false,

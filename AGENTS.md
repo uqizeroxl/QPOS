@@ -418,3 +418,125 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - Vercel: ensure `VITE_API_URL=https://api.qpos.shop/api` is set and redeploy
 - Vercel: set `VITE_GOOGLE_CLIENT_ID` and redeploy
 
+## 2026-07-29 — Sinkronisasi kategori setelah login pertama
+
+**Tujuan:**
+- Memastikan data kategori baru diminta setelah autentikasi siap dan langsung tersedia pada halaman Kategori serta dropdown kategori di halaman Produk.
+
+**Root cause:**
+- `CategoryProvider` selalu meminta `/categories` satu kali saat mount, termasuk ketika belum ada token pada kunjungan pertama. Request tanpa autentikasi tersebut gagal dan provider tidak bergantung pada perubahan status auth, sehingga tidak melakukan refetch setelah login. Login berikutnya tampak normal karena token tersimpan sebelum provider di-mount ulang.
+
+**File diubah:**
+- `src/contexts/CategoryContext.tsx`
+- `AGENTS.md`
+
+**Perubahan:**
+- Menghubungkan lifecycle kategori ke `isAuthenticated`, status loading auth, dan token aktif dari `AuthProvider`.
+- Menjalankan fetch otomatis hanya setelah auth siap serta mengulang fetch ketika token berubah (login dan switch store).
+- Menggabungkan request kategori yang sedang berjalan untuk token yang sama agar tidak terjadi duplicate request.
+- Mengabaikan respons dari token lama dan menyembunyikan state kategori sesi/store lama saat logout atau token berganti.
+- Mempertahankan halaman Produk sebagai consumer `activeCategories` dari `CategoryContext`, sehingga dropdown ikut tersinkron tanpa fetch tambahan.
+
+**Testing:**
+- `npm run build` berhasil.
+- Lint terarah `src/contexts/CategoryContext.tsx` berhasil tanpa error setelah perubahan.
+- `npm run lint` masih gagal karena error dan warning pre-existing di file lain; tidak ada error baru dari perbaikan kategori.
+- Alur yang dicakup oleh lifecycle: login pertama, refresh dengan token tersimpan, logout/login, dan pergantian token/store.
+
+**Catatan developer berikutnya:**
+- Saat menambahkan provider data terproteksi lain, jangan fetch hanya berdasarkan mount. Gate request dengan kesiapan auth dan jadikan token/store aktif sebagai pemicu sinkronisasi.
+- Pertahankan deduplikasi request dan pemeriksaan token sebelum menulis hasil async ke state untuk mencegah race condition lintas sesi/store.
+
+## 2026-07-29 — BUG-002 dukungan negative stock di Kasir
+
+**Tujuan:**
+- Mengizinkan Kasir menjual produk melampaui stok tersedia dan menyimpan hasil stok negatif tanpa mengubah perhitungan atau business logic transaksi lainnya.
+
+**Root Cause:**
+- Qty keranjang di-clamp ke `item.stock` pada penambahan produk, input manual, serta tombol `+/-`; stok 0 bahkan menghasilkan qty 0. Checkout frontend kembali menolak qty di atas stok, sementara backend mensyaratkan `stock >= quantity` sebelum melakukan decrement.
+
+**File diubah:**
+- `src/pages/cashier/CashierPage.tsx`
+- `src/pages/cashier/CartTable.tsx`
+- `src/contexts/ProductContext.tsx`
+- `server/src/services/transaction.service.ts`
+- `server/src/controllers/transaction.controller.ts`
+- `AGENTS.md`
+
+**Perubahan:**
+- Menghapus seluruh clamp dan validasi qty terhadap stok pada alur Kasir; minimum qty tetap 1 sesuai perilaku sebelumnya.
+- Menghapus atribut maksimum stok dari input qty sehingga tombol `+` dan input manual dapat melebihi stok nol, positif, atau negatif.
+- Menghapus guard stok dari helper sinkronisasi produk frontend agar pengurangan lokal konsisten mendukung stok negatif.
+- Mengganti conditional backend update dengan atomic `decrement: quantity` tanpa clamp ke 0.
+- Menghitung `previousStock` dan `currentStock` riwayat dari hasil atomic update agar pencatatan tetap benar pada transaksi bersamaan.
+- Tidak mengubah rumus subtotal, diskon, grand total, pembayaran, kembalian, item transaksi, import/export dataset, atau laporan.
+
+**Testing:**
+- `npm run build` frontend berhasil.
+- `npm run build --prefix server` berhasil.
+- Lint `src/pages/cashier/CartTable.tsx` berhasil.
+- Lint gabungan file frontend yang diubah masih melaporkan tiga error pre-existing: satu `set-state-in-effect` di `CashierPage.tsx` dan dua `preserve-manual-memoization` di `ProductContext.tsx`; baris perubahan BUG-002 tidak menambah temuan lint.
+- `git diff --check` berhasil.
+- Perhitungan jalur backend menghasilkan: `0 - 2 = -2`, `3 - 5 = -2`, dan `-2 - 3 = -5`; qty dan subtotal item tetap disimpan tanpa perubahan.
+
+**Catatan developer berikutnya:**
+- Negative stock adalah perilaku Kasir yang disengaja. Jangan menambahkan kembali guard `stock >= quantity`, clamp qty ke stok, atau clamp hasil stok ke 0 pada alur transaksi penjualan.
+- Gunakan atomic decrement dan nilai hasil update untuk pencatatan stock history agar aman terhadap transaksi bersamaan.
+
+## 2026-07-29 — BUG-003 audit checkout negative stock
+
+**Tujuan:**
+- Memastikan endpoint checkout yang benar-benar dijalankan menerima penjualan saat stok nol atau negatif serta tetap membuat seluruh record transaksi dan riwayatnya.
+
+**Root Cause:**
+- Audit source, route, middleware, controller, service, helper, context frontend, dan artefak build tidak menemukan validasi stok tersisa setelah BUG-002. Pesan `Stok <nama produk> tidak mencukupi.` hanya dapat berasal dari implementasi backend lama; qpos.shop masih mengarah ke container production yang belum di-rebuild/redeploy dengan perubahan backend BUG-002.
+
+**File diubah:**
+- `server/src/services/transaction.service.ts` (perubahan checkout BUG-002 yang diaudit dan diverifikasi)
+- `server/src/controllers/transaction.controller.ts` (handler error stok lama telah dihapus)
+- `src/pages/cashier/CashierPage.tsx` (validasi checkout frontend telah dihapus)
+- `src/contexts/ProductContext.tsx` (guard stok lokal telah dihapus)
+- `AGENTS.md`
+
+**Perubahan:**
+- Memastikan route `POST /api/transactions` melewati auth/role/rate limiter lalu langsung menggunakan controller dan service transaksi yang sudah mendukung negative stock; tidak ada middleware atau validator stok tambahan.
+- Memastikan source dan hasil build backend tidak lagi mengandung `InsufficientStockError`, pesan stok tidak mencukupi, maupun kondisi `stock >= quantity`.
+- Mempertahankan atomic `decrement: item.quantity`; transaksi, item, stock history, dan activity log tetap dibuat dalam satu database transaction.
+- Tidak mengubah laporan, receipt mapping, import/export, kategori, supplier, atau business logic lainnya.
+
+**Testing:**
+- Build frontend `npm run build` berhasil.
+- Build backend `npm run build --prefix server` berhasil.
+- Pencarian ulang source dan `server/dist` tidak menemukan validasi/pesan insufficient stock.
+- `git diff --check` berhasil.
+- Jalur kalkulasi checkout terverifikasi menghasilkan `0 - 2 = -2`, `3 - 5 = -2`, dan `-2 - 3 = -5`; deployment production belum dilakukan dari workspace ini sehingga pengujian langsung qpos.shop masih menunggu rebuild container VPS.
+
+**Catatan developer berikutnya:**
+- Deploy perubahan backend dengan `git pull` lalu `sudo docker compose up -d --build`; restart tanpa build dapat tetap menjalankan JavaScript lama di image/container.
+- Setelah deploy, ulangi tiga skenario negative stock di qpos.shop dan periksa Transaction, TransactionItem, StockHistory, ActivityLog, serta receipt sebagai smoke test production.
+
+## 2026-07-29 — BUG-004 audit terfokus penolakan stok checkout
+
+**Tujuan:**
+- Membuktikan apakah masih ada source backend yang dapat menolak checkout karena stok tidak mencukupi.
+
+**Root Cause:**
+- Tidak ditemukan blocker stok lain pada `server/src/**` maupun `server/dist`. Pesan production hanya dapat berasal dari image/container backend lama yang belum memuat perubahan BUG-002/BUG-003.
+
+**File diubah:**
+- `AGENTS.md`
+
+**Perubahan:**
+- Mengaudit route, middleware auth/role/rate limiter, controller, service, helper, error class, Prisma transaction, serta hasil kompilasi backend.
+- Membuktikan `POST /api/transactions` berakhir di satu implementasi checkout yang memakai atomic `decrement: item.quantity` tanpa kondisi stok.
+- Tidak ada business logic aplikasi yang diubah karena tidak ditemukan validasi tambahan.
+
+**Testing:**
+- Pencarian `insufficient`, pesan stok tidak mencukupi, dan kondisi `gte: quantity` pada source serta build backend tidak menghasilkan kecocokan checkout.
+- Build frontend berhasil.
+- Build backend berhasil.
+- `git diff --check` berhasil.
+
+**Catatan developer berikutnya:**
+- Rebuild dan deploy container production dengan `sudo docker compose up -d --build`; pesan lama tidak mungkin dihasilkan oleh source/build saat ini.
+

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import {
   CategoryApiError,
@@ -7,6 +7,7 @@ import {
 import { CategoryContext } from "./categoryContextValue";
 import type { Category, CategoryFormValues } from "../types/category";
 import type { CategoryResult } from "./categoryContextValue";
+import { useAuth } from "../hooks/useAuth";
 
 type CategoryProviderProps = {
   children: ReactNode;
@@ -45,18 +46,65 @@ function validateCategoryName(
 }
 
 export function CategoryProvider({ children }: CategoryProviderProps) {
-  const [baseCategories, setBaseCategories] = useState<Category[]>([]);
+  const { isAuthenticated, isLoading: isAuthLoading, token } = useAuth();
+  const [categoryState, setCategoryState] = useState<{
+    token: string | null;
+    categories: Category[];
+  }>({ token: null, categories: [] });
+  const authStateRef = useRef({ isAuthenticated, isAuthLoading, token });
+  const inFlightRequestRef = useRef<{
+    token: string;
+    promise: Promise<void>;
+  } | null>(null);
+
+  useEffect(() => {
+    authStateRef.current = { isAuthenticated, isAuthLoading, token };
+  }, [isAuthenticated, isAuthLoading, token]);
 
   const fetchCategories = useCallback(async () => {
-    const nextCategories = await categoryService.getCategories();
-    setBaseCategories(nextCategories);
+    const authState = authStateRef.current;
+
+    if (
+      !authState.isAuthenticated ||
+      authState.isAuthLoading ||
+      !authState.token
+    ) {
+      return;
+    }
+
+    if (inFlightRequestRef.current?.token === authState.token) {
+      return inFlightRequestRef.current.promise;
+    }
+
+    const requestToken = authState.token;
+    const request = categoryService.getCategories().then((nextCategories) => {
+      if (authStateRef.current.token === requestToken) {
+        setCategoryState({ token: requestToken, categories: nextCategories });
+      }
+    });
+
+    inFlightRequestRef.current = { token: requestToken, promise: request };
+
+    try {
+      await request;
+    } finally {
+      if (inFlightRequestRef.current?.promise === request) {
+        inFlightRequestRef.current = null;
+      }
+    }
   }, []);
 
   useEffect(() => {
+    if (!isAuthenticated || isAuthLoading || !token) {
+      return;
+    }
+
     void fetchCategories().catch((error) => {
       console.error("Failed to fetch categories:", error);
     });
+  }, [fetchCategories, isAuthenticated, isAuthLoading, token]);
 
+  useEffect(() => {
     const refreshCounts = () => {
       void fetchCategories().catch((error) => {
         console.error("Failed to refresh category product counts:", error);
@@ -66,11 +114,17 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     return () => window.removeEventListener("qpos:products-changed", refreshCounts);
   }, [fetchCategories]);
 
-  const categories = baseCategories;
+  const categories = useMemo(
+    () =>
+      isAuthenticated && token === categoryState.token
+        ? categoryState.categories
+        : [],
+    [categoryState, isAuthenticated, token],
+  );
 
   const addCategory = useCallback(
     async (values: CategoryFormValues): Promise<CategoryResult> => {
-      const message = validateCategoryName(baseCategories, values);
+      const message = validateCategoryName(categories, values);
 
       if (message) {
         return { ok: false, message };
@@ -95,7 +149,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
         return { ok: false, message };
       }
     },
-    [baseCategories, fetchCategories],
+    [categories, fetchCategories],
   );
 
   const updateCategory = useCallback(
@@ -103,13 +157,13 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       categoryId: string,
       values: CategoryFormValues,
     ): Promise<CategoryResult> => {
-      const message = validateCategoryName(baseCategories, values, categoryId);
+      const message = validateCategoryName(categories, values, categoryId);
 
       if (message) {
         return { ok: false, message };
       }
 
-      const currentCategory = baseCategories.find(
+      const currentCategory = categories.find(
         (category) => category.id === categoryId,
       );
 
@@ -136,7 +190,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
         return { ok: false, message };
       }
     },
-    [baseCategories, fetchCategories],
+    [categories, fetchCategories],
   );
 
   const deleteCategory = useCallback(

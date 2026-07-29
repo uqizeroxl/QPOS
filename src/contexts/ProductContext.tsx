@@ -152,12 +152,6 @@ export function ProductProvider({ children }: ProductProviderProps) {
           };
         }
 
-        if (currentProduct.stock < quantity) {
-          return {
-            ok: false as const,
-            message: `Stok ${currentProduct.name} tidak mencukupi.`,
-          };
-        }
       }
 
       setProducts(

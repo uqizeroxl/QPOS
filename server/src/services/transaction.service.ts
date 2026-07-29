@@ -44,12 +44,6 @@ export class InvalidTransactionDataError extends Error {
   }
 }
 
-export class InsufficientStockError extends Error {
-  constructor(productName: string) {
-    super(`Stok ${productName} tidak mencukupi.`);
-  }
-}
-
 export class TransactionNotFoundError extends Error {
   constructor() {
     super("Transaction not found");
@@ -166,16 +160,9 @@ export const createTransaction = async (
         );
       }
 
-      if (product.stock < item.quantity) {
-        throw new InsufficientStockError(product.name);
-      }
-
-      const updateResult = await tx.product.updateMany({
+      const updatedProduct = await tx.product.update({
         where: {
-          id: product.id,
-          stock: {
-            gte: item.quantity
-          }
+          id: product.id
         },
         data: {
           stock: {
@@ -184,12 +171,8 @@ export const createTransaction = async (
         }
       });
 
-      if (updateResult.count !== 1) {
-        throw new InsufficientStockError(product.name);
-      }
-
-      const previousStock = product.stock;
-      const currentStock = previousStock - item.quantity;
+      const currentStock = updatedProduct.stock;
+      const previousStock = currentStock + item.quantity;
       stockChanges.push({
         productId: product.id,
         quantity: item.quantity,

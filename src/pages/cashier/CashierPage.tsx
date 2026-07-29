@@ -13,7 +13,6 @@ import {
 } from "../../services/transactionService";
 import { ProductApiError, productService } from "../../services/productService";
 import { formatRupiah, parseRupiah } from "../../utils/currency";
-import { networkService } from "../../services/storage/network.service";
 import MainLayout from "../../layouts/MainLayout";
 import BarcodeInput from "./BarcodeInput";
 import CartTable from "./CartTable";
@@ -122,7 +121,7 @@ export default function CashierPage() {
           item.id === product.id
             ? {
                 ...item,
-                quantity: Math.min(item.quantity + 1, item.stock),
+                quantity: item.quantity + 1,
               }
             : item,
         );
@@ -244,7 +243,7 @@ export default function CashierPage() {
         item.id === productId
           ? {
               ...item,
-              quantity: Math.min(Math.max(quantity || 1, 1), item.stock),
+              quantity: Math.max(quantity || 1, 1),
             }
           : item,
       ),
@@ -264,14 +263,6 @@ export default function CashierPage() {
 
     if (paidAmount < total) {
       return "Nominal pembayaran belum mencukupi.";
-    }
-
-    if (networkService.isOnline()) {
-      for (const item of cartItems) {
-        if (item.stock < item.quantity) {
-          return `Stok ${item.name} tidak mencukupi.`;
-        }
-      }
     }
 
     return "";

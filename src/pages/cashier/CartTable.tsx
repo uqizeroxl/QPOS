@@ -32,7 +32,6 @@ export default function CartTable({
   const updateQuantityInput = (
     productId: string,
     value: string,
-    maxQuantity: number,
   ) => {
     if (!value) {
       setQuantityInputs((currentInputs) => ({
@@ -42,10 +41,7 @@ export default function CartTable({
       return;
     }
 
-    const nextQuantity = Math.min(
-      Math.max(Number(value) || 1, 1),
-      maxQuantity,
-    );
+    const nextQuantity = Math.max(Number(value) || 1, 1);
 
     setQuantityInputs((currentInputs) => ({
       ...currentInputs,
@@ -57,9 +53,8 @@ export default function CartTable({
   const updateQuantityFromButton = (
     productId: string,
     quantity: number,
-    maxQuantity: number,
   ) => {
-    const nextQuantity = Math.min(Math.max(quantity, 1), maxQuantity);
+    const nextQuantity = Math.max(quantity, 1);
 
     setQuantityInputs((currentInputs) => ({
       ...currentInputs,
@@ -108,7 +103,6 @@ export default function CartTable({
                           updateQuantityFromButton(
                             item.id,
                             item.quantity - 1,
-                            item.stock,
                           )
                         }
                         aria-label={`Kurangi ${item.name}`}
@@ -118,7 +112,6 @@ export default function CartTable({
 
                       <Input
                         min={1}
-                        max={item.stock}
                         type="number"
                         inputSize="compact"
                         value={quantityInputs[item.id] ?? item.quantity.toString()}
@@ -126,7 +119,6 @@ export default function CartTable({
                           updateQuantityInput(
                             item.id,
                             event.target.value,
-                            item.stock,
                           )
                         }
                         className="w-16 text-center font-semibold text-gray-800"
@@ -138,7 +130,6 @@ export default function CartTable({
                           updateQuantityFromButton(
                             item.id,
                             item.quantity + 1,
-                            item.stock,
                           )
                         }
                         aria-label={`Tambah ${item.name}`}
