@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "../../components/ui/Table";
 import MainLayout from "../../layouts/MainLayout";
+import PwaInstallPrompt from "../../components/pwa/PwaInstallPrompt";
 import {
   DashboardApiError,
   dashboardService,
@@ -119,6 +120,7 @@ export default function DashboardPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
+        <PwaInstallPrompt />
         <Card className="flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
           <div>
             <p className="text-sm font-medium text-blue-600">
