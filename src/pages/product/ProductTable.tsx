@@ -31,6 +31,45 @@ type ProductTableProps = {
   onDraftChange: (productId: string, changes: Partial<BulkProductDraft>) => void;
 };
 
+function SkeletonRow({ isDeleteMode }: { isDeleteMode: boolean }) {
+  return (
+    <TableRow className="animate-pulse hover:bg-transparent">
+      {isDeleteMode ? (
+        <TableCell>
+          <div className="mx-auto h-4 w-4 rounded bg-gray-200" />
+        </TableCell>
+      ) : null}
+      <TableCell>
+        <div className="h-4 w-24 rounded bg-gray-200" />
+      </TableCell>
+      <TableCell>
+        <div className="h-4 w-40 rounded bg-gray-200" />
+      </TableCell>
+      <TableCell>
+        <div className="h-4 w-28 rounded bg-gray-200" />
+      </TableCell>
+      <TableCell>
+        <div className="h-4 w-16 rounded bg-gray-200" />
+      </TableCell>
+      <TableCell>
+        <div className="h-4 w-16 rounded bg-gray-200" />
+      </TableCell>
+      <TableCell>
+        <div className="mx-auto h-4 w-8 rounded bg-gray-200" />
+      </TableCell>
+      <TableCell>
+        <div className="mx-auto h-4 w-12 rounded bg-gray-200" />
+      </TableCell>
+      <TableCell>
+        <div className="mx-auto h-4 w-4 rounded-full bg-gray-200" />
+      </TableCell>
+      <TableCell>
+        <div className="ml-auto h-4 w-20 rounded bg-gray-200" />
+      </TableCell>
+    </TableRow>
+  );
+}
+
 export default function ProductTable({
   products,
   isLoading = false,
@@ -86,13 +125,9 @@ export default function ProductTable({
 
           <TableBody className="bg-white">
             {isLoading ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={isDeleteMode ? 10 : 9} className="py-12 text-center">
-                  <p className="font-semibold text-gray-700">
-                    Memuat data produk...
-                  </p>
-                </TableCell>
-              </TableRow>
+              Array.from({ length: rowsPerPage }).map((_, index) => (
+                <SkeletonRow key={index} isDeleteMode={isDeleteMode} />
+              ))
             ) : products.length > 0 ? (
               products.map((product) => (
                 <ProductRow
