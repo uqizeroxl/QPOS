@@ -28,6 +28,7 @@ import {
 } from "../../services/dashboardService";
 import { formatRupiah } from "../../utils/currency";
 import { useTranslation } from "react-i18next";
+import StockStatusBadge from "../../components/ui/StockStatusBadge";
 
 const formatDateTime = (value: string, locale: string) =>
   new Intl.DateTimeFormat(locale, {
@@ -43,7 +44,6 @@ const emptyDashboard: DashboardData = {
   todayRevenue: 0,
   todayTransactions: 0,
   totalProducts: 0,
-  lowStockThreshold: 10,
   lowStockProducts: [],
   topProducts: [],
   recentTransactions: [],
@@ -109,9 +109,7 @@ export default function DashboardPage() {
     {
       title: t("dashboard.stats.lowStock.title"),
       value: dashboard.lowStockProducts.length.toString(),
-      description: t("dashboard.stats.lowStock.description", {
-        threshold: dashboard.lowStockThreshold,
-      }),
+      description: t("dashboard.stats.lowStock.description"),
       icon: AlertTriangle,
       tone: "red" as const,
     },
@@ -189,6 +187,7 @@ export default function DashboardPage() {
                     <TableHeadCell>{t("common.product")}</TableHeadCell>
                     <TableHeadCell>{t("common.category")}</TableHeadCell>
                     <TableHeadCell className="text-right">{t("common.stock")}</TableHeadCell>
+                    <TableHeadCell className="text-right">Minimum Stock</TableHeadCell>
                   </TableRow>
                 </TableHead>
                 <TableBody className="bg-white">
@@ -205,13 +204,22 @@ export default function DashboardPage() {
                         </TableCell>
                         <TableCell>{product.categoryName}</TableCell>
                         <TableCell className="text-right font-semibold text-red-700">
-                          {product.stock}
+                          <div className="flex flex-col items-end gap-1.5">
+                            <span>{product.stock}</span>
+                            <StockStatusBadge
+                              stock={product.stock}
+                              minimumStock={product.minimumStock}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-gray-700">
+                          {product.minimumStock}
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={3} className="py-10 text-center">
+                      <TableCell colSpan={4} className="py-10 text-center">
                         <p className="font-semibold text-gray-700">
                           {t("dashboard.lowStock.empty")}
                         </p>

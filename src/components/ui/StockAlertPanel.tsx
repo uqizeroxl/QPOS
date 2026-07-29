@@ -1,11 +1,12 @@
 import Card from "./Card";
+import StockStatusBadge from "./StockStatusBadge";
 
 type StockItem = {
   id: string;
   name: string;
   category: string;
   stock: number;
-  minStock: number;
+  minimumStock: number;
 };
 
 type StockAlertPanelProps = {
@@ -44,7 +45,12 @@ export default function StockAlertPanel({ items }: StockAlertPanelProps) {
 
               <div className="text-right">
                 <p className="font-semibold text-red-600">{item.stock} pcs</p>
-                <p className="text-xs text-gray-500">Min. {item.minStock}</p>
+                <p className="text-xs text-gray-500">Min. {item.minimumStock}</p>
+                <StockStatusBadge
+                  stock={item.stock}
+                  minimumStock={item.minimumStock}
+                  className="mt-1.5"
+                />
               </div>
             </div>
           ))

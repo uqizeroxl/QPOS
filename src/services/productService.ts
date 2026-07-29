@@ -2,6 +2,7 @@ import axios from "axios";
 import axiosInstance from "./api/axiosInstance";
 import { apiService } from "./api/apiService";
 import { productCacheService } from "./storage/product-cache.service";
+import { cacheService } from "./storage/cache.service";
 import type {
   Product,
   ProductFormValues,
@@ -48,6 +49,7 @@ function buildProductPayload(values: ProductFormValues): CreateProductPayload {
     purchasePrice: values.purchasePrice,
     sellingPrice: values.sellingPrice,
     stock: values.stock,
+    minimumStock: values.minimumStock,
     status: values.status === "Aktif" ? "ACTIVE" : "INACTIVE",
   };
 }
@@ -79,6 +81,7 @@ function mapProduct(product: ProductApiItem): Product {
       product.purchasePrice === null ? null : Number(product.purchasePrice),
     sellingPrice: Number(product.sellingPrice),
     stock: product.stock,
+    minimumStock: product.minimumStock,
     status: normalizeStatus(product.status),
   };
 }
@@ -160,6 +163,7 @@ export const productService = {
         "/products",
         payload,
       );
+      await cacheService.clear();
       notifyProductsChanged();
       return mapProduct(response.data);
     } catch (error) {
@@ -174,6 +178,7 @@ export const productService = {
         `/products/${productId}`,
         payload,
       );
+      await cacheService.clear();
       notifyProductsChanged();
       return mapProduct(response.data);
     } catch (error) {
@@ -370,6 +375,7 @@ export const productService = {
           },
         },
       );
+      await cacheService.clear();
       notifyProductsChanged();
       return response.data;
     } catch (error) {

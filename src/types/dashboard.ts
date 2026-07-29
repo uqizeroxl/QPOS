@@ -3,13 +3,13 @@ export type DashboardData = {
   todayRevenue: number;
   todayTransactions: number;
   totalProducts: number;
-  lowStockThreshold: number;
   lowStockProducts: {
     id: string;
     barcode: string;
     name: string;
     categoryName: string;
     stock: number;
+    minimumStock: number;
   }[];
   topProducts: {
     productId: string | null;

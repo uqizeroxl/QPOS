@@ -1,7 +1,5 @@
 import { PrismaClient, RecordStatus } from "../generated/prisma/client";
 
-const LOW_STOCK_THRESHOLD = 10;
-
 const getTodayRange = () => {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
@@ -55,7 +53,7 @@ export const getDashboard = async (prisma: PrismaClient) => {
       where: {
         status: RecordStatus.ACTIVE,
         stock: {
-          lte: LOW_STOCK_THRESHOLD
+          lte: prisma.product.fields.minimumStock
         }
       },
       orderBy: [{ stock: "asc" }, { name: "asc" }],
@@ -64,6 +62,7 @@ export const getDashboard = async (prisma: PrismaClient) => {
         barcode: true,
         name: true,
         stock: true,
+        minimumStock: true,
         category: {
           select: {
             name: true
@@ -104,13 +103,13 @@ export const getDashboard = async (prisma: PrismaClient) => {
     todayRevenue: todayTransactionSummary._sum.grandTotal ?? 0,
     todayTransactions: todayTransactionSummary._count._all,
     totalProducts,
-    lowStockThreshold: LOW_STOCK_THRESHOLD,
     lowStockProducts: lowStockProducts.map((product) => ({
       id: product.id,
       barcode: product.barcode,
       name: product.name,
       categoryName: product.category.name,
-      stock: product.stock
+      stock: product.stock,
+      minimumStock: product.minimumStock
     })),
     topProducts: topProducts.map((product) => ({
       productId: product.productId,

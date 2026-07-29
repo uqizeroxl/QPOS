@@ -8,6 +8,7 @@ import type {
   StockAdjustmentType,
 } from "../../services/productService";
 import type { Product } from "../../types";
+import StockStatusBadge from "../../components/ui/StockStatusBadge";
 
 type StockAdjustmentModalProps = {
   product: Product | null;
@@ -70,6 +71,11 @@ export default function StockAdjustmentModal({
             <p className="text-sm text-gray-500">
               {product.name} - stok saat ini {product.stock}
             </p>
+            <StockStatusBadge
+              stock={product.stock}
+              minimumStock={product.minimumStock}
+              className="mt-2"
+            />
           </div>
 
           <Button variant="icon" onClick={onClose} aria-label="Tutup">

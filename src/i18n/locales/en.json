@@ -82,7 +82,7 @@
       "todayRevenue": { "title": "Today's Revenue", "description": "Today's transaction revenue" },
       "todayTransactions": { "title": "Today's Transactions", "description": "Number of invoices today" },
       "totalProducts": { "title": "Total Products", "description": "Registered active products" },
-      "lowStock": { "title": "Low Stock", "description": "Products with stock <= {{threshold}}" }
+      "lowStock": { "title": "Minimum Stock", "description": "Products at or below their minimum" }
     },
     "lowStock": {
       "title": "Low Stock Products",

@@ -15,6 +15,7 @@ type CreateProductRequestBody = {
   purchasePrice?: number | string | null;
   sellingPrice?: number | string;
   stock?: number | string;
+  minimumStock?: number | string;
   status?: string;
   categoryId?: string;
   category?: string;
@@ -287,6 +288,10 @@ export const createProduct = async (
     const sellingPrice = Number(req.body.sellingPrice ?? 0);
     const stock =
       req.body.stock === undefined ? undefined : Number(req.body.stock);
+    const minimumStock =
+      req.body.minimumStock === undefined
+        ? undefined
+        : Number(req.body.minimumStock);
     const status = parseProductStatus(req.body.status?.trim());
 
     if (!name) {
@@ -321,6 +326,17 @@ export const createProduct = async (
       return;
     }
 
+    if (
+      minimumStock !== undefined &&
+      (!Number.isInteger(minimumStock) || minimumStock < 0)
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "Minimum stock must be an integer greater than or equal to 0"
+      });
+      return;
+    }
+
     if (!status) {
       res.status(400).json({
         success: false,
@@ -345,6 +361,7 @@ export const createProduct = async (
         purchasePrice,
         sellingPrice,
         stock,
+        minimumStock,
         status,
         categoryId,
         supplierId
@@ -415,6 +432,10 @@ export const updateProduct = async (
     const sellingPrice = Number(req.body.sellingPrice ?? 0);
     const stock =
       req.body.stock === undefined ? undefined : Number(req.body.stock);
+    const minimumStock =
+      req.body.minimumStock === undefined
+        ? undefined
+        : Number(req.body.minimumStock);
     const status = parseProductStatus(req.body.status?.trim());
 
     if (!name) {
@@ -449,6 +470,17 @@ export const updateProduct = async (
       return;
     }
 
+    if (
+      minimumStock !== undefined &&
+      (!Number.isInteger(minimumStock) || minimumStock < 0)
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "Minimum stock must be an integer greater than or equal to 0"
+      });
+      return;
+    }
+
     if (!status) {
       res.status(400).json({
         success: false,
@@ -474,6 +506,7 @@ export const updateProduct = async (
         purchasePrice,
         sellingPrice,
         stock,
+        minimumStock,
         status,
         categoryId,
         supplierId

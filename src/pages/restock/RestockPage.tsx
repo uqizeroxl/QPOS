@@ -21,6 +21,7 @@ import { ProductApiError, productService } from "../../services/productService";
 import type { Product } from "../../types";
 import RestockProductModal from "./RestockProductModal";
 import type { RestockProductValues } from "./RestockProductModal";
+import StockStatusBadge from "../../components/ui/StockStatusBadge";
 
 type RestockItem = Product & {
   restockQuantity: string;
@@ -433,8 +434,12 @@ export default function RestockPage() {
                             {product.barcode || "-"}
                           </span>
                         </span>
-                        <span className="shrink-0 text-sm font-semibold text-gray-700">
-                          Stok {product.stock}
+                        <span className="flex shrink-0 flex-col items-end gap-1.5 text-sm font-semibold text-gray-700">
+                          <span>Stok {product.stock}</span>
+                          <StockStatusBadge
+                            stock={product.stock}
+                            minimumStock={product.minimumStock}
+                          />
                         </span>
                       </button>
                     );
@@ -506,7 +511,13 @@ export default function RestockPage() {
                         </p>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm font-semibold text-gray-700">
-                        {item.stock}
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span>{item.stock}</span>
+                          <StockStatusBadge
+                            stock={item.stock}
+                            minimumStock={item.minimumStock}
+                          />
+                        </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <Input
@@ -522,7 +533,13 @@ export default function RestockPage() {
                         />
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm font-semibold text-gray-900">
-                        {item.stock + getRestockQuantity(item)}
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span>{item.stock + getRestockQuantity(item)}</span>
+                          <StockStatusBadge
+                            stock={item.stock + getRestockQuantity(item)}
+                            minimumStock={item.minimumStock}
+                          />
+                        </div>
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-right">
                         <Button

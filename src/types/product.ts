@@ -11,6 +11,7 @@ export type Product = {
   purchasePrice: number | null;
   sellingPrice: number;
   stock: number;
+  minimumStock: number;
   status: ProductStatus;
 };
 
@@ -42,6 +43,7 @@ export type CreateProductPayload = {
   purchasePrice: number | null;
   sellingPrice: number;
   stock: number;
+  minimumStock: number;
   status: RecordStatus;
   supplierId?: string | null;
 };
@@ -59,6 +61,7 @@ export type ProductApiItem = {
   purchasePrice: string | number | null;
   sellingPrice: string | number;
   stock: number;
+  minimumStock: number;
   status: RecordStatus | "Aktif" | "Nonaktif";
 };
 

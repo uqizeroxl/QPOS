@@ -4,6 +4,7 @@ import { TableCell, TableRow } from "../../components/ui/Table";
 import { formatRupiah, parseRupiah } from "../../utils/currency";
 import { Input } from "../../components/ui/Input";
 import type { BulkProductDraft, Product } from "../../types";
+import StockStatusBadge from "../../components/ui/StockStatusBadge";
 
 type FormattedPriceInputProps = {
   value: number | null;
@@ -81,8 +82,6 @@ export default function ProductRow({
   editDraft,
   onDraftChange,
 }: ProductRowProps) {
-  const isLowStock = product.stock < 5;
-
   return (
     <TableRow className="border-b border-gray-100 last:border-0">
       {isDeleteMode ? (
@@ -142,18 +141,18 @@ export default function ProductRow({
           />
         ) : formatRupiah(product.sellingPrice, { prefix: true })}
       </TableCell>
-      <TableCell className="whitespace-nowrap text-sm font-semibold text-gray-900">
+      <TableCell className="whitespace-nowrap text-center align-middle text-sm font-semibold text-gray-900">
         {product.stock}
       </TableCell>
-      <TableCell className="whitespace-nowrap">
-        <span
-          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-            isLowStock
-              ? "bg-red-50 text-red-700"
-              : "bg-emerald-50 text-emerald-700"
-          }`}
-        >
-          {isLowStock ? "Stok Menipis" : "Stok Aman"}
+      <TableCell className="min-w-32 whitespace-nowrap text-center align-middle text-sm font-semibold text-gray-700">
+        {product.minimumStock}
+      </TableCell>
+      <TableCell className="whitespace-nowrap text-center align-middle">
+        <span className="inline-flex items-center justify-center">
+          <StockStatusBadge
+            stock={product.stock}
+            minimumStock={product.minimumStock}
+          />
         </span>
       </TableCell>
       <TableCell className="whitespace-nowrap text-right">

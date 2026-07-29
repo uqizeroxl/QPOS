@@ -114,6 +114,7 @@ model Product {
   purchasePrice    Decimal?          @db.Decimal(14, 2)
   sellingPrice     Decimal           @default(0) @db.Decimal(14, 2)
   stock            Int               @default(0)
+  minimumStock     Int               @default(5)
   status           RecordStatus      @default(ACTIVE)
   categoryId       String
   supplierId       String?

@@ -82,7 +82,7 @@
       "todayRevenue": { "title": "Pendapatan Hari Ini", "description": "Akumulasi transaksi hari ini" },
       "todayTransactions": { "title": "Transaksi Hari Ini", "description": "Jumlah invoice hari ini" },
       "totalProducts": { "title": "Total Produk", "description": "Produk aktif terdaftar" },
-      "lowStock": { "title": "Stok Menipis", "description": "Produk stok <= {{threshold}}" }
+      "lowStock": { "title": "Stok Minimum", "description": "Produk pada atau di bawah batas minimum" }
     },
     "lowStock": {
       "title": "Produk Stok Menipis",

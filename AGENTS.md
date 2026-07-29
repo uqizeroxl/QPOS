@@ -578,4 +578,200 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - Tidak build di GitHub runner — SSH ke VPS, jalankan `git pull` + `sudo docker compose up -d --build`
 - Secrets: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`
 - `deploy.sh`: script manual alternatif dengan step yang sama
+## 2026-07-29 — FEATURE-001 minimum stock per produk
+
+**Tujuan:**
+- Memungkinkan owner menetapkan batas minimum stok per produk dan menggunakan batas tersebut untuk indikator Produk serta peringatan Dashboard.
+
+**Schema berubah:**
+- Model tenant `Product` mendapat field `minimumStock Int @default(5)`.
+- Migration `20260729000000_add_product_minimum_stock` menambahkan kolom `minimumStock` dengan default 5 ke tabel `products`.
+
+**File diubah:**
+- `server/prisma/schema.prisma`
+- `server/prisma/migrations/20260729000000_add_product_minimum_stock/migration.sql`
+- `server/src/controllers/product.controller.ts`
+- `server/src/services/product.service.ts`
+- `server/src/services/dashboard.service.ts`
+- `src/types/product.ts`, `src/types/dashboard.ts`
+- `src/services/productService.ts`
+- `src/pages/product/ProductForm.tsx`, `ProductTable.tsx`, `ProductRow.tsx`, `ProductPage.tsx`
+- `src/pages/dashboard/DashboardPage.tsx`
+- `src/i18n/locales/id.json`, `src/i18n/locales/en.json`
+- `AGENTS.md`
+
+**Perubahan:**
+- Create/update produk menerima dan memvalidasi minimum stock sebagai integer >= 0; default API dan database adalah 5.
+- Form tambah/edit serta tabel Produk menampilkan Minimum Stock.
+- Status stok Produk dan query Dashboard memakai aturan `stock <= minimumStock` per produk.
+- Export dataset mengisi kolom `Minimum Stock` dengan nilai tersimpan.
+- Import menerima `Minimum Stock`, alias lama `Minimum Stok`, atau file tanpa kolom tersebut; nilai kosong mempertahankan nilai existing dan memakai default 5 untuk produk baru.
+- Daftar Dashboard menampilkan stok aktual dan minimum masing-masing produk.
+
+**Testing:**
+- Prisma Client tenant berhasil di-generate.
+- `prisma validate` berhasil.
+- Migration terdeteksi oleh `prisma migrate status`; belum diterapkan ke database lokal karena ada migration lama lain yang juga masih pending.
+- Build backend berhasil.
+- Build frontend berhasil setelah memulihkan dependency yang sudah tercatat di lockfile.
+- Lint file terkait masih melaporkan tiga error React hooks pre-existing di `DashboardPage.tsx` dan `ProductPage.tsx`; tidak ada temuan pada baris FEATURE-001.
+- `git diff --check` berhasil.
+
+**Catatan developer berikutnya:**
+- Terapkan tenant migration dengan `npx prisma migrate deploy --config prisma.config.ts` pada setiap database tenant sebelum menjalankan backend baru.
+- Pertahankan perbandingan field-to-field `stock <= minimumStock`; jangan mengembalikan threshold global pada Dashboard.
+
+## 2026-07-29 — FEATURE-001.2 indikator visual status stok
+
+**Tujuan:**
+- Menyeragamkan indikator stok dengan ikon, label, dan warna agar kondisi persediaan mudah dikenali di seluruh UI inventori.
+
+**File diubah:**
+- `src/components/ui/StockStatusBadge.tsx`
+- `src/components/ui/StockAlertPanel.tsx`
+- `src/pages/product/ProductRow.tsx`
+- `src/pages/product/StockAdjustmentModal.tsx`
+- `src/pages/dashboard/DashboardPage.tsx`
+- `src/pages/restock/RestockPage.tsx`
+- `src/pages/restock/RestockProductModal.tsx`
+- `AGENTS.md`
+
+**Shared helper baru:**
+- `StockStatusBadge` menjadi sumber tunggal rule visual berdasarkan pasangan `stock` dan `minimumStock`, menggunakan ikon Lucide React yang sudah terpasang.
+- Rule: Aman/CircleCheckBig/hijau; Hampir Habis/TriangleAlert/oranye; Habis/CircleX/merah; Minus/PackageMinus/merah gelap.
+
+**Perubahan UI:**
+- Tabel Produk, Dashboard, panel alert stok, modal penyesuaian stok, serta pencarian/daftar/modal Restock memakai badge yang sama.
+- Status Minus mempunyai badge eksplisit “Minus”.
+- Angka stok dan minimum stock tetap ditampilkan; tidak ada business logic stok yang diubah.
+
+**Testing:**
+- Build frontend berhasil.
+- Lint shared component berhasil; lint gabungan halaman masih menemukan tiga error `set-state-in-effect` pre-existing pada Dashboard dan Restock.
+- `git diff --check` berhasil.
+
+**Catatan developer berikutnya:**
+- Gunakan `StockStatusBadge` untuk tampilan status stok baru; jangan menduplikasi conditional warna/label di halaman.
+- Riwayat stok hanya menampilkan angka historis karena record history tidak menyimpan minimum stock pada saat kejadian.
+
+## 2026-07-29 — FEATURE-001.3 minimum stock dan tooltip icon-only
+
+**Tujuan:**
+- Memastikan Minimum Stock selalu terlihat pada tabel Produk dan mengecilkan indikator status menjadi ikon dengan tooltip informatif.
+
+**Root Cause:**
+- Mapper frontend mengasumsikan `minimumStock` selalu tersedia sehingga respons backend lama menghasilkan nilai kosong/undefined. Kolom juga belum memiliki lebar minimum. Badge sebelumnya merender ikon, teks, padding, border, dan background sehingga terlalu dominan di tabel.
+
+**File diubah:**
+- `src/components/ui/StockStatusBadge.tsx`
+- `src/pages/product/ProductTable.tsx`, `ProductRow.tsx`, `ProductForm.tsx`
+- `src/services/productService.ts`, `dashboardService.ts`
+- `src/types/product.ts`
+- `AGENTS.md`
+
+**Perubahan:**
+- `ProductApiItem.minimumStock` dibuat opsional untuk kompatibilitas respons lama dan dinormalisasi ke default 5 pada mapper API.
+- Kolom Minimum Stock diberi lebar minimum dan selalu merender nilai hasil normalisasi.
+- `StockStatusBadge` sekarang icon-only berukuran `h-4 w-4`, tanpa teks visual, background, atau padding badge.
+- Tooltip hover/focus menampilkan Status, Stok Saat Ini, Minimum Stock, serta pesan kondisi; native `title` disediakan sebagai fallback saat tooltip CSS terpotong container.
+- Dashboard, Produk, Restock, panel stok, dan modal tetap menggunakan shared component yang sama.
+
+**Testing:**
+- Build frontend berhasil.
+- Lint file inti yang diubah berhasil.
+- `git diff --check` berhasil.
+
+**Catatan developer berikutnya:**
+- Pertahankan fallback minimum stock hanya pada boundary mapper API; domain `Product` tetap memiliki `minimumStock` wajib.
+- Jangan menambahkan label teks langsung pada status stok; detail status tersedia melalui tooltip dan aria-label.
+
+## 2026-07-29 — UI-001 alignment tabel Produk
+
+**Tujuan:**
+- Menyeragamkan alignment kolom Stok, Minimum Stock, dan Status pada tabel Produk.
+
+**File diubah:**
+- `src/pages/product/ProductTable.tsx`
+- `src/pages/product/ProductRow.tsx`
+- `AGENTS.md`
+
+**Perubahan:**
+- Header Stok, Minimum Stock, dan Status dibuat rata tengah horizontal dan vertikal.
+- Angka stok dan minimum stock dibuat tepat di tengah sel.
+- Ikon `StockStatusBadge` dipusatkan dengan wrapper inline-flex tanpa mengubah padding atau tinggi baris.
+- Alignment kolom lain tidak diubah.
+
+**Testing:**
+- Build frontend berhasil.
+- `git diff --check` berhasil.
+
+**Catatan developer berikutnya:**
+- Pertahankan `text-center align-middle` pada ketiga header/sel inventori dan gunakan shared `StockStatusBadge` untuk kolom Status.
+
+## 2026-07-29 — BUG-005 input dan persistensi Minimum Stock
+
+**Root Cause:**
+- Input Minimum Stock mengikat `value` langsung ke number dan menjalankan `Number(value || 0)` pada setiap `onChange`; string kosong langsung dipaksa kembali menjadi 0 sehingga tidak dapat diedit secara natural.
+- Tabel menerapkan fallback 5 lagi pada layer render. Walaupun nullish fallback tidak menimpa angka 0, fallback ganda menyamarkan respons API yang belum membawa field dan membuat alur nilai tersimpan sulit diverifikasi.
+
+**File diubah:**
+- `src/pages/product/ProductForm.tsx`
+- `src/pages/product/ProductRow.tsx`
+- `AGENTS.md`
+
+**Perubahan:**
+- Input Minimum Stock memakai state string terpisah sehingga boleh kosong sementara selama editing.
+- Fokus memilih seluruh isi agar mengetik angka baru langsung menggantikan nilai sebelumnya.
+- Blur kosong mengembalikan default 5; save kosong juga dinormalisasi ke 5.
+- Validasi `min=0` dan validasi backend integer >= 0 tetap dipertahankan.
+- Tabel merender nilai domain `product.minimumStock` secara langsung; fallback 5 hanya dilakukan di mapper API ketika respons benar-benar null/undefined.
+- Audit memastikan payload create/update mengirim field, controller meneruskan field, Prisma menyimpan dan mengembalikannya, serta mapper mempertahankan 0 maupun nilai positif.
+
+**Validasi:**
+- Nilai 10 melewati form, payload, backend, response, mapper, dan tabel tanpa diganti.
+- Nilai 0 dipertahankan karena mapper memakai nullish fallback (`??`), bukan truthy fallback.
+- Input dapat dikosongkan sementara dan dapat mengganti 0 langsung menjadi 15 melalui select-on-focus.
+- Build frontend dan backend berhasil.
+- `git diff --check` berhasil.
+
+**Catatan:**
+- Jangan mem-parsing controlled number input pada setiap keystroke jika field perlu mendukung keadaan kosong sementara.
+- Fallback kompatibilitas API harus tetap berada di mapper, bukan di komponen tabel.
+
+## 2026-07-29 — Sinkronisasi Minimum Stock dengan dataset
+
+**Root Cause:**
+- Nilai minimum stock dinormalisasi berulang di form, controller, mapper, import, dan tabel. Fallback 5 pada beberapa layer menyembunyikan field API yang hilang dan berisiko mengubah nilai valid 0.
+- Komponen lama `StockAlertPanel` memakai alias `minStock`, sehingga kontrak field frontend tidak seragam.
+- Cache GET produk tidak dibersihkan setelah create, update, atau import dataset.
+
+**File diubah:**
+- `server/src/controllers/product.controller.ts`
+- `server/src/services/product.service.ts`
+- `src/pages/product/ProductForm.tsx`
+- `src/services/productService.ts`, `dashboardService.ts`
+- `src/services/api/axiosInstance.ts`
+- `src/components/ui/StockAlertPanel.tsx`
+- `src/types/product.ts`
+- `AGENTS.md`
+
+**Perubahan:**
+- Menetapkan `minimumStock` sebagai satu-satunya nama field dari database sampai seluruh UI.
+- Menghapus fallback nilai pada controller, mapper, tabel, dan dashboard; Prisma default hanya berlaku saat create benar-benar tidak menyertakan field.
+- Input kosong boleh selama editing tetapi ditolak saat save; nilai harus integer >= 0.
+- Dataset membaca integer Minimum Stock persis, mempertahankan 0, mempertahankan nilai existing jika sel kosong, dan memakai default schema untuk produk baru tanpa nilai.
+- Export membaca `product.minimumStock` terbaru langsung dari query database.
+- Cache frontend dibersihkan setelah create, update, dan import agar refresh halaman tidak memakai dataset lama.
+- Mock response offline produk ikut membawa `minimumStock` dari payload.
+
+**Testing:**
+- Nilai 0 dan 10 tidak melewati truthy/nullish fallback.
+- Edit 25 diteruskan pada payload create/update dan response mapper tanpa transformasi.
+- Build frontend dan backend berhasil.
+- Lint file yang diubah berhasil.
+- `git diff --check` berhasil.
+
+**Catatan:**
+- Jangan menambah alias `stockMinimum` atau `minStock`; kontrak canonical adalah `minimumStock`.
+- Migration tenant wajib diterapkan sebelum backend baru dijalankan.
 

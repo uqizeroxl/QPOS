@@ -25,7 +25,6 @@ import BulkUpdateConfirmationDialog from "./BulkUpdateConfirmationDialog";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from "../../constants/pagination";
 
 const productPageSizeKey = "product-page-size";
-const lowStockThreshold = 5;
 
 const toBulkDraft = (product: Product): BulkProductDraft => ({
   id: product.id,
@@ -339,7 +338,7 @@ export default function ProductPage() {
 
       showToast("Stok berhasil disesuaikan.", "success");
 
-      if (updatedProduct.stock < lowStockThreshold) {
+      if (updatedProduct.stock <= updatedProduct.minimumStock) {
         addLowStockActivity(updatedProduct);
       }
 
@@ -384,7 +383,7 @@ export default function ProductPage() {
   };
 
   const addLowStockActivity = (product: Product) => {
-    if (product.stock >= lowStockThreshold) {
+    if (product.stock > product.minimumStock) {
       return;
     }
 
@@ -415,7 +414,7 @@ export default function ProductPage() {
 
         if (
           editingProduct.stock !== updatedProduct.stock &&
-          updatedProduct.stock < lowStockThreshold
+          updatedProduct.stock <= updatedProduct.minimumStock
         ) {
           addLowStockActivity(updatedProduct);
         }

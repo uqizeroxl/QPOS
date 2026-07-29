@@ -75,8 +75,11 @@ export default function ProductTable({
               <TableHeadCell>Kategori</TableHeadCell>
               <TableHeadCell>Harga Beli</TableHeadCell>
               <TableHeadCell>Harga Jual</TableHeadCell>
-              <TableHeadCell>Stok</TableHeadCell>
-              <TableHeadCell>Status</TableHeadCell>
+              <TableHeadCell className="text-center align-middle">Stok</TableHeadCell>
+              <TableHeadCell className="min-w-32 text-center align-middle">
+                Minimum Stock
+              </TableHeadCell>
+              <TableHeadCell className="text-center align-middle">Status</TableHeadCell>
               <TableHeadCell className="text-right">Aksi</TableHeadCell>
             </TableRow>
           </TableHead>
@@ -84,7 +87,7 @@ export default function ProductTable({
           <TableBody className="bg-white">
             {isLoading ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={isDeleteMode ? 9 : 8} className="py-12 text-center">
+                <TableCell colSpan={isDeleteMode ? 10 : 9} className="py-12 text-center">
                   <p className="font-semibold text-gray-700">
                     Memuat data produk...
                   </p>
@@ -107,7 +110,7 @@ export default function ProductTable({
               ))
             ) : (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={isDeleteMode ? 9 : 8} className="py-12 text-center">
+                <TableCell colSpan={isDeleteMode ? 10 : 9} className="py-12 text-center">
                   <p className="font-semibold text-gray-700">
                     Belum ada data.
                   </p>

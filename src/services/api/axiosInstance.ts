@@ -60,6 +60,7 @@ function buildMockResponse(url: string, method: string, body: Record<string, unk
         purchasePrice: body?.purchasePrice ?? null,
         sellingPrice: body?.sellingPrice ?? 0,
         stock: body?.stock ?? 0,
+        minimumStock: body?.minimumStock,
         status: "ACTIVE",
       };
     }

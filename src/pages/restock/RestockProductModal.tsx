@@ -5,6 +5,7 @@ import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import type { Product } from "../../types";
+import StockStatusBadge from "../../components/ui/StockStatusBadge";
 
 export type RestockProductValues = {
   quantity: number;
@@ -133,6 +134,10 @@ export default function RestockProductModal({
           <label className="block space-y-2">
             <span className="text-sm font-medium text-gray-700">Stok Saat Ini</span>
             <Input value={product.stock} readOnly />
+            <StockStatusBadge
+              stock={product.stock}
+              minimumStock={product.minimumStock}
+            />
           </label>
           <label className="block space-y-2">
             <span className="text-sm font-medium text-gray-700">Jumlah Restock</span>

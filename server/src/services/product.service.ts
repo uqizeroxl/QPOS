@@ -16,6 +16,7 @@ export type CreateProductInput = {
   purchasePrice?: number | null;
   sellingPrice: number;
   stock?: number;
+  minimumStock?: number;
   status?: RecordStatus;
   categoryId?: string;
   supplierId?: string | null;
@@ -122,6 +123,7 @@ type ProductDatasetRow = {
   purchasePrice: number;
   sellingPrice: number;
   stock: number;
+  minimumStock: number | null;
   status: RecordStatus;
 };
 
@@ -133,7 +135,7 @@ const productDatasetHeaders = [
   "Harga Beli",
   "Harga Jual",
   "Stok",
-  "Minimum Stok",
+  "Minimum Stock",
   "Status"
 ] as const;
 
@@ -319,6 +321,7 @@ export const createProduct = async (
           purchasePrice: sanitizedData.purchasePrice,
           sellingPrice: sanitizedData.sellingPrice,
           stock: sanitizedData.stock,
+          minimumStock: sanitizedData.minimumStock,
           status: sanitizedData.status,
           categoryId,
           supplierId: sanitizedData.supplierId
@@ -419,6 +422,7 @@ export const updateProduct = async (
           purchasePrice: data.purchasePrice,
           sellingPrice: data.sellingPrice,
           stock: data.stock,
+          minimumStock: data.minimumStock,
           status: data.status,
           categoryId,
           supplierId: data.supplierId
@@ -943,23 +947,41 @@ const getCellNumber = (row: ExcelJS.Row, columnNumber: number) => {
   return numericValue;
 };
 
-const getDatasetStock = (row: ExcelJS.Row) => {
-  const text = getCellText(row, 7);
-  return text === "" ? 0 : Math.trunc(getCellNumber(row, 7));
-};
-
-const assertDatasetHeaders = (worksheet: ExcelJS.Worksheet) => {
+const getDatasetColumnIndexes = (worksheet: ExcelJS.Worksheet) => {
   const headerRow = worksheet.getRow(1);
+  const columns = new Map<string, number>();
 
-  productDatasetHeaders.forEach((expectedHeader, index) => {
-    const currentHeader = getCellText(headerRow, index + 1);
+  headerRow.eachCell((cell, columnNumber) => {
+    columns.set(cell.text.trim(), columnNumber);
+  });
 
-    if (currentHeader !== expectedHeader) {
+  const requiredHeaders = productDatasetHeaders.filter(
+    (header) => header !== "Minimum Stock"
+  );
+
+  requiredHeaders.forEach((header) => {
+    if (!columns.has(header)) {
       throw new ProductDatasetValidationError(
         "Format header dataset produk tidak sesuai."
       );
     }
   });
+
+  return {
+    barcode: columns.get("Barcode")!,
+    name: columns.get("Nama Produk")!,
+    category: columns.get("Kategori")!,
+    supplier: columns.get("Supplier")!,
+    purchasePrice: columns.get("Harga Beli")!,
+    sellingPrice: columns.get("Harga Jual")!,
+    stock: columns.get("Stok")!,
+    minimumStock: columns.has("Minimum Stock")
+      ? columns.get("Minimum Stock")!
+      : columns.has("Minimum Stok")
+        ? columns.get("Minimum Stok")!
+        : null,
+    status: columns.get("Status")!
+  };
 };
 
 const parseProductDatasetRows = async (fileBuffer: Buffer) => {
@@ -972,7 +994,7 @@ const parseProductDatasetRows = async (fileBuffer: Buffer) => {
     throw new ProductDatasetValidationError("File dataset produk kosong.");
   }
 
-  assertDatasetHeaders(worksheet);
+  const columns = getDatasetColumnIndexes(worksheet);
 
   const rows: ProductDatasetRow[] = [];
 
@@ -981,10 +1003,17 @@ const parseProductDatasetRows = async (fileBuffer: Buffer) => {
       return;
     }
 
-    const barcode = getCellText(row, 1) || null;
-    const name = getCellText(row, 2);
-    const categoryName = getCellText(row, 3);
-    const supplierName = getCellText(row, 4);
+    const barcode = getCellText(row, columns.barcode) || null;
+    const name = getCellText(row, columns.name);
+    const categoryName = getCellText(row, columns.category);
+    const supplierName = getCellText(row, columns.supplier);
+    const minimumStockText = columns.minimumStock
+      ? getCellText(row, columns.minimumStock)
+      : "";
+    const minimumStock =
+      minimumStockText === ""
+        ? null
+        : getCellNumber(row, columns.minimumStock!);
 
     if (barcode === null && !name && !categoryName) {
       return;
@@ -996,15 +1025,25 @@ const parseProductDatasetRows = async (fileBuffer: Buffer) => {
       );
     }
 
+    if (minimumStock !== null && !Number.isInteger(minimumStock)) {
+      throw new ProductDatasetValidationError(
+        `Minimum Stock harus berupa bilangan bulat pada baris ${rowNumber}.`
+      );
+    }
+
     rows.push({
       barcode,
       name,
       categoryName,
       supplierName,
-      purchasePrice: getCellNumber(row, 5),
-      sellingPrice: getCellNumber(row, 6),
-      stock: getDatasetStock(row),
-      status: normalizeDatasetStatus(getCellText(row, 9))
+      purchasePrice: getCellNumber(row, columns.purchasePrice),
+      sellingPrice: getCellNumber(row, columns.sellingPrice),
+      stock:
+        getCellText(row, columns.stock) === ""
+          ? 0
+          : Math.trunc(getCellNumber(row, columns.stock)),
+      minimumStock,
+      status: normalizeDatasetStatus(getCellText(row, columns.status))
     });
   });
 
@@ -1070,7 +1109,7 @@ export const exportProductDataset = async (prisma: PrismaClient) => {
       "Harga Beli": Number(product.purchasePrice),
       "Harga Jual": Number(product.sellingPrice),
       Stok: product.stock,
-      "Minimum Stok": 0,
+      "Minimum Stock": product.minimumStock,
       Status: product.status === RecordStatus.ACTIVE ? "Aktif" : "Nonaktif"
     });
   });
@@ -1208,7 +1247,8 @@ export const importProductDataset = async (
         id: true,
         barcode: true,
         name: true,
-        stock: true
+        stock: true,
+        minimumStock: true
       }
     });
     const productByBarcode = new Map(
@@ -1239,6 +1279,9 @@ export const importProductDataset = async (
           purchasePrice: row.purchasePrice,
           sellingPrice: row.sellingPrice,
           stock: row.stock,
+          ...(row.minimumStock === null
+            ? {}
+            : { minimumStock: row.minimumStock }),
           status: row.status
         };
 
@@ -1252,7 +1295,8 @@ export const importProductDataset = async (
               id: true,
               barcode: true,
               name: true,
-              stock: true
+              stock: true,
+              minimumStock: true
             }
           });
           if (existingProduct.stock !== row.stock) {
@@ -1291,7 +1335,8 @@ export const importProductDataset = async (
             id: true,
             barcode: true,
             name: true,
-            stock: true
+            stock: true,
+            minimumStock: true
           }
         });
         if (product.stock !== 0) {

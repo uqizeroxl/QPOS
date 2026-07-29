@@ -51,6 +51,7 @@ const getInitialFormValues = (
       purchasePrice: null,
       sellingPrice: 0,
       stock: 0,
+      minimumStock: 5,
       status: "Aktif",
     };
   }
@@ -63,6 +64,7 @@ const getInitialFormValues = (
     purchasePrice: product.purchasePrice,
     sellingPrice: product.sellingPrice,
     stock: product.stock,
+    minimumStock: product.minimumStock,
     status: product.status,
   };
 };
@@ -92,6 +94,9 @@ export default function ProductForm({
   );
   const [stockInput, setStockInput] = useState(() =>
     initialFormValues.stock.toString(),
+  );
+  const [minimumStockInput, setMinimumStockInput] = useState(() =>
+    initialFormValues.minimumStock.toString(),
   );
   const [autoGenerateWhenEmpty, setAutoGenerateWhenEmpty] = useState(false);
   const [printAfterSave, setPrintAfterSave] = useState(false);
@@ -145,6 +150,7 @@ export default function ProductForm({
       : null,
     sellingPrice: parseRupiah(sellingPriceInput),
     stock: Number(stockInput || 0),
+    minimumStock: Number(minimumStockInput),
   });
 
   const createPrintPayload = (
@@ -192,6 +198,18 @@ export default function ProductForm({
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (minimumStockInput.trim() === "") {
+      setFormError("Minimum Stock wajib diisi.");
+      return;
+    }
+
+    const minimumStock = Number(minimumStockInput);
+
+    if (!Number.isInteger(minimumStock) || minimumStock < 0) {
+      setFormError("Minimum Stock harus berupa angka bulat 0 atau lebih.");
+      return;
+    }
 
     const nextValues: ProductFormValues = {
       ...getPreparedFormValues(),
@@ -364,6 +382,19 @@ export default function ProductForm({
                 type="number"
                 value={stockInput}
                 onChange={(event) => setStockInput(event.target.value)}
+              />
+            </label>
+
+            <label className="space-y-2 sm:col-span-2">
+              <span className="text-sm font-medium text-gray-700">
+                Minimum Stock
+              </span>
+              <Input
+                min={0}
+                type="number"
+                value={minimumStockInput}
+                onFocus={(event) => event.currentTarget.select()}
+                onChange={(event) => setMinimumStockInput(event.target.value)}
               />
             </label>
           </div>
