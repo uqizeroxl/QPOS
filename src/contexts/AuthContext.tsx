@@ -107,11 +107,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } catch {
         if (isMounted) {
           window.dispatchEvent(
-            new CustomEvent("app:toast", {
+              new CustomEvent("app:toast", {
               detail: {
                 message:
                   "Tidak dapat memverifikasi sesi. Anda tetap dapat menggunakan aplikasi dengan data tersimpan.",
-                type: "info",
+                type: "warning",
               },
             }),
           );

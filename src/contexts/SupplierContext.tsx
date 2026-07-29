@@ -25,7 +25,7 @@ export function SupplierProvider({ children }: SupplierProviderProps) {
         new CustomEvent("app:toast", {
           detail: {
             message: "Gagal memuat supplier. Data mungkin tidak tersedia.",
-            type: "info",
+            type: "warning",
           },
         }),
       );

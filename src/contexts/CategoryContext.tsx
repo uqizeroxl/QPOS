@@ -87,7 +87,7 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
         new CustomEvent("app:toast", {
           detail: {
             message: "Gagal memuat kategori. Data mungkin tidak tersedia.",
-            type: "info",
+            type: "warning",
           },
         }),
       );

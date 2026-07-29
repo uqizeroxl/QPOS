@@ -37,9 +37,11 @@ export function ToastProvider({ children }: ToastProviderProps) {
             className={`rounded-lg px-4 py-3 text-sm font-semibold text-white shadow-lg ${
               toast.type === "success"
                 ? "bg-emerald-600"
-                : toast.type === "info"
-                  ? "bg-blue-600"
-                  : "bg-red-600"
+                : toast.type === "warning"
+                  ? "bg-amber-500"
+                  : toast.type === "info"
+                    ? "bg-blue-600"
+                    : "bg-red-600"
             }`}
           >
             {toast.message}
