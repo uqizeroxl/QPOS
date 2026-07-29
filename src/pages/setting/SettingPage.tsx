@@ -2,9 +2,12 @@ import {
   AlertTriangle,
   DatabaseBackup,
   FileSpreadsheet,
+  HardDrive,
   Mail,
   Save,
   Settings,
+  Shield,
+  Store,
   Trash2,
   Upload,
   Users,
@@ -34,7 +37,16 @@ import {
   settingsService,
   type ProductDatasetResetResult,
 } from "../../services/settingsService";
+
 const resetConfirmationText = "HAPUS SEMUA";
+
+type Tab = "store" | "dataset" | "security";
+
+const tabs: { key: Tab; label: string; icon: typeof Store; ownerOnly: boolean }[] = [
+  { key: "store", label: "Informasi Toko", icon: Store, ownerOnly: false },
+  { key: "dataset", label: "Dataset Produk", icon: HardDrive, ownerOnly: false },
+  { key: "security", label: "Keamanan", icon: Shield, ownerOnly: true },
+];
 
 export default function SettingPage() {
   const { settings, saveSettings, setReceiptFooter } = useSettings();
@@ -46,6 +58,7 @@ export default function SettingPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [storeInfo, setStoreInfo] = useState(settings);
   const { showToast } = useToast();
+  const [activeTab, setActiveTab] = useState<Tab>("store");
   const [datasetFile, setDatasetFile] = useState<File | null>(null);
   const [datasetPreview, setDatasetPreview] =
     useState<ProductDatasetPreview | null>(null);
@@ -299,6 +312,8 @@ export default function SettingPage() {
     }
   };
 
+  const availableTabs = tabs.filter((t) => !t.ownerOnly || user?.role === "OWNER");
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -324,269 +339,290 @@ export default function SettingPage() {
           </div>
         </Card>
 
-        {user?.role === "OWNER" ? (
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex gap-6" role="tablist">
+            {availableTabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.key}
+                  role="tab"
+                  aria-selected={activeTab === tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`inline-flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-medium transition ${
+                    activeTab === tab.key
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {activeTab === "store" ? (
+          <div className="space-y-6">
+            <Card as="section" className="p-5">
+              <div className="border-b border-gray-200 pb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Informasi Toko
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Data ini digunakan sebagai identitas toko pada aplikasi POS.
+                </p>
+              </div>
+
+              <div className="mt-5 grid gap-4">
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    Nama Toko
+                  </span>
+                  <Input
+                    value={storeInfo.storeName}
+                    onChange={(event) =>
+                      setStoreInfo((currentInfo) => ({
+                        ...currentInfo,
+                        storeName: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    Nomor Telepon
+                  </span>
+                  <Input
+                    value={storeInfo.phone}
+                    onChange={(event) =>
+                      setStoreInfo((currentInfo) => ({
+                        ...currentInfo,
+                        phone: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-gray-700">Alamat</span>
+                  <Textarea
+                    rows={4}
+                    value={storeInfo.address}
+                    onChange={(event) =>
+                      setStoreInfo((currentInfo) => ({
+                        ...currentInfo,
+                        address: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-gray-700">Tema</span>
+                  <Select
+                    value={theme}
+                    onChange={(event) =>
+                      setTheme(event.target.value as ThemePreference)
+                    }
+                  >
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="system">System</option>
+                  </Select>
+                </label>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
+                <Button variant="secondary" onClick={handleBackup}>
+                  <DatabaseBackup className="h-4 w-4" />
+                  Backup Database
+                </Button>
+                <Button onClick={handleSave}>
+                  <Save className="h-4 w-4" />
+                  Simpan
+                </Button>
+              </div>
+            </Card>
+
+            <Card as="section" className="p-5">
+              <div className="border-b border-gray-200 pb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Pengaturan Struk
+                </h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  Atur teks yang tampil pada bagian paling bawah struk.
+                </p>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <label className="block space-y-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    Footer Struk
+                  </span>
+                  <Textarea
+                    rows={5}
+                    maxLength={250}
+                    value={receiptFooter}
+                    onChange={(event) => {
+                      const value = event.target.value.replace(/\r\n?/g, "\n");
+                      if (value.split("\n").length <= 5) {
+                        setReceiptFooterInput(value);
+                      }
+                    }}
+                    placeholder="Terima kasih"
+                  />
+                </label>
+
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>{receiptFooter.split("\n").length}/5 baris</span>
+                  <span>{receiptFooter.length}/250 karakter</span>
+                </div>
+
+                <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Preview
+                  </p>
+                  <p className="mt-3 whitespace-pre-line text-center text-sm font-semibold text-gray-800">
+                    {receiptFooter.trim() || "Terima kasih"}
+                  </p>
+                </div>
+
+                <div className="flex justify-end border-t border-gray-200 pt-5">
+                  <Button
+                    onClick={() => void handleSaveReceiptFooter()}
+                    disabled={isSavingReceiptFooter}
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSavingReceiptFooter ? "Menyimpan..." : "Simpan"}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        ) : null}
+
+        {activeTab === "dataset" ? (
           <Card as="section" className="p-5">
             <div className="border-b border-gray-200 pb-4">
               <h2 className="text-lg font-semibold text-gray-900">
-                Pengaturan Struk
+                Dataset Produk
               </h2>
               <p className="mt-1 text-sm text-gray-500">
-                Atur teks yang tampil pada bagian paling bawah struk.
+                Export dan import data master produk antar toko.
               </p>
             </div>
 
-            <div className="mt-5 space-y-4">
-              <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">
-                  Footer Struk
-                </span>
-                <Textarea
-                  rows={5}
-                  maxLength={250}
-                  value={receiptFooter}
-                  onChange={(event) => {
-                    const value = event.target.value.replace(/\r\n?/g, "\n");
-                    if (value.split("\n").length <= 5) {
-                      setReceiptFooterInput(value);
-                    }
-                  }}
-                  placeholder="Terima kasih"
-                />
-              </label>
-
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>{receiptFooter.split("\n").length}/5 baris</span>
-                <span>{receiptFooter.length}/250 karakter</span>
-              </div>
-
-              <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Preview
-                </p>
-                <p className="mt-3 whitespace-pre-line text-center text-sm font-semibold text-gray-800">
-                  {receiptFooter.trim() || "Terima kasih"}
-                </p>
-              </div>
-
-              <div className="flex justify-end border-t border-gray-200 pt-5">
-                <Button
-                  onClick={() => void handleSaveReceiptFooter()}
-                  disabled={isSavingReceiptFooter}
-                >
-                  <Save className="h-4 w-4" />
-                  {isSavingReceiptFooter ? "Menyimpan..." : "Simpan"}
-                </Button>
-              </div>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <Button
+                variant="secondary"
+                onClick={handleExportDataset}
+                disabled={isDatasetLoading}
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Export Dataset Produk
+              </Button>
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isDatasetLoading}
+              >
+                <Upload className="h-4 w-4" />
+                Import Dataset Produk
+              </Button>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx"
+                className="hidden"
+                onChange={handleSelectDatasetFile}
+              />
             </div>
+
+            {datasetError ? (
+              <p className="mt-5 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                {datasetError}
+              </p>
+            ) : null}
+
+            {datasetPreview ? (
+              <div className="mt-5 rounded-lg border border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Ringkasan Import
+                </h3>
+                <div className="mt-3 grid gap-3 text-sm text-gray-600 sm:grid-cols-3">
+                  <p>Total data: {datasetPreview.totalData}</p>
+                  <p>Produk baru: {datasetPreview.newProducts}</p>
+                  <p>Barcode duplikat: {datasetPreview.duplicateBarcodes}</p>
+                </div>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <Button
+                    onClick={handleImportDataset}
+                    disabled={isDatasetLoading}
+                  >
+                    Import Dataset
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            {importResult ? (
+              <div className="mt-5 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                Ditambahkan: {importResult.inserted}. Diperbarui:{" "}
+                {importResult.updated}. Row duplikat dalam file dilewati:{" "}
+                {importResult.skippedDuplicateRows}. Gagal: {importResult.failed}.
+              </div>
+            ) : null}
+
+            {user?.role === "OWNER" ? (
+              <div className="mt-6 border-t border-red-200 pt-5">
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 text-red-600" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-red-900">
+                        Zona Berbahaya
+                      </h3>
+                      <p className="mt-1 text-sm text-red-700">
+                        Hapus seluruh produk, kategori, supplier, dan riwayat stok
+                        dari dataset toko ini.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResetResult(null);
+                          setResetError("");
+                          setIsResetDialogOpen(true);
+                        }}
+                        className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Hapus Seluruh Dataset
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {resetResult ? (
+                  <div className="mt-4 rounded-lg bg-emerald-50 px-3 py-3 text-sm text-emerald-700">
+                    <p className="font-semibold">Dataset berhasil dihapus.</p>
+                    <p className="mt-1">
+                      Produk: {resetResult.products}. Kategori: {resetResult.categories}.
+                      Supplier: {resetResult.suppliers}. Riwayat stok:{" "}
+                      {resetResult.stockHistories}.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </Card>
         ) : null}
 
-        <Card as="section" className="p-5">
-          <div className="border-b border-gray-200 pb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Informasi Toko
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Data ini digunakan sebagai identitas toko pada aplikasi POS.
-            </p>
-          </div>
-
-          <div className="mt-5 grid gap-4">
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">
-                Nama Toko
-              </span>
-              <Input
-                value={storeInfo.storeName}
-                onChange={(event) =>
-                  setStoreInfo((currentInfo) => ({
-                    ...currentInfo,
-                    storeName: event.target.value,
-                  }))
-                }
-              />
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">
-                Nomor Telepon
-              </span>
-              <Input
-                value={storeInfo.phone}
-                onChange={(event) =>
-                  setStoreInfo((currentInfo) => ({
-                    ...currentInfo,
-                    phone: event.target.value,
-                  }))
-                }
-              />
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">Alamat</span>
-              <Textarea
-                rows={4}
-                value={storeInfo.address}
-                onChange={(event) =>
-                  setStoreInfo((currentInfo) => ({
-                    ...currentInfo,
-                    address: event.target.value,
-                  }))
-                }
-              />
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-sm font-medium text-gray-700">Tema</span>
-              <Select
-                value={theme}
-                onChange={(event) =>
-                  setTheme(event.target.value as ThemePreference)
-                }
-              >
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-                <option value="system">System</option>
-              </Select>
-            </label>
-          </div>
-
-          <div className="mt-5 flex flex-col gap-3 border-t border-gray-200 pt-5 sm:flex-row sm:justify-end">
-            <Button
-              variant="secondary"
-              onClick={handleBackup}
-            >
-              <DatabaseBackup className="h-4 w-4" />
-              Backup Database
-            </Button>
-            <Button
-              onClick={handleSave}
-            >
-              <Save className="h-4 w-4" />
-              Simpan
-            </Button>
-          </div>
-        </Card>
-
-        <Card as="section" className="p-5">
-          <div className="border-b border-gray-200 pb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Dataset Produk
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Export dan import data master produk antar toko.
-            </p>
-          </div>
-
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <Button
-              variant="secondary"
-              onClick={handleExportDataset}
-              disabled={isDatasetLoading}
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              Export Dataset Produk
-            </Button>
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isDatasetLoading}
-            >
-              <Upload className="h-4 w-4" />
-              Import Dataset Produk
-            </Button>
-            <Input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx"
-              className="hidden"
-              onChange={handleSelectDatasetFile}
-            />
-          </div>
-
-          {datasetError ? (
-            <p className="mt-5 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-              {datasetError}
-            </p>
-          ) : null}
-
-          {datasetPreview ? (
-            <div className="mt-5 rounded-lg border border-gray-200 p-4">
-              <h3 className="text-sm font-semibold text-gray-900">
-                Ringkasan Import
-              </h3>
-              <div className="mt-3 grid gap-3 text-sm text-gray-600 sm:grid-cols-3">
-                <p>Total data: {datasetPreview.totalData}</p>
-                <p>Produk baru: {datasetPreview.newProducts}</p>
-                <p>Barcode duplikat: {datasetPreview.duplicateBarcodes}</p>
-              </div>
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <Button
-                  onClick={handleImportDataset}
-                  disabled={isDatasetLoading}
-                >
-                  Import Dataset
-                </Button>
-              </div>
-            </div>
-          ) : null}
-
-          {importResult ? (
-            <div className="mt-5 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-              Ditambahkan: {importResult.inserted}. Diperbarui:{" "}
-              {importResult.updated}. Row duplikat dalam file dilewati:{" "}
-              {importResult.skippedDuplicateRows}. Gagal: {importResult.failed}.
-            </div>
-          ) : null}
-
-          {user?.role === "OWNER" ? (
-            <div className="mt-6 border-t border-red-200 pt-5">
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="mt-0.5 h-5 w-5 text-red-600" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-red-900">
-                      Zona Berbahaya
-                    </h3>
-                    <p className="mt-1 text-sm text-red-700">
-                      Hapus seluruh produk, kategori, supplier, dan riwayat stok
-                      dari dataset toko ini.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResetResult(null);
-                        setResetError("");
-                        setIsResetDialogOpen(true);
-                      }}
-                      className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition hover:bg-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Hapus Seluruh Dataset
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {resetResult ? (
-                <div className="mt-4 rounded-lg bg-emerald-50 px-3 py-3 text-sm text-emerald-700">
-                  <p className="font-semibold">Dataset berhasil dihapus.</p>
-                  <p className="mt-1">
-                    Produk: {resetResult.products}. Kategori: {resetResult.categories}.
-                    Supplier: {resetResult.suppliers}. Riwayat stok:{" "}
-                    {resetResult.stockHistories}.
-                  </p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </Card>
-
-        {user?.role === "OWNER" ? (
+        {activeTab === "security" && user?.role === "OWNER" ? (
           <Card as="section" className="border-2 border-red-300 p-5">
             <div className="border-b border-red-200 pb-4">
-              <h2 className="text-lg font-semibold text-red-800">
-                Danger Zone
-              </h2>
+              <h2 className="text-lg font-semibold text-red-800">Keamanan</h2>
               <p className="mt-1 text-sm text-red-600">
                 Tindakan berbahaya yang mempengaruhi kepemilikan dan keberadaan toko.
               </p>
