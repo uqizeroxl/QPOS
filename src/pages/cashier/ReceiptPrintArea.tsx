@@ -84,6 +84,11 @@ export default function ReceiptPrintArea({
         <p className="receipt-center receipt-thanks whitespace-pre-line">
           {settings.receiptFooter}
         </p>
+
+        <div className="receipt-cut-space" />
+        <div className="receipt-cut-line">
+          <span className="receipt-cut-text">--- potong disini ---</span>
+        </div>
       </div>
     </div>
   );

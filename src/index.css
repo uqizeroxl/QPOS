@@ -189,6 +189,12 @@ body {
     margin: 0;
   }
 
+  body {
+    height: auto;
+    margin: 0;
+    padding: 0;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -274,17 +280,16 @@ body {
 
   .receipt-print-root {
     --receipt-width: 58mm;
-    position: absolute;
-    inset: 0;
     display: block;
     width: var(--receipt-width);
-    min-height: 100vh;
-    padding: 4mm 3mm;
+    margin: 0 auto;
+    padding: 4mm 3mm 0;
     background: #ffffff;
     color: #111827;
     font-family: "Courier New", monospace;
     font-size: 10px;
     line-height: 1.35;
+    page-break-after: avoid;
   }
 
   .receipt-ticket {
@@ -335,5 +340,23 @@ body {
   .receipt-thanks {
     margin: 0;
     font-weight: 700;
+  }
+
+  .receipt-cut-space {
+    height: 15mm;
+  }
+
+  .receipt-cut-line {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1mm 0;
+    border-top: 1px dashed #111827;
+  }
+
+  .receipt-cut-text {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: #6b7280;
   }
 }

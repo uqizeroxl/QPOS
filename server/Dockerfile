@@ -24,7 +24,9 @@ COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/prisma.config.ts /app/prisma.master.config.ts ./
 COPY --from=build /app/dist ./dist
 COPY scripts ./scripts
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
 
 USER node
 EXPOSE 3000
-CMD ["node", "dist/server.js"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
