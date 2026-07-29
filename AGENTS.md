@@ -131,6 +131,7 @@ npm run preview          # Preview production build
 npm run prisma:generate  # Generate Prisma client
 npm run prisma:migrate   # Run Prisma migrations
 npm run seed             # Seed database with sample data
+./deploy.sh              # Pull + rebuild + restart (VPS)
 ```
 
 ## Conventions
@@ -173,7 +174,7 @@ npm run seed             # Seed database with sample data
 | Service | Image | Port Mapping | Purpose |
 |---------|-------|-------------|---------|
 | `qpos-db` | `postgres:16-alpine` | `5433:5432` | PostgreSQL database (tenant + master) |
-| `qpos-server` | Custom (multi-stage `server/Dockerfile`) | `8000:8000` | Express.js API server |
+| `qpos-server` | Custom (multi-stage `server/Dockerfile`) | `8000:8000` | Express.js API server with auto-migration upon startup (`server/docker-entrypoint.sh`)|
 
 #### Environment Variables (Backend)
 
@@ -209,14 +210,7 @@ npm run seed             # Seed database with sample data
 
 #### Deployment Commands (VPS)
 
-**Full setup (new deployment):**
-```bash
-cd ~/QPOS
-sudo docker compose up -d --build
-sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.master.config.ts
-sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.config.ts
-sudo docker compose exec qpos-server node dist/scripts/bootstrap-master-default-store.js
-```
+**Migrations run automatically** via `server/docker-entrypoint.sh` on every container start. Just rebuild and restart:
 
 **Re-deploy after code changes:**
 ```bash
@@ -225,12 +219,10 @@ git pull
 sudo docker compose up -d --build
 ```
 
-**Run migrations after schema changes:**
+**Full setup (new deployment) — same command:**
 ```bash
-# Master DB
-sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.master.config.ts
-# Tenant DB
-sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.config.ts
+cd ~/QPOS
+sudo docker compose up -d --build
 ```
 
 **Reset tenant DB (WARNING: deletes all business data):**
@@ -238,30 +230,56 @@ sudo docker compose run --rm qpos-server npx prisma migrate deploy --config pris
 sudo docker compose stop qpos-server
 sudo docker compose exec -T qpos-db psql -U qpos -d postgres -c "DROP DATABASE qpos;"
 sudo docker compose exec -T qpos-db psql -U qpos -d postgres -c "CREATE DATABASE qpos;"
-sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.config.ts
 sudo docker compose up -d
-sudo docker compose exec qpos-server node dist/scripts/bootstrap-master-default-store.js
 ```
 
-**Bootstrap default store + users:**
+**Bootstrap default store + users** (runs automatically on container start, can also run manually):
 ```bash
 sudo docker compose exec qpos-server node dist/scripts/bootstrap-master-default-store.js
 ```
-This creates a default OWNER user (`owner` / `owner123`) and registers the "Multazam" store in the master DB.
+Creates a default OWNER user (`owner` / `owner123`) and registers the "Multazam" store in the master DB.
 
 #### Dockerfile Details (`server/Dockerfile`)
 
 Multi-stage build:
 1. **Build stage** (`node:22-alpine`): `npm ci` → `prisma generate` (tenant + master) → `tsc`
-2. **Runtime stage** (`node:22-alpine`): Python 3 + reportlab (for PDF generation) + compiled `dist/` + Prisma client + prisma schemas
-
-**IMPORTANT**: Use `docker compose run` (not `exec`) for one-off commands like migrations when the server is stopped. `docker compose exec` requires the container to be running.
+2. **Runtime stage** (`node:22-alpine`): Python 3 + reportlab (for PDF generation) + compiled `dist/` + Prisma client + prisma schemas + `docker-entrypoint.sh` (auto-migration + bootstrap on start)
 
 #### Reverse Proxy
 
 - nginx serves the SPA frontend with `try_files $uri $uri/ /index.html`
 - API proxy to backend is configured at infrastructure level (domain routing)
 - Frontend `VITE_API_URL` points directly to `https://api.qpos.shop/api`
+
+### CI/CD — GitHub Actions + SSH Deploy
+
+**Push-to-deploy via GitHub Actions** — triggered on push to `main`. Build runs entirely on the VPS, not on GitHub runners.
+
+**Workflow file:** `.github/workflows/deploy.yml`
+
+**Required GitHub Secrets:**
+| Secret | Description |
+|--------|-------------|
+| `SERVER_HOST` | VPS IP or hostname (`api.qpos.shop`) |
+| `SERVER_USER` | SSH username (e.g. `ubuntu`, `deploy`) |
+| `SERVER_SSH_KEY` | Private SSH key for passwordless login |
+
+**What happens on push to `main`:**
+1. GitHub Action SSHes into the VPS
+2. Runs `git pull` in `~/QPOS`
+3. Runs `sudo docker compose up -d --build`
+4. The container's `docker-entrypoint.sh` runs migrations + bootstrap automatically
+
+**Manual deploy (from VPS):**
+```bash
+./deploy.sh
+```
+
+**Set up SSH key for GitHub Actions:**
+1. On the VPS: `ssh-keygen -t ed25519 -f ~/.ssh/deploy-key -N ""`
+2. Add public key to `~/.ssh/authorized_keys`: `cat ~/.ssh/deploy-key.pub >> ~/.ssh/authorized_keys`
+3. Copy private key content: `cat ~/.ssh/deploy-key`
+4. Add as `SERVER_SSH_KEY` secret on GitHub repo → Settings → Secrets and variables → Actions
 
 ## Known Issues & Gotchas
 
@@ -320,7 +338,6 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - Switch-store toast: `"Berhasil pindah ke toko {name}"`
 
 **Pending:**
-- VPS: `sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.master.config.ts` (adds OAuth columns to `accounts` table)
 - Vercel: set `VITE_GOOGLE_CLIENT_ID` and redeploy
 
 **2026-07-27 — TS 6 build fix**
@@ -338,8 +355,6 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - New files: `server/src/services/member.service.ts`, `server/src/controllers/member.controller.ts`, `server/src/routes/member.routes.ts`, `src/services/memberService.ts`, `src/types/member.ts`, `src/pages/role-management/RoleManagementPage.tsx`
 
 **Pending (VPS):**
-- Master DB migration skipped but `accounts.tokenVersion` column missing — run `sudo docker compose run --rm qpos-server npx prisma db push --config prisma.master.config.ts` to force sync
-- Then restart server: `sudo docker compose up -d --build`
 - Vercel: ensure `VITE_API_URL=https://api.qpos.shop/api` is set and redeploy
 
 **2026-07-28 (continued) — Security hardening, Offline support, Store/User pages, Settings expansion**
@@ -413,8 +428,6 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - `e7508cf` — `docs: update AGENTS.md with 2026-07-28 session history`
 
 **Pending (VPS):**
-- Run master DB migration: `sudo docker compose run --rm qpos-server npx prisma migrate deploy --config prisma.master.config.ts`
-- Then restart server: `sudo docker compose up -d --build`
 - Vercel: ensure `VITE_API_URL=https://api.qpos.shop/api` is set and redeploy
 - Vercel: set `VITE_GOOGLE_CLIENT_ID` and redeploy
 
