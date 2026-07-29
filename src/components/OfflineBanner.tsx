@@ -16,7 +16,7 @@ export default function OfflineBanner() {
     >
       {isOnline
         ? `Sinkronisasi data... ${pendingCount} antrean`
-        : "Anda sedang offline. Data akan disinkronkan saat koneksi tersedia."}
+        : "Anda dalam status offline, data akan otomatis di sinkronisasikan apabila internet tersedia."}
     </div>
   );
 }
