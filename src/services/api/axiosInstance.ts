@@ -10,11 +10,15 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 const AUTH_PREFIXES = ["/auth/login", "/auth/refresh", "/auth/google", "/auth/apple", "/auth/tiktok", "/auth/bind-tiktok"];
 
-function clearAuthAndRedirect() {
+function clearAuthAndRedirect(message?: string) {
   localStorage.removeItem(STORAGE_KEYS.authToken);
   localStorage.removeItem(STORAGE_KEYS.authRefreshToken);
   localStorage.removeItem(STORAGE_KEYS.authUser);
   window.dispatchEvent(new CustomEvent("auth:clear"));
+
+  if (message) {
+    sessionStorage.setItem("auth_expired_message", message);
+  }
 
   if (window.location.pathname !== "/") {
     window.location.href = "/";
@@ -61,8 +65,8 @@ axiosInstance.interceptors.request.use((config) => {
     const refreshToken = localStorage.getItem(STORAGE_KEYS.authRefreshToken);
 
     if (refreshToken && isTokenExpired(refreshToken)) {
-      clearAuthAndRedirect();
-      return Promise.reject(new axios.Cancel("Sesi telah berakhir. Silakan login ulang."));
+          clearAuthAndRedirect("Sesi Anda telah berakhir. Silakan login kembali.");
+          return Promise.reject(new axios.Cancel("Sesi telah berakhir. Silakan login ulang."));
     }
   }
 
@@ -133,14 +137,14 @@ axiosInstance.interceptors.response.use(
           return axiosInstance(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError);
-          clearAuthAndRedirect();
+          clearAuthAndRedirect("Sesi Anda telah berakhir. Silakan login kembali.");
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;
         }
       }
 
-      clearAuthAndRedirect();
+      clearAuthAndRedirect("Sesi Anda telah berakhir. Silakan login kembali.");
       return Promise.reject(error);
     }
 

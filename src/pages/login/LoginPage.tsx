@@ -2,7 +2,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { SiTiktok } from "react-icons/si";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
@@ -38,6 +38,14 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const state = location.state as LocationState | null;
   const redirectPath = state?.from?.pathname ?? ROUTES.dashboard;
+
+  useEffect(() => {
+    const message = sessionStorage.getItem("auth_expired_message");
+    if (message) {
+      sessionStorage.removeItem("auth_expired_message");
+      showToast(message, "error");
+    }
+  }, [showToast]);
 
   if (isAuthenticated) {
     return <Navigate to={ROUTES.dashboard} replace />;
