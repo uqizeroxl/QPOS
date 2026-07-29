@@ -25,7 +25,7 @@ app.use(
         ? {
             directives: {
               defaultSrc: ["'self'"],
-              scriptSrc: ["'self'", "https://accounts.google.com", "https://apis.google.com"],
+              scriptSrc: ["'self'", "https://accounts.google.com", "https://apis.google.com", "https://www.tiktok.com", "https://www.tiktokapis.com"],
               styleSrc: ["'self'", "'unsafe-inline'"],
               connectSrc: [
                 "'self'",
@@ -34,10 +34,13 @@ app.use(
                 "https://accounts.google.com",
                 "https://www.googleapis.com",
                 "https://oauth2.googleapis.com",
+                "https://www.tiktok.com",
+                "https://www.tiktokapis.com",
+                "https://open.tiktokapis.com",
               ],
               imgSrc: ["'self'", "data:"],
               fontSrc: ["'self'"],
-              frameSrc: ["'self'", "https://accounts.google.com"],
+              frameSrc: ["'self'", "https://accounts.google.com", "https://www.tiktok.com", "https://www.tiktokapis.com"],
               objectSrc: ["'none'"],
               upgradeInsecureRequests: [],
             },

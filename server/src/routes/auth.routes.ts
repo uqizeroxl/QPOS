@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { login, logout, profile, listStores, switchStore, googleLogin, appleLogin, completeRegistration, refresh, acceptOwnership, accountInfo, bindGoogle } from "../controllers/auth.controller";
+import { login, logout, profile, listStores, switchStore, googleLogin, appleLogin, tiktokLogin, completeRegistration, refresh, acceptOwnership, accountInfo, bindGoogle, bindTikTok } from "../controllers/auth.controller";
 import { authenticate } from "../middleware/auth.middleware";
 import { authLimiter } from "../middleware/rate-limiter.middleware";
 
@@ -17,6 +17,8 @@ router.get("/account", authenticate, accountInfo);
 router.post("/bind-google", authenticate, bindGoogle);
 router.post("/google", authLimiter, googleLogin);
 router.post("/apple", authLimiter, appleLogin);
+router.post("/tiktok", authLimiter, tiktokLogin);
+router.post("/bind-tiktok", authenticate, bindTikTok);
 router.post("/complete-registration", authLimiter, completeRegistration);
 
 export default router;

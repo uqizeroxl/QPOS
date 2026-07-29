@@ -23,4 +23,6 @@ export const appConfig = {
   appleTeamId: process.env.APPLE_TEAM_ID || "",
   appleKeyId: process.env.APPLE_KEY_ID || "",
   applePrivateKey: (process.env.APPLE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+  tiktokClientKey: process.env.TIKTOK_CLIENT_KEY || "",
+  tiktokClientSecret: process.env.TIKTOK_CLIENT_SECRET || "",
 };

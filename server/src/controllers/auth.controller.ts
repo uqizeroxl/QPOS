@@ -193,6 +193,65 @@ export const googleLogin = async (
   }
 };
 
+export const tiktokLogin = async (
+  req: Request<unknown, unknown, OAuthRequestBody>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const authorizationCode = req.body.authorizationCode?.trim() ?? "";
+
+    if (!authorizationCode) {
+      res.status(400).json({
+        success: false,
+        message: "TikTok Authorization Code wajib dikirim."
+      });
+      return;
+    }
+
+    const auth = await authService.loginWithTikTok(authorizationCode);
+
+    if (auth && "needsRegistration" in auth && auth.needsRegistration) {
+      res.status(200).json({
+        success: true,
+        message: "Lanjutkan pendaftaran toko.",
+        data: auth
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Login dengan TikTok berhasil.",
+      data: auth
+    });
+  } catch (error) {
+    if (
+      error instanceof OAuthProviderNotConfiguredError
+    ) {
+      res.status(501).json({
+        success: false,
+        message: error.message
+      });
+      return;
+    }
+
+    if (
+      error instanceof authService.UserInactiveError ||
+      error instanceof authService.StoreInactiveError
+    ) {
+      res.status(401).json({
+        success: false,
+        message: error.message
+      });
+      return;
+    }
+
+    console.error("Unexpected error while logging in with TikTok:", error);
+    next(error);
+  }
+};
+
 export const appleLogin = async (
   req: Request<unknown, unknown, OAuthRequestBody>,
   res: Response,
@@ -403,6 +462,47 @@ export const accountInfo = async (
 
 type BindGoogleBody = {
   accessToken?: string;
+};
+
+type BindTikTokBody = {
+  authorizationCode?: string;
+};
+
+export const bindTikTok = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const body = req.body as BindTikTokBody;
+    const authorizationCode = body.authorizationCode?.trim() ?? "";
+
+    if (!authorizationCode) {
+      res.status(400).json({
+        success: false,
+        message: "TikTok Authorization Code wajib dikirim."
+      });
+      return;
+    }
+
+    const result = await authService.bindTikTokAccount(req.user.id, authorizationCode);
+
+    res.status(200).json({
+      success: true,
+      message: `Akun TikTok (@${result.name}) berhasil terhubung.`,
+      data: result
+    });
+  } catch (error) {
+    if (
+      error instanceof OAuthProviderNotConfiguredError ||
+      error instanceof OAuthTokenInvalidError ||
+      error instanceof authService.TikTokAlreadyBoundError
+    ) {
+      res.status(400).json({ success: false, message: error.message });
+      return;
+    }
+    next(error);
+  }
 };
 
 export const bindGoogle = async (

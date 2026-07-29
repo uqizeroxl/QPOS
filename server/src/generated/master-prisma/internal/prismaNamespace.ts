@@ -838,6 +838,7 @@ export const AccountScalarFieldEnum = {
   email: 'email',
   googleId: 'googleId',
   appleId: 'appleId',
+  tiktokId: 'tiktokId',
   avatarUrl: 'avatarUrl',
   isActive: 'isActive',
   tokenVersion: 'tokenVersion',

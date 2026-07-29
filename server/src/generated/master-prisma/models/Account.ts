@@ -42,6 +42,7 @@ export type AccountMinAggregateOutputType = {
   email: string | null
   googleId: string | null
   appleId: string | null
+  tiktokId: string | null
   avatarUrl: string | null
   isActive: boolean | null
   tokenVersion: number | null
@@ -57,6 +58,7 @@ export type AccountMaxAggregateOutputType = {
   email: string | null
   googleId: string | null
   appleId: string | null
+  tiktokId: string | null
   avatarUrl: string | null
   isActive: boolean | null
   tokenVersion: number | null
@@ -72,6 +74,7 @@ export type AccountCountAggregateOutputType = {
   email: number
   googleId: number
   appleId: number
+  tiktokId: number
   avatarUrl: number
   isActive: number
   tokenVersion: number
@@ -97,6 +100,7 @@ export type AccountMinAggregateInputType = {
   email?: true
   googleId?: true
   appleId?: true
+  tiktokId?: true
   avatarUrl?: true
   isActive?: true
   tokenVersion?: true
@@ -112,6 +116,7 @@ export type AccountMaxAggregateInputType = {
   email?: true
   googleId?: true
   appleId?: true
+  tiktokId?: true
   avatarUrl?: true
   isActive?: true
   tokenVersion?: true
@@ -127,6 +132,7 @@ export type AccountCountAggregateInputType = {
   email?: true
   googleId?: true
   appleId?: true
+  tiktokId?: true
   avatarUrl?: true
   isActive?: true
   tokenVersion?: true
@@ -229,6 +235,7 @@ export type AccountGroupByOutputType = {
   email: string | null
   googleId: string | null
   appleId: string | null
+  tiktokId: string | null
   avatarUrl: string | null
   isActive: boolean
   tokenVersion: number
@@ -267,6 +274,7 @@ export type AccountWhereInput = {
   email?: Prisma.StringNullableFilter<"Account"> | string | null
   googleId?: Prisma.StringNullableFilter<"Account"> | string | null
   appleId?: Prisma.StringNullableFilter<"Account"> | string | null
+  tiktokId?: Prisma.StringNullableFilter<"Account"> | string | null
   avatarUrl?: Prisma.StringNullableFilter<"Account"> | string | null
   isActive?: Prisma.BoolFilter<"Account"> | boolean
   tokenVersion?: Prisma.IntFilter<"Account"> | number
@@ -283,6 +291,7 @@ export type AccountOrderByWithRelationInput = {
   email?: Prisma.SortOrderInput | Prisma.SortOrder
   googleId?: Prisma.SortOrderInput | Prisma.SortOrder
   appleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  tiktokId?: Prisma.SortOrderInput | Prisma.SortOrder
   avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   tokenVersion?: Prisma.SortOrder
@@ -297,6 +306,7 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   email?: string
   googleId?: string
   appleId?: string
+  tiktokId?: string
   AND?: Prisma.AccountWhereInput | Prisma.AccountWhereInput[]
   OR?: Prisma.AccountWhereInput[]
   NOT?: Prisma.AccountWhereInput | Prisma.AccountWhereInput[]
@@ -308,7 +318,7 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   memberships?: Prisma.StoreMemberListRelationFilter
-}, "id" | "username" | "email" | "googleId" | "appleId">
+}, "id" | "username" | "email" | "googleId" | "appleId" | "tiktokId">
 
 export type AccountOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -318,6 +328,7 @@ export type AccountOrderByWithAggregationInput = {
   email?: Prisma.SortOrderInput | Prisma.SortOrder
   googleId?: Prisma.SortOrderInput | Prisma.SortOrder
   appleId?: Prisma.SortOrderInput | Prisma.SortOrder
+  tiktokId?: Prisma.SortOrderInput | Prisma.SortOrder
   avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   tokenVersion?: Prisma.SortOrder
@@ -341,6 +352,7 @@ export type AccountScalarWhereWithAggregatesInput = {
   email?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
   googleId?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
   appleId?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
+  tiktokId?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
   avatarUrl?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"Account"> | boolean
   tokenVersion?: Prisma.IntWithAggregatesFilter<"Account"> | number
@@ -356,6 +368,7 @@ export type AccountCreateInput = {
   email?: string | null
   googleId?: string | null
   appleId?: string | null
+  tiktokId?: string | null
   avatarUrl?: string | null
   isActive?: boolean
   tokenVersion?: number
@@ -372,6 +385,7 @@ export type AccountUncheckedCreateInput = {
   email?: string | null
   googleId?: string | null
   appleId?: string | null
+  tiktokId?: string | null
   avatarUrl?: string | null
   isActive?: boolean
   tokenVersion?: number
@@ -388,6 +402,7 @@ export type AccountUpdateInput = {
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tiktokId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
@@ -404,6 +419,7 @@ export type AccountUncheckedUpdateInput = {
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tiktokId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
@@ -420,6 +436,7 @@ export type AccountCreateManyInput = {
   email?: string | null
   googleId?: string | null
   appleId?: string | null
+  tiktokId?: string | null
   avatarUrl?: string | null
   isActive?: boolean
   tokenVersion?: number
@@ -435,6 +452,7 @@ export type AccountUpdateManyMutationInput = {
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tiktokId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
@@ -450,6 +468,7 @@ export type AccountUncheckedUpdateManyInput = {
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tiktokId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
@@ -465,6 +484,7 @@ export type AccountCountOrderByAggregateInput = {
   email?: Prisma.SortOrder
   googleId?: Prisma.SortOrder
   appleId?: Prisma.SortOrder
+  tiktokId?: Prisma.SortOrder
   avatarUrl?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   tokenVersion?: Prisma.SortOrder
@@ -484,6 +504,7 @@ export type AccountMaxOrderByAggregateInput = {
   email?: Prisma.SortOrder
   googleId?: Prisma.SortOrder
   appleId?: Prisma.SortOrder
+  tiktokId?: Prisma.SortOrder
   avatarUrl?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   tokenVersion?: Prisma.SortOrder
@@ -499,6 +520,7 @@ export type AccountMinOrderByAggregateInput = {
   email?: Prisma.SortOrder
   googleId?: Prisma.SortOrder
   appleId?: Prisma.SortOrder
+  tiktokId?: Prisma.SortOrder
   avatarUrl?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   tokenVersion?: Prisma.SortOrder
@@ -561,6 +583,7 @@ export type AccountCreateWithoutMembershipsInput = {
   email?: string | null
   googleId?: string | null
   appleId?: string | null
+  tiktokId?: string | null
   avatarUrl?: string | null
   isActive?: boolean
   tokenVersion?: number
@@ -576,6 +599,7 @@ export type AccountUncheckedCreateWithoutMembershipsInput = {
   email?: string | null
   googleId?: string | null
   appleId?: string | null
+  tiktokId?: string | null
   avatarUrl?: string | null
   isActive?: boolean
   tokenVersion?: number
@@ -607,6 +631,7 @@ export type AccountUpdateWithoutMembershipsInput = {
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tiktokId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
@@ -622,6 +647,7 @@ export type AccountUncheckedUpdateWithoutMembershipsInput = {
   email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tiktokId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
@@ -668,6 +694,7 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   email?: boolean
   googleId?: boolean
   appleId?: boolean
+  tiktokId?: boolean
   avatarUrl?: boolean
   isActive?: boolean
   tokenVersion?: boolean
@@ -685,6 +712,7 @@ export type AccountSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   email?: boolean
   googleId?: boolean
   appleId?: boolean
+  tiktokId?: boolean
   avatarUrl?: boolean
   isActive?: boolean
   tokenVersion?: boolean
@@ -700,6 +728,7 @@ export type AccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   email?: boolean
   googleId?: boolean
   appleId?: boolean
+  tiktokId?: boolean
   avatarUrl?: boolean
   isActive?: boolean
   tokenVersion?: boolean
@@ -715,6 +744,7 @@ export type AccountSelectScalar = {
   email?: boolean
   googleId?: boolean
   appleId?: boolean
+  tiktokId?: boolean
   avatarUrl?: boolean
   isActive?: boolean
   tokenVersion?: boolean
@@ -722,7 +752,7 @@ export type AccountSelectScalar = {
   updatedAt?: boolean
 }
 
-export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "name" | "passwordHash" | "email" | "googleId" | "appleId" | "avatarUrl" | "isActive" | "tokenVersion" | "createdAt" | "updatedAt", ExtArgs["result"]["account"]>
+export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "name" | "passwordHash" | "email" | "googleId" | "appleId" | "tiktokId" | "avatarUrl" | "isActive" | "tokenVersion" | "createdAt" | "updatedAt", ExtArgs["result"]["account"]>
 export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   memberships?: boolean | Prisma.Account$membershipsArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
@@ -743,6 +773,7 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     email: string | null
     googleId: string | null
     appleId: string | null
+    tiktokId: string | null
     avatarUrl: string | null
     isActive: boolean
     tokenVersion: number
@@ -1179,6 +1210,7 @@ export interface AccountFieldRefs {
   readonly email: Prisma.FieldRef<"Account", 'String'>
   readonly googleId: Prisma.FieldRef<"Account", 'String'>
   readonly appleId: Prisma.FieldRef<"Account", 'String'>
+  readonly tiktokId: Prisma.FieldRef<"Account", 'String'>
   readonly avatarUrl: Prisma.FieldRef<"Account", 'String'>
   readonly isActive: Prisma.FieldRef<"Account", 'Boolean'>
   readonly tokenVersion: Prisma.FieldRef<"Account", 'Int'>

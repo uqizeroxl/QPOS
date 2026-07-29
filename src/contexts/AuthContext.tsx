@@ -122,6 +122,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, [clearAuth, fetchStores, token]);
 
+  useEffect(() => {
+    const handleAuthClear = () => {
+      clearAuth();
+    };
+
+    window.addEventListener("auth:clear", handleAuthClear);
+    return () => window.removeEventListener("auth:clear", handleAuthClear);
+  }, [clearAuth]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,

@@ -10,6 +10,7 @@ export type AccountInfo = {
   name: string;
   email: string | null;
   googleId: string | null;
+  tiktokId: string | null;
 };
 
 export class AuthApiError extends Error {
@@ -146,6 +147,28 @@ export const authService = {
         { email: string },
         { accessToken: string }
       >("/auth/bind-google", { accessToken });
+      return response.data;
+    } catch (error) {
+      return handleAuthError(error);
+    }
+  },
+  loginWithTikTok: async (authorizationCode: string) => {
+    try {
+      const response = await apiService.post<
+        OAuthLoginResponse,
+        { authorizationCode: string }
+      >("/auth/tiktok", { authorizationCode });
+      return response.data;
+    } catch (error) {
+      return handleAuthError(error);
+    }
+  },
+  bindTikTok: async (authorizationCode: string) => {
+    try {
+      const response = await apiService.post<
+        { name: string },
+        { authorizationCode: string }
+      >("/auth/bind-tiktok", { authorizationCode });
       return response.data;
     } catch (error) {
       return handleAuthError(error);

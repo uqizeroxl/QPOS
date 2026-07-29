@@ -1,5 +1,6 @@
 import { Check, CheckCircle2, Loader2, Store, User } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
+import { SiTiktok } from "react-icons/si";
 import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -12,7 +13,7 @@ import type { AuthPayload } from "../../types/auth";
 import { AuthApiError, authService } from "../../services/authService";
 
 const STEPS = [
-  { label: "Akun", subtitle: "Hubungkan dengan Google" },
+  { label: "Akun", subtitle: "Hubungkan akun" },
   { label: "Profil", subtitle: "Informasi pribadi" },
   { label: "Toko", subtitle: "Informasi toko" },
   { label: "Selesai", subtitle: "Registrasi selesai" },
@@ -39,7 +40,82 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const isGoogleConnected = Boolean(registrationToken);
+  const [isUsingTikTok, setIsUsingTikTok] = useState(false);
+
+  const isAccountConnected = Boolean(registrationToken);
+
+  const handleTikTokLogin = async () => {
+    setErrorMessage("");
+    setIsSubmitting(true);
+    setIsUsingTikTok(true);
+    try {
+      const state = crypto.randomUUID();
+      sessionStorage.setItem("tiktok_oauth_state", state);
+
+      const clientKey = import.meta.env.VITE_TIKTOK_CLIENT_KEY ?? "";
+      if (!clientKey) {
+        setErrorMessage("TikTok belum dikonfigurasi.");
+        setIsSubmitting(false);
+        setIsUsingTikTok(false);
+        return;
+      }
+
+      const redirectUri = `${window.location.origin}/tiktok-callback.html`;
+      const authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=user.info.basic&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
+
+      const popup = window.open(authUrl, "tiktok-register", "width=600,height=700");
+
+      if (!popup) {
+        setErrorMessage("Izinkan popup untuk menghubungkan TikTok.");
+        setIsSubmitting(false);
+        setIsUsingTikTok(false);
+        return;
+      }
+
+      const code = await new Promise<string>((resolve, reject) => {
+        const handleMessage = (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          if (event.data?.type !== "tiktok_oauth") return;
+          window.removeEventListener("message", handleMessage);
+          if (event.data.error) {
+            reject(new Error(event.data.error));
+          } else {
+            resolve(event.data.code);
+          }
+        };
+        window.addEventListener("message", handleMessage);
+
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            window.removeEventListener("message", handleMessage);
+            reject(new Error("Popup ditutup."));
+          }
+        }, 500);
+      });
+
+      const auth = await authService.loginWithTikTok(code);
+      if ("needsRegistration" in auth && auth.needsRegistration) {
+        setRegistrationToken(auth.registrationToken);
+        setName(auth.user.name);
+        setCurrentStep(2);
+      } else {
+        login(auth as AuthPayload);
+        navigate(ROUTES.dashboard, { replace: true });
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof AuthApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Terjadi kesalahan pada server.",
+      );
+    } finally {
+      setIsSubmitting(false);
+      setIsUsingTikTok(false);
+    }
+  };
 
   useEffect(() => {
     if (state?.registrationToken) {
@@ -170,36 +246,49 @@ export default function RegisterPage() {
     <div className="space-y-5">
       <div className="text-center">
         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100">
-          <FcGoogle className="h-7 w-7" />
+          <User className="h-7 w-7 text-blue-600" />
         </div>
-        <h2 className="text-lg font-bold text-gray-900">Hubungkan Akun Google</h2>
+        <h2 className="text-lg font-bold text-gray-900">Hubungkan Akun</h2>
         <p className="mt-1 text-sm text-gray-500">
-          Hubungkan akun Google Anda untuk memulai.
+          Hubungkan akun Google{import.meta.env.VITE_TIKTOK_CLIENT_KEY ? " atau TikTok" : ""} untuk memulai.
         </p>
       </div>
 
-      {isGoogleConnected ? (
+      {isAccountConnected ? (
         <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100">
               <Check className="h-5 w-5 text-emerald-600" />
             </div>
             <div>
-              <p className="font-medium text-emerald-800">Akun Google terhubung</p>
+              <p className="font-medium text-emerald-800">Akun terhubung</p>
               <p className="text-sm text-emerald-600">{name || "Pengguna"}</p>
             </div>
           </div>
         </div>
       ) : (
-        <Button
-          variant="secondary"
-          onClick={() => handleGoogleLogin()}
-          disabled={isSubmitting}
-          className="w-full gap-3 py-3"
-        >
-          <FcGoogle className="h-5 w-5 shrink-0" />
-          {isSubmitting ? "Menghubungkan..." : "Hubungkan Akun Google"}
-        </Button>
+        <div className="space-y-3">
+          <Button
+            variant="secondary"
+            onClick={() => handleGoogleLogin()}
+            disabled={isSubmitting}
+            className="w-full gap-3 py-3"
+          >
+            <FcGoogle className="h-5 w-5 shrink-0" />
+            {isSubmitting && !isUsingTikTok ? "Menghubungkan..." : "Hubungkan Akun Google"}
+          </Button>
+          {import.meta.env.VITE_TIKTOK_CLIENT_KEY ? (
+            <Button
+              variant="secondary"
+              onClick={() => void handleTikTokLogin()}
+              disabled={isSubmitting}
+              className="w-full gap-3 py-3"
+            >
+              <SiTiktok className="h-5 w-5 shrink-0" />
+              {isSubmitting && isUsingTikTok ? "Menghubungkan..." : "Hubungkan Akun TikTok"}
+            </Button>
+          ) : null}
+        </div>
       )}
 
       {errorMessage ? (
@@ -208,7 +297,7 @@ export default function RegisterPage() {
         </p>
       ) : null}
 
-      {isGoogleConnected ? (
+      {isAccountConnected ? (
         <Button
           onClick={() => setCurrentStep(2)}
           className="w-full"

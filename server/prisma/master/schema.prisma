@@ -34,6 +34,7 @@ model Account {
   email        String?       @unique @db.VarChar(255)
   googleId     String?       @unique @db.VarChar(255)
   appleId      String?       @unique @db.VarChar(255)
+  tiktokId     String?       @unique @db.VarChar(255)
   avatarUrl    String?       @db.Text
   isActive     Boolean       @default(true)
   tokenVersion Int           @default(0)

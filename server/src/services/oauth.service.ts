@@ -13,6 +13,13 @@ export type AppleTokenPayload = {
   email: string;
 };
 
+export type TikTokTokenPayload = {
+  sub: string;
+  email: string;
+  name: string;
+  picture: string;
+};
+
 export class OAuthTokenInvalidError extends Error {
   constructor() {
     super("Token OAuth tidak valid.");
@@ -68,6 +75,95 @@ export const verifyGoogleToken = async (
       picture: userInfo.picture ?? "",
     };
   } catch (error) {
+    throw new OAuthTokenInvalidError();
+  }
+};
+
+export const verifyTikTokToken = async (
+  authorizationCode: string
+): Promise<TikTokTokenPayload> => {
+  if (
+    !appConfig.tiktokClientKey ||
+    !appConfig.tiktokClientSecret
+  ) {
+    throw new OAuthProviderNotConfiguredError("TikTok");
+  }
+
+  try {
+    const tokenParams = new URLSearchParams({
+      client_key: appConfig.tiktokClientKey,
+      client_secret: appConfig.tiktokClientSecret,
+      code: authorizationCode,
+      grant_type: "authorization_code",
+      redirect_uri: `${appConfig.appUrl}/tiktok-callback`,
+    });
+
+    const tokenResponse = await fetch("https://open.tiktokapis.com/v2/oauth/token/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Cache-Control": "no-cache",
+      },
+      body: tokenParams.toString(),
+    });
+
+    if (!tokenResponse.ok) {
+      throw new OAuthTokenInvalidError();
+    }
+
+    const tokenData = await tokenResponse.json() as {
+      access_token: string;
+      open_id: string;
+    };
+
+    if (!tokenData.access_token || !tokenData.open_id) {
+      throw new OAuthTokenInvalidError();
+    }
+
+    const userResponse = await fetch(
+      "https://open.tiktokapis.com/v2/user/info/?fields=open_id,union_id,display_name,avatar_url",
+      {
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+        },
+      }
+    );
+
+    if (!userResponse.ok) {
+      throw new OAuthTokenInvalidError();
+    }
+
+    const userData = await userResponse.json() as {
+      data: {
+        user: {
+          open_id: string;
+          union_id?: string;
+          display_name: string;
+          avatar_url?: string;
+        };
+      };
+    };
+
+    const user = userData.data?.user;
+
+    if (!user || !user.open_id) {
+      throw new OAuthTokenInvalidError();
+    }
+
+    return {
+      sub: user.open_id,
+      email: "",
+      name: user.display_name ?? "TikTok User",
+      picture: user.avatar_url ?? "",
+    };
+  } catch (error) {
+    if (
+      error instanceof OAuthProviderNotConfiguredError ||
+      error instanceof OAuthTokenInvalidError
+    ) {
+      throw error;
+    }
+
     throw new OAuthTokenInvalidError();
   }
 };

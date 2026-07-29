@@ -1,13 +1,25 @@
 import axios from "axios";
 import { API_BASE_URL, API_TIMEOUT } from "../../constants/api";
 import { STORAGE_KEYS } from "../../constants/app";
+import { isTokenExpired } from "../../utils/token";
 import { authService } from "../authService";
 import { cacheService } from "../storage/cache.service";
 import { syncService } from "../storage/sync.service";
 
 const CACHE_TTL = 5 * 60 * 1000;
 
-const AUTH_PREFIXES = ["/auth/login", "/auth/refresh", "/auth/google", "/auth/apple"];
+const AUTH_PREFIXES = ["/auth/login", "/auth/refresh", "/auth/google", "/auth/apple", "/auth/tiktok", "/auth/bind-tiktok"];
+
+function clearAuthAndRedirect() {
+  localStorage.removeItem(STORAGE_KEYS.authToken);
+  localStorage.removeItem(STORAGE_KEYS.authRefreshToken);
+  localStorage.removeItem(STORAGE_KEYS.authUser);
+  window.dispatchEvent(new CustomEvent("auth:clear"));
+
+  if (window.location.pathname !== "/") {
+    window.location.href = "/";
+  }
+}
 
 function shouldCache(url: string): boolean {
   return !AUTH_PREFIXES.some((prefix) => url.startsWith(prefix));
@@ -40,8 +52,18 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use((config) => {
   const token = localStorage.getItem(STORAGE_KEYS.authToken);
 
-  if (token) {
+  if (token && !isTokenExpired(token)) {
     config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  }
+
+  if (token && isTokenExpired(token)) {
+    const refreshToken = localStorage.getItem(STORAGE_KEYS.authRefreshToken);
+
+    if (refreshToken && isTokenExpired(refreshToken)) {
+      clearAuthAndRedirect();
+      return Promise.reject(new axios.Cancel("Sesi telah berakhir. Silakan login ulang."));
+    }
   }
 
   return config;
@@ -82,6 +104,11 @@ axiosInstance.interceptors.response.use(
       const refreshToken = localStorage.getItem(STORAGE_KEYS.authRefreshToken);
 
       if (refreshToken) {
+        if (isTokenExpired(refreshToken)) {
+          clearAuthAndRedirect();
+          return Promise.reject(new axios.Cancel("Sesi telah berakhir. Silakan login ulang."));
+        }
+
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject });
@@ -106,18 +133,14 @@ axiosInstance.interceptors.response.use(
           return axiosInstance(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError);
-          localStorage.removeItem(STORAGE_KEYS.authToken);
-          localStorage.removeItem(STORAGE_KEYS.authRefreshToken);
-          localStorage.removeItem(STORAGE_KEYS.authUser);
+          clearAuthAndRedirect();
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;
         }
       }
 
-      localStorage.removeItem(STORAGE_KEYS.authToken);
-      localStorage.removeItem(STORAGE_KEYS.authRefreshToken);
-      localStorage.removeItem(STORAGE_KEYS.authUser);
+      clearAuthAndRedirect();
       return Promise.reject(error);
     }
 

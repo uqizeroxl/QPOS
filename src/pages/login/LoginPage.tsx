@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
+import { SiTiktok } from "react-icons/si";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import Button from "../../components/ui/Button";
@@ -74,6 +75,77 @@ export default function LoginPage() {
     },
     flow: "implicit",
   });
+
+  const handleTikTokLogin = async () => {
+    setErrorMessage("");
+    setIsSubmitting(true);
+    try {
+      const state = crypto.randomUUID();
+      sessionStorage.setItem("tiktok_oauth_state", state);
+
+      const clientKey = import.meta.env.VITE_TIKTOK_CLIENT_KEY ?? "";
+      if (!clientKey) {
+        setErrorMessage("TikTok belum dikonfigurasi.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const redirectUri = `${window.location.origin}/tiktok-callback.html`;
+      const authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=user.info.basic&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
+
+      const popup = window.open(authUrl, "tiktok-login", "width=600,height=700");
+
+      if (!popup) {
+        setErrorMessage("Izinkan popup untuk login dengan TikTok.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const code = await new Promise<string>((resolve, reject) => {
+        const handleMessage = (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          if (event.data?.type !== "tiktok_oauth") return;
+          window.removeEventListener("message", handleMessage);
+          if (event.data.error) {
+            reject(new Error(event.data.error));
+          } else {
+            resolve(event.data.code);
+          }
+        };
+        window.addEventListener("message", handleMessage);
+
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            window.removeEventListener("message", handleMessage);
+            reject(new Error("Popup ditutup."));
+          }
+        }, 500);
+      });
+
+      const auth = await authService.loginWithTikTok(code);
+
+      if ("needsRegistration" in auth && auth.needsRegistration) {
+        navigate("/register", { state: { registrationToken: auth.registrationToken, user: auth.user } });
+        return;
+      }
+
+      login(auth as AuthPayload);
+      const storeName = (auth as AuthPayload).stores?.[0]?.name;
+      showToast(`Selamat datang, ${auth.user.name}${storeName ? `, di ${storeName}` : ""}`);
+      navigate(redirectPath, { replace: true });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof AuthApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : t("common.serverError"),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleLogin = async () => {
     setErrorMessage("");
@@ -174,6 +246,17 @@ export default function LoginPage() {
             <FcGoogle className="h-5 w-5 shrink-0" aria-hidden="true" />
             Google
           </Button>
+          {import.meta.env.VITE_TIKTOK_CLIENT_KEY ? (
+            <Button
+              variant="secondary"
+              onClick={() => void handleTikTokLogin()}
+              disabled={isSubmitting}
+              className="w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
+              <SiTiktok className="h-5 w-5 shrink-0" aria-hidden="true" />
+              TikTok
+            </Button>
+          ) : null}
         </div>
       </Card>
     </div>

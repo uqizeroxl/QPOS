@@ -1,6 +1,7 @@
 import { CheckCircle, Loader2, LogIn, XCircle } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { FcGoogle } from "react-icons/fc";
+import { SiTiktok } from "react-icons/si";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import Button from "../../components/ui/Button";
@@ -47,6 +48,75 @@ export default function AcceptOwnershipPage() {
       void doAcceptOwnership();
     }
   }, [isAuthenticated, token, status, doAcceptOwnership]);
+
+  const handleTikTokLogin = useCallback(async () => {
+    setStatus("loading");
+    try {
+      const state = crypto.randomUUID();
+      sessionStorage.setItem("tiktok_oauth_state", state);
+
+      const clientKey = import.meta.env.VITE_TIKTOK_CLIENT_KEY ?? "";
+      if (!clientKey) {
+        setStatus("error");
+        setMessage("TikTok belum dikonfigurasi.");
+        return;
+      }
+
+      const redirectUri = `${window.location.origin}/tiktok-callback.html`;
+      const authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&scope=user.info.basic&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
+
+      const popup = window.open(authUrl, "tiktok-accept", "width=600,height=700");
+
+      if (!popup) {
+        setStatus("error");
+        setMessage("Izinkan popup untuk login dengan TikTok.");
+        return;
+      }
+
+      const code = await new Promise<string>((resolve, reject) => {
+        const handleMessage = (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          if (event.data?.type !== "tiktok_oauth") return;
+          window.removeEventListener("message", handleMessage);
+          if (event.data.error) {
+            reject(new Error(event.data.error));
+          } else {
+            resolve(event.data.code);
+          }
+        };
+        window.addEventListener("message", handleMessage);
+
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            window.removeEventListener("message", handleMessage);
+            reject(new Error("Popup ditutup."));
+          }
+        }, 500);
+      });
+
+      const auth = await authService.loginWithTikTok(code);
+
+      if ("needsRegistration" in auth && auth.needsRegistration) {
+        navigate(`/register?redirect=${encodeURIComponent(`/accept-ownership?token=${token}`)}`, {
+          state: { registrationToken: auth.registrationToken, user: auth.user },
+        });
+        return;
+      }
+
+      login(auth as AuthPayload);
+      showToast("Login berhasil");
+    } catch (error) {
+      setStatus("error");
+      setMessage(
+        error instanceof AuthApiError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Login gagal.",
+      );
+    }
+  }, [token, login, navigate, showToast]);
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (credentialResponse) => {
@@ -158,6 +228,7 @@ export default function AcceptOwnershipPage() {
                     Login dengan Google menggunakan email yang diundang untuk
                     menerima kepemilikan toko.
                   </p>
+                  <div className="flex flex-col gap-3">
                   <Button
                     variant="secondary"
                     onClick={() => handleGoogleLogin()}
@@ -166,6 +237,17 @@ export default function AcceptOwnershipPage() {
                     <FcGoogle className="h-5 w-5 shrink-0" />
                     Login dengan Google
                   </Button>
+                  {import.meta.env.VITE_TIKTOK_CLIENT_KEY ? (
+                    <Button
+                      variant="secondary"
+                      onClick={() => void handleTikTokLogin()}
+                      className="w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    >
+                      <SiTiktok className="h-5 w-5 shrink-0" />
+                      Login dengan TikTok
+                    </Button>
+                  ) : null}
+                  </div>
                 </div>
               )}
             </div>

@@ -8,6 +8,7 @@ import { masterPrisma } from "../utils/master-prisma";
 import {
   verifyGoogleToken,
   verifyAppleToken,
+  verifyTikTokToken,
   OAuthProviderNotConfiguredError,
 } from "./oauth.service";
 
@@ -290,7 +291,7 @@ export const login = async (username: string, password: string) => {
 
 const findOrCreateOAuthAccount = async (params: {
   providerId: string;
-  providerField: "googleId" | "appleId";
+  providerField: "googleId" | "appleId" | "tiktokId";
   email: string;
   name: string;
   avatarUrl?: string;
@@ -405,6 +406,39 @@ export const loginWithGoogle = async (accessToken: string) => {
     email: googlePayload.email,
     name: googlePayload.name,
     avatarUrl: googlePayload.picture,
+  });
+
+  if (!account.isActive) {
+    throw new UserInactiveError();
+  }
+
+  const result = await loginWithOAuthAccount(account);
+
+  if (!result) {
+    const registrationToken = signRegistrationToken(account.id);
+    return {
+      needsRegistration: true,
+      registrationToken,
+      user: {
+        id: account.id,
+        username: account.username,
+        name: account.name,
+      },
+    };
+  }
+
+  return result;
+};
+
+export const loginWithTikTok = async (authorizationCode: string) => {
+  const tiktokPayload = await verifyTikTokToken(authorizationCode);
+
+  const account = await findOrCreateOAuthAccount({
+    providerId: tiktokPayload.sub,
+    providerField: "tiktokId",
+    email: tiktokPayload.email,
+    name: tiktokPayload.name,
+    avatarUrl: tiktokPayload.picture,
   });
 
   if (!account.isActive) {
@@ -643,6 +677,7 @@ export type AccountInfo = {
   name: string;
   email: string | null;
   googleId: string | null;
+  tiktokId: string | null;
 };
 
 export const getAccountInfo = async (accountId: string): Promise<AccountInfo> => {
@@ -653,7 +688,8 @@ export const getAccountInfo = async (accountId: string): Promise<AccountInfo> =>
       username: true,
       name: true,
       email: true,
-      googleId: true
+      googleId: true,
+      tiktokId: true
     }
   });
 
@@ -667,6 +703,12 @@ export const getAccountInfo = async (accountId: string): Promise<AccountInfo> =>
 export class GoogleAlreadyBoundError extends Error {
   constructor() {
     super("Akun Google sudah terhubung ke pengguna lain.");
+  }
+}
+
+export class TikTokAlreadyBoundError extends Error {
+  constructor() {
+    super("Akun TikTok sudah terhubung ke pengguna lain.");
   }
 }
 
@@ -693,6 +735,31 @@ export const bindGoogleAccount = async (
   });
 
   return { email: googlePayload.email };
+};
+
+export const bindTikTokAccount = async (
+  accountId: string,
+  authorizationCode: string
+) => {
+  const tiktokPayload = await verifyTikTokToken(authorizationCode);
+
+  const existingByTikTokId = await masterPrisma.account.findFirst({
+    where: { tiktokId: tiktokPayload.sub, id: { not: accountId } }
+  });
+
+  if (existingByTikTokId) {
+    throw new TikTokAlreadyBoundError();
+  }
+
+  await masterPrisma.account.update({
+    where: { id: accountId },
+    data: {
+      tiktokId: tiktokPayload.sub,
+      email: tiktokPayload.email || undefined,
+    }
+  });
+
+  return { name: tiktokPayload.name };
 };
 
 export const logout = async (accountId: string) => {
