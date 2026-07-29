@@ -3,6 +3,12 @@ name: Deploy
 on:
   push:
     branches: [main]
+    paths:
+      - server/**
+      - docker-compose.yml
+      - deploy.sh
+      - init-db.sql
+      - .github/workflows/deploy.yml
 
 jobs:
   deploy:
