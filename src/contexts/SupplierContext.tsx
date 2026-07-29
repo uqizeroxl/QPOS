@@ -16,8 +16,20 @@ export function SupplierProvider({ children }: SupplierProviderProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   const fetchSuppliers = useCallback(async (search?: string) => {
-    const nextSuppliers = await supplierService.getSuppliers(search);
-    setSuppliers(nextSuppliers);
+    try {
+      const nextSuppliers = await supplierService.getSuppliers(search);
+      setSuppliers(nextSuppliers);
+    } catch (error) {
+      console.error("Failed to fetch suppliers:", error);
+      window.dispatchEvent(
+        new CustomEvent("app:toast", {
+          detail: {
+            message: "Gagal memuat supplier. Data mungkin tidak tersedia.",
+            type: "info",
+          },
+        }),
+      );
+    }
   }, []);
 
   const addSupplier = useCallback(

@@ -106,7 +106,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await fetchStores();
       } catch {
         if (isMounted) {
-          clearAuth();
+          window.dispatchEvent(
+            new CustomEvent("app:toast", {
+              detail: {
+                message:
+                  "Tidak dapat memverifikasi sesi. Anda tetap dapat menggunakan aplikasi dengan data tersimpan.",
+                type: "info",
+              },
+            }),
+          );
         }
       } finally {
         if (isMounted) {
