@@ -7,7 +7,7 @@ export default function ToastEventListener() {
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as { message: string; type: string };
-      showToast(detail.message, detail.type as "success" | "error");
+      showToast(detail.message, detail.type as "success" | "error" | "info");
     };
 
     window.addEventListener("app:toast", handler);

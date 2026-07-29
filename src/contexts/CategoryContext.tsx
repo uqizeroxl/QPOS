@@ -81,6 +81,16 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       if (authStateRef.current.token === requestToken) {
         setCategoryState({ token: requestToken, categories: nextCategories });
       }
+    }).catch((error) => {
+      console.error("Failed to fetch categories:", error);
+      window.dispatchEvent(
+        new CustomEvent("app:toast", {
+          detail: {
+            message: "Gagal memuat kategori. Data mungkin tidak tersedia.",
+            type: "info",
+          },
+        }),
+      );
     });
 
     inFlightRequestRef.current = { token: requestToken, promise: request };
@@ -99,16 +109,12 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       return;
     }
 
-    void fetchCategories().catch((error) => {
-      console.error("Failed to fetch categories:", error);
-    });
+    void fetchCategories();
   }, [fetchCategories, isAuthenticated, isAuthLoading, token]);
 
   useEffect(() => {
     const refreshCounts = () => {
-      void fetchCategories().catch((error) => {
-        console.error("Failed to refresh category product counts:", error);
-      });
+      void fetchCategories();
     };
     window.addEventListener("qpos:products-changed", refreshCounts);
     return () => window.removeEventListener("qpos:products-changed", refreshCounts);
