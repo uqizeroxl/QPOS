@@ -553,3 +553,29 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 **Catatan developer berikutnya:**
 - Rebuild dan deploy container production dengan `sudo docker compose up -d --build`; pesan lama tidak mungkin dihasilkan oleh source/build saat ini.
 
+## 2026-07-29 — Offline mutation success + Receipt height + Auto-migration entrypoint
+
+**Offline mutation success (axiosInstance.ts):**
+- Saat offline, mutation (POST/PUT/DELETE) enqueue ke IndexedDB via `syncService`
+- Tidak lagi `reject` — mengembalikan mock `AxiosResponse` dengan data dummy (produk, kategori, supplier) sesuai URL
+- Memicu toast via `CustomEvent("app:toast")` dengan pesan sukses
+- Service worker dikonfigurasi dengan `BackgroundSyncPlugin` (`api-mutations` queue) sebagai lapisan retry kedua
+
+**Receipt print height fix:**
+- `src/index.css`: hapus `min-height: 100vh` dan `position: absolute; inset: 0` → height mengikuti konten, tidak ada halaman kosong
+- Body diberi `height: auto; margin: 0; padding: 0` saat print
+- `ReceiptPrintArea.tsx`: tambah `receipt-cut-space` (15mm) + `receipt-cut-line` dengan "--- potong disini ---"
+- CSS cut area: dashed line + gray text
+
+**Auto-migration entrypoint (`server/docker-entrypoint.sh`):**
+- Baru: entrypoint script yang jalan otomatis sebelum server start
+- Step: `migrate deploy` → `db push --accept-data-loss` (master & tenant) → `bootstrap` → server
+- Menangani kasus migration tracking tidak sinkron dengan database
+- `server/Dockerfile`: ubah `CMD` jadi `ENTRYPOINT`
+
+**GitHub Actions deploy workflow (`.github/workflows/deploy.yml`):**
+- Trigger: push ke `main` dengan path filter (`server/**`, `docker-compose.yml`, `deploy.sh`, `init-db.sql`, workflow itself)
+- Tidak build di GitHub runner — SSH ke VPS, jalankan `git pull` + `sudo docker compose up -d --build`
+- Secrets: `SERVER_HOST`, `SERVER_USER`, `SERVER_SSH_KEY`
+- `deploy.sh`: script manual alternatif dengan step yang sama
+
