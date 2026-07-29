@@ -1,3 +1,4 @@
+import type { AxiosResponse } from "axios";
 import axios from "axios";
 import { API_BASE_URL, API_TIMEOUT } from "../../constants/api";
 import { STORAGE_KEYS } from "../../constants/app";
@@ -42,6 +43,63 @@ function stripOrigin(fullUrl: string): string {
   } catch {
     return fullUrl;
   }
+}
+
+function buildMockResponse(url: string, method: string, body: Record<string, unknown> | undefined): Record<string, unknown> {
+  const now = new Date().toISOString();
+  const tempId = crypto.randomUUID();
+
+  if (url.includes("/products") && !url.includes("/restocks") && !url.includes("/dataset") && !url.includes("/barcode")) {
+    if (method === "POST") {
+      return {
+        id: tempId,
+        barcode: body?.barcode ?? "",
+        name: body?.name ?? "",
+        categoryId: body?.categoryId ?? "",
+        category: null,
+        purchasePrice: body?.purchasePrice ?? null,
+        sellingPrice: body?.sellingPrice ?? 0,
+        stock: body?.stock ?? 0,
+        status: "ACTIVE",
+      };
+    }
+    return { ...body, id: body?.id ?? tempId };
+  }
+
+  if (url.includes("/categories")) {
+    if (method === "POST") {
+      return {
+        id: tempId,
+        name: body?.name ?? "",
+        description: body?.description ?? "",
+        status: "ACTIVE",
+        _count: { products: 0 },
+        productCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+    return { ...body, id: body?.id ?? tempId };
+  }
+
+  if (url.includes("/suppliers")) {
+    if (method === "POST") {
+      return {
+        id: tempId,
+        name: body?.name ?? "",
+        phone: body?.phone ?? "",
+        email: body?.email ?? "",
+        address: body?.address ?? "",
+        notes: body?.note ?? "",
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      };
+    }
+    return { ...body, id: body?.id ?? tempId };
+  }
+
+  return { id: tempId, ...body };
 }
 
 const axiosInstance = axios.create({
@@ -162,14 +220,30 @@ axiosInstance.interceptors.response.use(
         headers.Authorization = `Bearer ${token}`;
       }
 
+      const body = originalRequest.data ? JSON.parse(originalRequest.data) : undefined;
+
       await syncService.enqueue(
         url,
         originalRequest.method as "POST" | "PUT" | "DELETE",
-        originalRequest.data ? JSON.parse(originalRequest.data) : undefined,
+        body,
         headers,
       );
 
-      return Promise.reject(new Error("Anda sedang offline. Transaksi akan diproses saat koneksi tersedia."));
+      const actionWord = originalRequest.method === "POST" ? "disimpan" : originalRequest.method === "PUT" || originalRequest.method === "PATCH" ? "diperbarui" : "dihapus";
+      const message = `Data berhasil ${actionWord}, sinkronisasi akan dilakukan apabila terhubung ke server`;
+
+      const mockData = buildMockResponse(url, originalRequest.method, body);
+      const mockResponse: AxiosResponse = {
+        data: { success: true, message, data: mockData },
+        status: originalRequest.method === "POST" ? 201 : 200,
+        statusText: "OK",
+        headers: {},
+        config: originalRequest,
+      };
+
+      window.dispatchEvent(new CustomEvent("app:toast", { detail: { message, type: "success" } }));
+
+      return mockResponse;
     }
 
     return Promise.reject(error);

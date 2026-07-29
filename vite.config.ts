@@ -33,8 +33,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https?:\/\/.*\/api\/.*/i,
+            urlPattern: /^https?:\/\/.*\/api\/(?!auth).*$/i,
             handler: 'NetworkFirst',
+            method: 'GET',
             options: {
               cacheName: 'api-cache',
               expiration: {
@@ -42,6 +43,19 @@ export default defineConfig({
                 maxAgeSeconds: 60 * 60 * 24,
               },
               networkTimeoutSeconds: 5,
+            },
+          },
+          {
+            urlPattern: /^https?:\/\/.*\/api\/(?!auth).*$/i,
+            handler: 'NetworkOnly',
+            method: 'POST',
+            options: {
+              backgroundSync: {
+                name: 'api-mutations',
+                options: {
+                  maxRetentionTime: 24 * 60,
+                },
+              },
             },
           },
         ],

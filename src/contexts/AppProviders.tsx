@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import ToastEventListener from "../components/pwa/ToastEventListener";
 import { AuthProvider } from "./AuthContext";
 import { ActivityProvider } from "./ActivityContext";
 import { CategoryProvider } from "./CategoryContext";
@@ -26,6 +27,7 @@ export default function AppProviders({ children }: AppProvidersProps) {
         <AuthProvider>
           <SettingsProvider>
             <ToastProvider>
+              <ToastEventListener />
               <NotificationProvider>
                 <ActivityProvider>
                   <ProductProvider>
