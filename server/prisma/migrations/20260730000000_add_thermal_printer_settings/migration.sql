@@ -1,0 +1,3 @@
+ALTER TABLE "settings"
+ADD COLUMN "thermalPaperWidth" INTEGER NOT NULL DEFAULT 80,
+ADD COLUMN "receiptAutoCut" BOOLEAN NOT NULL DEFAULT true;

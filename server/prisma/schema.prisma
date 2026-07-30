@@ -238,6 +238,8 @@ model Settings {
   phone         String   @default("") @db.VarChar(30)
   address       String   @default("") @db.Text
   receiptFooter String   @default("Terima kasih") @db.VarChar(250)
+  thermalPaperWidth Int  @default(80)
+  receiptAutoCut Boolean @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

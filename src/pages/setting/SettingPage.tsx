@@ -26,6 +26,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { useToast } from "../../hooks/useToast";
 import MainLayout from "../../layouts/MainLayout";
 import type { ThemePreference } from "../../contexts/themeContextValue";
+import type { ThermalPaperWidth } from "../../types/settings";
 import {
   ProductApiError,
   productService,
@@ -51,7 +52,7 @@ const tabs: { key: Tab; label: string; icon: typeof Store; ownerOnly: boolean }[
 ];
 
 export default function SettingPage() {
-  const { settings, saveSettings, setReceiptFooter } = useSettings();
+  const { settings, saveSettings, setReceiptSettings } = useSettings();
   const { user } = useAuth();
   const { theme, setTheme } = useTheme();
   const { fetchProducts } = useProducts();
@@ -78,6 +79,8 @@ export default function SettingPage() {
     settings.receiptFooter,
   );
   const [isSavingReceiptFooter, setIsSavingReceiptFooter] = useState(false);
+  const [thermalPaperWidth, setThermalPaperWidth] = useState<ThermalPaperWidth>(settings.thermalPaperWidth);
+  const [receiptAutoCut, setReceiptAutoCut] = useState(settings.receiptAutoCut);
   const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
   const [changeOwnerEmail, setChangeOwnerEmail] = useState("");
   const [changeOwnerStoreName, setChangeOwnerStoreName] = useState("");
@@ -94,10 +97,17 @@ export default function SettingPage() {
 
   useEffect(() => {
     setReceiptFooterInput(settings.receiptFooter);
-  }, [settings.receiptFooter]);
+    setThermalPaperWidth(settings.thermalPaperWidth);
+    setReceiptAutoCut(settings.receiptAutoCut);
+  }, [settings.receiptAutoCut, settings.receiptFooter, settings.thermalPaperWidth]);
 
   const handleSave = () => {
-    saveSettings(storeInfo);
+    saveSettings({
+      ...storeInfo,
+      receiptFooter: settings.receiptFooter,
+      thermalPaperWidth: settings.thermalPaperWidth,
+      receiptAutoCut: settings.receiptAutoCut,
+    });
     showToast("Pengaturan toko berhasil disimpan.");
   };
 
@@ -109,9 +119,13 @@ export default function SettingPage() {
     setIsSavingReceiptFooter(true);
 
     try {
-      const result = await settingsService.updateReceiptFooter(receiptFooter);
+      const result = await settingsService.updateReceiptFooter({
+        receiptFooter,
+        thermalPaperWidth,
+        receiptAutoCut,
+      });
       setReceiptFooterInput(result.receiptFooter);
-      setReceiptFooter(result.receiptFooter);
+      setReceiptSettings(result);
       showToast("Footer struk berhasil disimpan.");
     } catch (error) {
       showToast(
@@ -644,8 +658,12 @@ export default function SettingPage() {
           <SystemSettingsTab
             receiptFooter={receiptFooter}
             isSavingReceiptFooter={isSavingReceiptFooter}
+            thermalPaperWidth={thermalPaperWidth}
+            receiptAutoCut={receiptAutoCut}
             onReceiptFooterChange={setReceiptFooterInput}
             onSaveReceiptFooter={handleSaveReceiptFooter}
+            onThermalPaperWidthChange={setThermalPaperWidth}
+            onReceiptAutoCutChange={setReceiptAutoCut}
           />
         ) : null}
 

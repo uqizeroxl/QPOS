@@ -883,6 +883,13 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - Menghilangkan spacer bawah dan page break yang tidak diperlukan sehingga tidak ada ruang kosong berlebih.
 - Output berakhir normal setelah konten/garis potong agar kompatibel dengan fitur auto cut printer atau driver yang mendukungnya.
 
+## 2026-07-30 — Konfigurasi Printer Thermal
+
+- Menambahkan pengaturan ukuran kertas thermal 58mm/80mm dengan default 80mm dan penyimpanan per tenant.
+- Menambahkan pengaturan Auto Cut ON/OFF pada Pengaturan > Sistem > Pengaturan Struk.
+- Seluruh flow cetak struk membaca konfigurasi pengguna untuk page size, preview, dan akhir print job; tinggi tetap mengikuti konten tanpa halaman kosong.
+- Memisahkan adapter print browser dan menyiapkan TODO integrasi ESC/POS `GS V` untuk aplikasi desktop; browser tetap bergantung pada dukungan driver/printer.
+
 ## 2026-07-30 — UI-002 padding kartu perangkat
 
 **Tujuan:**

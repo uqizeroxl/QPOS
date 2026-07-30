@@ -26,6 +26,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       address: nextSettings.address.trim(),
       receiptFooter:
         nextSettings.receiptFooter.trim() || defaultSettings.receiptFooter,
+      thermalPaperWidth: nextSettings.thermalPaperWidth,
+      receiptAutoCut: nextSettings.receiptAutoCut,
     };
 
     setSettings(safeSettings);
@@ -40,12 +42,20 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     });
   }, []);
 
+  const setReceiptSettings = useCallback((receiptSettings: Parameters<typeof settingsService.updateReceiptFooter>[0]) => {
+    setSettings((currentSettings) => {
+      const nextSettings = { ...currentSettings, ...receiptSettings };
+      storeSettings(nextSettings);
+      return nextSettings;
+    });
+  }, []);
+
   useEffect(() => {
     if (!user) return;
 
     let isMounted = true;
     void settingsService.getReceiptFooter().then((result) => {
-      if (isMounted) setReceiptFooter(result.receiptFooter);
+      if (isMounted) setReceiptSettings(result);
     }).catch(() => {
       // Keep the cached/default footer while the API is unavailable.
     });
@@ -53,11 +63,11 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     return () => {
       isMounted = false;
     };
-  }, [setReceiptFooter, user]);
+  }, [setReceiptSettings, user]);
 
   const value = useMemo(
-    () => ({ settings, saveSettings, setReceiptFooter }),
-    [saveSettings, setReceiptFooter, settings],
+    () => ({ settings, saveSettings, setReceiptFooter, setReceiptSettings }),
+    [saveSettings, setReceiptFooter, setReceiptSettings, settings],
   );
 
   return (

@@ -279,10 +279,9 @@ body {
   }
 
   .receipt-print-root {
-    --receipt-width: 80mm;
     box-sizing: border-box;
     display: block;
-    width: var(--receipt-width);
+    width: var(--receipt-paper-width);
     height: auto;
     min-height: 0;
     margin: 0;
@@ -361,7 +360,7 @@ body {
 
   html:has(body.receipt-printing),
   body.receipt-printing {
-    width: 80mm;
+    width: var(--receipt-paper-width);
     height: auto;
     min-height: 0;
     overflow: visible;

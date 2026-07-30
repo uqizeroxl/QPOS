@@ -23,12 +23,12 @@ export const settingsService = {
       throw error;
     }
   },
-  updateReceiptFooter: async (receiptFooter: string) => {
+  updateReceiptFooter: async (settings: ReceiptFooterSettings) => {
     try {
       const response = await apiService.put<
         ReceiptFooterSettings,
         ReceiptFooterSettings
-      >("/settings/receipt-footer", { receiptFooter });
+      >("/settings/receipt-footer", settings);
       return response.data;
     } catch (error) {
       if (axios.isAxiosError<{ message?: string }>(error)) {

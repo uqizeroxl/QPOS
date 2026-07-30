@@ -9,8 +9,23 @@ import { stripHtml } from "../utils/escape";
 const DEFAULT_RECEIPT_FOOTER = "Terima kasih";
 const MAX_RECEIPT_FOOTER_LENGTH = 250;
 const MAX_RECEIPT_FOOTER_LINES = 5;
+const THERMAL_PAPER_WIDTHS = [58, 80] as const;
 
 export class ReceiptFooterValidationError extends Error {}
+
+const normalizeThermalPaperWidth = (value: unknown) => {
+  if (typeof value !== "number" || !THERMAL_PAPER_WIDTHS.includes(value as 58 | 80)) {
+    throw new ReceiptFooterValidationError("Ukuran kertas harus 58 mm atau 80 mm.");
+  }
+  return value;
+};
+
+const normalizeReceiptAutoCut = (value: unknown) => {
+  if (typeof value !== "boolean") {
+    throw new ReceiptFooterValidationError("Auto Cut harus berupa ON atau OFF.");
+  }
+  return value;
+};
 
 const normalizeReceiptFooter = (value: unknown) => {
   if (typeof value !== "string") {
@@ -39,7 +54,7 @@ export const getReceiptFooter = async (prisma: PrismaClient) => {
     where: { key: "default" },
     create: { key: "default" },
     update: {},
-    select: { receiptFooter: true }
+    select: { receiptFooter: true, thermalPaperWidth: true, receiptAutoCut: true }
   });
 
   return settings;
@@ -47,15 +62,32 @@ export const getReceiptFooter = async (prisma: PrismaClient) => {
 
 export const updateReceiptFooter = async (
   prisma: PrismaClient,
-  value: unknown
+  value: unknown,
+  thermalPaperWidthValue: unknown,
+  receiptAutoCutValue: unknown
 ) => {
   const receiptFooter = normalizeReceiptFooter(value);
+  const thermalPaperWidth = thermalPaperWidthValue === undefined
+    ? undefined
+    : normalizeThermalPaperWidth(thermalPaperWidthValue);
+  const receiptAutoCut = receiptAutoCutValue === undefined
+    ? undefined
+    : normalizeReceiptAutoCut(receiptAutoCutValue);
 
   return prisma.settings.upsert({
     where: { key: "default" },
-    create: { key: "default", receiptFooter },
-    update: { receiptFooter },
-    select: { receiptFooter: true }
+    create: {
+      key: "default",
+      receiptFooter,
+      ...(thermalPaperWidth === undefined ? {} : { thermalPaperWidth }),
+      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut })
+    },
+    update: {
+      receiptFooter,
+      ...(thermalPaperWidth === undefined ? {} : { thermalPaperWidth }),
+      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut })
+    },
+    select: { receiptFooter: true, thermalPaperWidth: true, receiptAutoCut: true }
   });
 };
 
