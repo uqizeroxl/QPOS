@@ -279,17 +279,20 @@ body {
   }
 
   .receipt-print-root {
-    --receipt-width: 58mm;
+    --receipt-width: 80mm;
+    box-sizing: border-box;
     display: block;
     width: var(--receipt-width);
-    margin: 0 auto;
-    padding: 4mm 3mm 0;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 3mm;
     background: #ffffff;
     color: #111827;
     font-family: "Courier New", monospace;
     font-size: 10px;
     line-height: 1.35;
-    page-break-after: avoid;
+    break-after: auto;
   }
 
   .receipt-ticket {
@@ -342,10 +345,6 @@ body {
     font-weight: 700;
   }
 
-  .receipt-cut-space {
-    height: 15mm;
-  }
-
   .receipt-cut-line {
     display: flex;
     justify-content: center;
@@ -358,5 +357,22 @@ body {
     font-size: 9px;
     letter-spacing: 1px;
     color: #6b7280;
+  }
+
+  html:has(body.receipt-printing),
+  body.receipt-printing {
+    width: 80mm;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  body.receipt-printing > :not(.receipt-print-root) {
+    display: none !important;
+  }
+
+  body.receipt-printing .receipt-print-root,
+  body.receipt-printing .receipt-print-root * {
+    visibility: visible;
   }
 }

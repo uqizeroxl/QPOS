@@ -876,3 +876,10 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - Tidak ada perubahan fungsi, endpoint, validasi, preview, penyimpanan, maupun data Pengaturan Struk.
 - Refactor hanya memindahkan UI ke `SystemSettingsTab` untuk penataan struktur tanpa mengubah fitur Pengaturan lainnya.
 
+## 2026-07-30 — Cetak Struk Thermal 80mm
+
+- Memperbaiki layout cetak struk untuk media thermal 80mm dari Kasir, Detail Transaksi, dan Riwayat Transaksi.
+- Tinggi struk kini mengikuti tinggi konten dengan mengeluarkan UI aplikasi lain dari flow print.
+- Menghilangkan spacer bawah dan page break yang tidak diperlukan sehingga tidak ada ruang kosong berlebih.
+- Output berakhir normal setelah konten/garis potong agar kompatibel dengan fitur auto cut printer atau driver yang mendukungnya.
+

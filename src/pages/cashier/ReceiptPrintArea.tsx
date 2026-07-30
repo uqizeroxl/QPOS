@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useSettings } from "../../hooks/useSettings";
 import { formatRupiah } from "../../utils/currency";
 import type { SalesTransaction } from "../../types/cashier";
@@ -22,7 +23,7 @@ export default function ReceiptPrintArea({
     return null;
   }
 
-  return (
+  return createPortal(
     <div className="receipt-print-root">
       <div className="receipt-ticket">
         <div className="receipt-center">
@@ -85,11 +86,11 @@ export default function ReceiptPrintArea({
           {settings.receiptFooter}
         </p>
 
-        <div className="receipt-cut-space" />
         <div className="receipt-cut-line">
           <span className="receipt-cut-text">--- potong disini ---</span>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
