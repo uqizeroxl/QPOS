@@ -1,5 +1,7 @@
 import axios from "axios";
 import { apiService } from "./api/apiService";
+import { API_BASE_URL } from "../constants/api";
+import { STORAGE_KEYS } from "../constants/app";
 import type { AuthUser, AuthPayload, StoreInfo, OAuthLoginResponse } from "../types/auth";
 
 export type { AuthUser, AuthPayload, StoreInfo, UserRole, OAuthLoginResponse } from "../types/auth";
@@ -56,10 +58,20 @@ export const authService = {
     }
   },
   logout: async () => {
+    const token = localStorage.getItem(STORAGE_KEYS.authToken);
+    const refreshToken = localStorage.getItem(STORAGE_KEYS.authRefreshToken);
+
     try {
-      await apiService.post("/auth/logout");
-    } catch (error) {
-      return handleAuthError(error);
+      await axios.post(
+        `${API_BASE_URL}/auth/logout`,
+        { refreshToken },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          timeout: 5000,
+        },
+      );
+    } catch {
+      // Ignore all errors — AuthContext will clean up credentials locally.
     }
   },
   refreshToken: async (refreshTokenValue: string) => {

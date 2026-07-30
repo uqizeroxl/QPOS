@@ -70,11 +70,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = useCallback(async () => {
     try {
-      if (localStorage.getItem(STORAGE_KEYS.authToken)) {
-        await authService.logout();
-      }
+      await authService.logout();
     } finally {
       clearAuth();
+      window.dispatchEvent(
+        new CustomEvent("app:toast", {
+          detail: { message: "Anda telah berhasil logout.", type: "success" },
+        }),
+      );
     }
   }, [clearAuth]);
 
@@ -106,12 +109,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         await fetchStores();
       } catch {
         if (isMounted) {
+          clearAuth();
           window.dispatchEvent(
-              new CustomEvent("app:toast", {
+            new CustomEvent("app:toast", {
               detail: {
-                message:
-                  "Tidak dapat memverifikasi sesi. Anda tetap dapat menggunakan aplikasi dengan data tersimpan.",
-                type: "warning",
+                message: "Sesi Anda telah berakhir. Silakan login kembali.",
+                type: "error",
               },
             }),
           );

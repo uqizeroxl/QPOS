@@ -9,7 +9,7 @@ import { syncService } from "../storage/sync.service";
 
 const CACHE_TTL = 5 * 60 * 1000;
 
-const AUTH_PREFIXES = ["/auth/login", "/auth/refresh", "/auth/google", "/auth/apple", "/auth/tiktok", "/auth/bind-tiktok"];
+const AUTH_PREFIXES = ["/auth/login", "/auth/refresh", "/auth/logout", "/auth/google", "/auth/apple", "/auth/tiktok", "/auth/bind-tiktok"];
 
 function clearAuthAndRedirect(message?: string) {
   localStorage.removeItem(STORAGE_KEYS.authToken);

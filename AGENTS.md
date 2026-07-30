@@ -775,3 +775,64 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - Jangan menambah alias `stockMinimum` atau `minStock`; kontrak canonical adalah `minimumStock`.
 - Migration tenant wajib diterapkan sebelum backend baru dijalankan.
 
+## 2026-07-30 — BUG-006 logout gagal karena 401 token kadaluwarsa
+
+**Tujuan:**
+- Logout tetap berjalan meskipun access token sudah kadaluwarsa.
+- Mengirim access token (jika masih ada) dan refresh token ke server untuk blacklist.
+- Jika server mengembalikan 401, frontend mengabaikannya, membersihkan kredensial lokal, redirect ke login, dan menampilkan toast.
+
+**Root Cause:**
+- Route `/auth/logout` diproteksi oleh middleware `authenticate` yang diverifikasi dengan `verifyToken`. Jika access token sudah expired, middleware mengembalikan 401 sebelum controller logout dijalankan.
+- Axios response interceptor mencoba refresh token saat 401, tetapi terkadang gagal dan memanggil `clearAuthAndRedirect()` yang menginterupsi alur logout normal.
+
+**File diubah:**
+- `server/src/routes/auth.routes.ts`
+- `server/src/controllers/auth.controller.ts`
+- `server/src/services/auth.service.ts`
+- `src/services/authService.ts`
+- `src/services/api/axiosInstance.ts`
+- `src/contexts/AuthContext.tsx`
+- `AGENTS.md`
+
+**Perubahan Backend:**
+
+*`server/src/routes/auth.routes.ts`:*
+- Menghapus middleware `authenticate` dari route `POST /logout`.
+
+*`server/src/controllers/auth.controller.ts` (`logout`):*
+- Tidak lagi menggunakan `AuthenticatedRequest`.
+- Jika `req.user` tersedia (akses via authenticate middleware untuk kompatibilitas), gunakan `authService.logout(userId)`.
+- Jika tidak, baca `refreshToken` dari body → panggil `authService.logoutByRefreshToken()`.
+- Selalu return 200.
+
+*`server/src/services/auth.service.ts`:*
+- Menambahkan `logoutByRefreshToken(refreshTokenValue)`:
+  - Decode refresh token JWT.
+  - Increment `Account.tokenVersion` jika payload valid.
+  - Catch semua error (token invalid/expired → diabaikan, frontend bersihkan lokal).
+
+**Perubahan Frontend:**
+
+*`src/services/authService.ts` (`logout`):*
+- Tidak lagi menggunakan `apiService` (axiosInstance dengan interceptors).
+- Menggunakan `axios.post()` langsung dengan base URL, mengirim access token (jika ada) di header dan refresh token di body.
+- Catch semua error secara diam-diam.
+
+*`src/services/api/axiosInstance.ts`:*
+- Menambahkan `"/auth/logout"` ke `AUTH_PREFIXES` agar interceptor tidak mencoba refresh/cache/offline-queue untuk request logout.
+
+*`src/contexts/AuthContext.tsx`:*
+- `logout()`: Menghapus conditional `if (token exists)` — selalu coba panggil server. Di `finally`, setelah `clearAuth()`, dispatch toast `"Anda telah berhasil logout."`.
+- `verifyProfile()` catch handler: Memanggil `clearAuth()` + toast error "Sesi Anda telah berakhir. Silakan login kembali." jika verifikasi sesi gagal (sebelumnya hanya menampilkan warning tanpa membersihkan state auth).
+
+**Testing:**
+- `npm run build` frontend berhasil.
+- `npm run build --prefix server` backend berhasil.
+- Tidak ada error baru pada file yang diubah.
+
+**Catatan developer berikutnya:**
+- Logout sekarang menggunakan direct axios call (bukan axiosInstance), sehingga tidak terpengaruh oleh interceptor 401/refresh.
+- Jika suatu endpoint perlu dipanggil tanpa interceptor (misalnya untuk alur auth), gunakan pola yang sama: `axios.post(url, payload, { headers, timeout })`.
+- Backend handler `logout` harus selalu return 200 dalam kondisi apapun; frontend bertanggung jawab membersihkan state lokal.
+

@@ -882,6 +882,26 @@ export const logout = async (accountId: string, deviceId?: string) => {
   }
 };
 
+export const logoutByRefreshToken = async (refreshTokenValue: string) => {
+  try {
+    const payload = jwt.verify(refreshTokenValue, appConfig.jwtSecret) as RefreshJwtPayload;
+
+    if (payload.type !== "refresh" || !payload.sub) {
+      return;
+    }
+
+    await masterPrisma.account.update({
+      where: { id: payload.sub },
+      data: {
+        tokenVersion: { increment: 1 }
+      }
+    });
+  } catch {
+    // Token is invalid/expired — nothing to invalidate server-side.
+    // Frontend will clean up credentials locally.
+  }
+};
+
 export class InvitationNotFoundError extends Error {
   constructor() {
     super("Undangan tidak ditemukan atau sudah kadaluwarsa.");

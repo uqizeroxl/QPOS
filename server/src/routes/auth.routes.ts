@@ -8,7 +8,7 @@ const router = Router();
 
 router.post("/login", authLimiter, login);
 router.get("/profile", authenticate, profile);
-router.post("/logout", authenticate, logout);
+router.post("/logout", logout);
 router.post("/refresh", refresh);
 router.get("/stores", authenticate, listStores);
 router.post("/accept-ownership", authenticate, acceptOwnership);

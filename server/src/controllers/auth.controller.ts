@@ -87,13 +87,22 @@ export const profile = (
 };
 
 export const logout = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const deviceId = req.body.deviceId?.trim() || undefined;
-    await authService.logout(req.user.id, deviceId);
+    const authenticatedReq = req as AuthenticatedRequest;
+
+    if (authenticatedReq.user) {
+      const deviceId = req.body.deviceId?.trim() || undefined;
+      await authService.logout(authenticatedReq.user.id, deviceId);
+    } else {
+      const refreshTokenValue = req.body.refreshToken?.trim() ?? "";
+      if (refreshTokenValue) {
+        await authService.logoutByRefreshToken(refreshTokenValue);
+      }
+    }
 
     res.status(200).json({
       success: true,
