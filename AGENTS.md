@@ -870,3 +870,9 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - Placeholder dipisahkan ke komponen `SystemSettingsTab` agar siap dikembangkan pada sprint berikutnya.
 - Tidak mengubah fitur, UI, atau behavior Informasi Toko, Dataset Produk, dan Keamanan.
 
+## 2026-07-30 — Penataan Pengaturan Struk
+
+- Pengaturan Struk dipindahkan dari tab Informasi Toko ke tab Sistem sebagai section/card pertama.
+- Tidak ada perubahan fungsi, endpoint, validasi, preview, penyimpanan, maupun data Pengaturan Struk.
+- Refactor hanya memindahkan UI ke `SystemSettingsTab` untuk penataan struktur tanpa mengubah fitur Pengaturan lainnya.
+
