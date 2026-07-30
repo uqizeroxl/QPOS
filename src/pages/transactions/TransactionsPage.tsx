@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
+import LoadError from "../../components/ui/LoadError";
 import DatePicker from "../../components/ui/DatePicker";
 import { Input, Select } from "../../components/ui/Input";
 import {
@@ -237,11 +238,7 @@ export default function TransactionsPage() {
           </label>
         </Card>
 
-        {errorMessage ? (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-            {errorMessage}
-          </p>
-        ) : null}
+        {errorMessage ? <LoadError message={errorMessage} onRetry={fetchTransactions} isRetrying={isLoading} /> : null}
 
         <Card as="section" className="overflow-hidden">
           <div className="overflow-x-auto">

@@ -16,6 +16,7 @@ export const cacheService = {
 
       return entry.data as T;
     } catch {
+      // IndexedDB may be unavailable (private mode or denied storage).
       return null;
     }
   },
@@ -29,6 +30,7 @@ export const cacheService = {
         ttl,
       });
     } catch {
+      // IndexedDB may be unavailable (private mode or denied storage).
     }
   },
 
@@ -36,6 +38,7 @@ export const cacheService = {
     try {
       await db.cache.delete(url);
     } catch {
+      // IndexedDB may be unavailable (private mode or denied storage).
     }
   },
 
@@ -43,6 +46,7 @@ export const cacheService = {
     try {
       await db.cache.clear();
     } catch {
+      // IndexedDB may be unavailable (private mode or denied storage).
     }
   },
 

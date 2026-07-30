@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import BarcodeScannerModal from "../../components/BarcodeScannerModal";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
+import LoadError from "../../components/ui/LoadError";
 import { useActivityLog } from "../../hooks/useActivityLog";
 import { useCategories } from "../../hooks/useCategories";
 import { useProducts } from "../../hooks/useProducts";
@@ -96,12 +97,6 @@ export default function ProductPage() {
     searchTerm,
     selectedCategory,
   ]);
-
-  useEffect(() => {
-    if (errorMessage) {
-      showToast(errorMessage, "error");
-    }
-  }, [errorMessage, showToast]);
 
   const totalPages = Math.ceil(totalProducts / rowsPerPage);
   const normalizedPage = Math.max(1, Math.min(currentPage, totalPages || 1));
@@ -572,6 +567,7 @@ export default function ProductPage() {
           </Card>
         ) : null}
 
+        {errorMessage ? <LoadError message={errorMessage} onRetry={() => fetchProducts({ page: currentPage, limit: rowsPerPage, search: searchTerm.trim() || undefined, category: selectedCategory === "Semua" ? undefined : selectedCategory })} isRetrying={isLoading} /> : null}
         <ProductTable
           products={products}
           isLoading={isLoading}

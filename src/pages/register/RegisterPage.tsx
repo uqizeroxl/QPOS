@@ -1,7 +1,7 @@
 import { Check, CheckCircle2, Loader2, Store, User } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 import { SiTiktok } from "react-icons/si";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useGoogleLogin } from "@react-oauth/google";
 import Button from "../../components/ui/Button";
@@ -30,7 +30,7 @@ export default function RegisterPage() {
   const location = useLocation();
   const state = location.state as LocationState | null;
 
-  const initialStep = state?.registrationToken ? 1 : 1;
+  const initialStep = state?.registrationToken ? 2 : 1;
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [registrationToken, setRegistrationToken] = useState(
     state?.registrationToken ?? "",
@@ -117,20 +117,6 @@ export default function RegisterPage() {
     }
   };
 
-  useEffect(() => {
-    if (state?.registrationToken) {
-      setRegistrationToken(state.registrationToken);
-      if (state?.user?.name) {
-        setName(state.user.name);
-        setCurrentStep(2);
-      }
-    }
-  }, [state]);
-
-  if (isAuthenticated) {
-    return <Navigate to={ROUTES.dashboard} replace />;
-  }
-
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (credentialResponse) => {
       if (!credentialResponse.access_token) return;
@@ -163,6 +149,10 @@ export default function RegisterPage() {
     },
     flow: "implicit",
   });
+
+  if (isAuthenticated) {
+    return <Navigate to={ROUTES.dashboard} replace />;
+  }
 
   const handleSubmit = async () => {
     if (!storeName.trim()) {

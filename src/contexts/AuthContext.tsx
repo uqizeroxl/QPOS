@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { STORAGE_KEYS } from "../constants/app";
 import { authService } from "../services/authService";
 import { cacheService } from "../services/storage/cache.service";
+import { db } from "../services/storage/db";
 import type { StoreInfo } from "../services/authService";
 import { AuthContext } from "./authContextValue";
 import type { AuthContextValue, AuthUser, LoginPayload } from "./authContextValue";
@@ -56,6 +57,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.setItem(STORAGE_KEYS.authRefreshToken, nextRefreshToken);
     localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(nextUser));
     setAuthState({ token: nextToken, user: nextUser });
+    setIsLoading(false);
     void fetchStores();
   }, [fetchStores]);
 
@@ -64,8 +66,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem(STORAGE_KEYS.authRefreshToken);
     localStorage.removeItem(STORAGE_KEYS.authUser);
     setAuthState({ token: null, user: null });
+    setIsLoading(false);
     setStores([]);
-    void cacheService.clear();
+    sessionStorage.removeItem("product-page-size");
+    void Promise.allSettled([cacheService.clear(), db.pendingMutations.clear()]);
   }, []);
 
   const logout = useCallback(async () => {

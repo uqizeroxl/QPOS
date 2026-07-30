@@ -12,6 +12,8 @@ export type CategoryContextValue = {
   categories: Category[];
   activeCategoryNames: string[];
   activeCategories: Category[];
+  isLoading: boolean;
+  errorMessage: string;
   fetchCategories: () => Promise<void>;
   addCategory: (values: CategoryFormValues) => Promise<CategoryResult>;
   updateCategory: (

@@ -51,6 +51,8 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     token: string | null;
     categories: Category[];
   }>({ token: null, categories: [] });
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const authStateRef = useRef({ isAuthenticated, isAuthLoading, token });
   const inFlightRequestRef = useRef<{
     token: string;
@@ -77,6 +79,8 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     }
 
     const requestToken = authState.token;
+    setIsLoading(true);
+    setErrorMessage("");
     const request = categoryService.getCategories().then((nextCategories) => {
       if (authStateRef.current.token === requestToken) {
         setCategoryState({ token: requestToken, categories: nextCategories });
@@ -91,6 +95,11 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
           },
         }),
       );
+      if (authStateRef.current.token === requestToken) {
+        setErrorMessage(error instanceof Error ? error.message : "Kategori gagal dimuat.");
+      }
+    }).finally(() => {
+      if (authStateRef.current.token === requestToken) setIsLoading(false);
     });
 
     inFlightRequestRef.current = { token: requestToken, promise: request };
@@ -252,6 +261,8 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
       categories,
       activeCategoryNames,
       activeCategories,
+      isLoading,
+      errorMessage,
       fetchCategories,
       addCategory,
       updateCategory,
@@ -260,6 +271,8 @@ export function CategoryProvider({ children }: CategoryProviderProps) {
     [
       activeCategoryNames,
       activeCategories,
+      isLoading,
+      errorMessage,
       fetchCategories,
       addCategory,
       categories,

@@ -2,9 +2,10 @@ import type { AxiosResponse } from "axios";
 import axios from "axios";
 import { API_BASE_URL, API_TIMEOUT } from "../../constants/api";
 import { STORAGE_KEYS } from "../../constants/app";
+import type { ApiResponse, AuthPayload } from "../../types";
 import { isTokenExpired } from "../../utils/token";
-import { authService } from "../authService";
 import { cacheService } from "../storage/cache.service";
+import { db } from "../storage/db";
 import { syncService } from "../storage/sync.service";
 
 const CACHE_TTL = 5 * 60 * 1000;
@@ -16,6 +17,7 @@ function clearAuthAndRedirect(message?: string) {
   localStorage.removeItem(STORAGE_KEYS.authRefreshToken);
   localStorage.removeItem(STORAGE_KEYS.authUser);
   window.dispatchEvent(new CustomEvent("auth:clear"));
+  void Promise.allSettled([cacheService.clear(), db.pendingMutations.clear()]);
 
   if (message) {
     sessionStorage.setItem("auth_expired_message", message);
@@ -162,8 +164,10 @@ axiosInstance.interceptors.response.use(
     const isNetworkError = !error.response;
     const method = originalRequest?.method?.toLowerCase();
     const url = stripOrigin(originalRequest?.url ?? "");
+    const isPublicAuthRequest = AUTH_PREFIXES.some((prefix) => url.startsWith(prefix));
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !isPublicAuthRequest && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true;
       const refreshToken = localStorage.getItem(STORAGE_KEYS.authRefreshToken);
 
       if (refreshToken) {
@@ -181,11 +185,15 @@ axiosInstance.interceptors.response.use(
           });
         }
 
-        originalRequest._retry = true;
         isRefreshing = true;
 
         try {
-          const data = await authService.refreshToken(refreshToken);
+          const response = await axios.post<ApiResponse<AuthPayload>>(
+            `${API_BASE_URL}/auth/refresh`,
+            { refreshToken },
+            { timeout: API_TIMEOUT, headers: { "Content-Type": "application/json" } },
+          );
+          const data = response.data.data;
 
           localStorage.setItem(STORAGE_KEYS.authToken, data.token);
           localStorage.setItem(STORAGE_KEYS.authRefreshToken, data.refreshToken);
@@ -205,6 +213,10 @@ axiosInstance.interceptors.response.use(
 
       clearAuthAndRedirect("Sesi Anda telah berakhir. Silakan login kembali.");
       return Promise.reject(error);
+    }
+
+    if (error.response?.status === 401 && originalRequest?._retry) {
+      clearAuthAndRedirect("Sesi Anda telah berakhir. Silakan login kembali.");
     }
 
     if (isNetworkError && method === "get" && shouldCache(url)) {

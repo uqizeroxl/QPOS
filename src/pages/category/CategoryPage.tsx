@@ -1,6 +1,7 @@
 import { Tags } from "lucide-react";
 import { useMemo, useState } from "react";
 import Card from "../../components/ui/Card";
+import LoadError from "../../components/ui/LoadError";
 import { useActivityLog } from "../../hooks/useActivityLog";
 import { useCategories } from "../../hooks/useCategories";
 import { useToast } from "../../hooks/useToast";
@@ -25,7 +26,7 @@ function compareText(firstValue: string, secondValue: string) {
 }
 
 export default function CategoryPage() {
-  const { categories, addCategory, updateCategory, deleteCategory } =
+  const { categories, isLoading, errorMessage, fetchCategories, addCategory, updateCategory, deleteCategory } =
     useCategories();
   const { addActivity } = useActivityLog();
   const { showToast } = useToast();
@@ -200,6 +201,7 @@ export default function CategoryPage() {
           onSortDirectionChange={handleSortDirectionChange}
           onAddCategory={openAddForm}
         />
+        {errorMessage ? <LoadError message={errorMessage} onRetry={fetchCategories} isRetrying={isLoading} /> : null}
 
         <CategoryTable
           categories={paginatedCategories}

@@ -14,8 +14,12 @@ type SupplierProviderProps = {
 
 export function SupplierProvider({ children }: SupplierProviderProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const fetchSuppliers = useCallback(async (search?: string) => {
+    setIsLoading(true);
+    setErrorMessage("");
     try {
       const nextSuppliers = await supplierService.getSuppliers(search);
       setSuppliers(nextSuppliers);
@@ -29,6 +33,9 @@ export function SupplierProvider({ children }: SupplierProviderProps) {
           },
         }),
       );
+      setErrorMessage(error instanceof Error ? error.message : "Supplier gagal dimuat.");
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -133,6 +140,8 @@ export function SupplierProvider({ children }: SupplierProviderProps) {
   const value = useMemo(
     () => ({
       suppliers,
+      isLoading,
+      errorMessage,
       fetchSuppliers,
       addSupplier,
       updateSupplier,
@@ -145,6 +154,8 @@ export function SupplierProvider({ children }: SupplierProviderProps) {
       deleteSupplier,
       fetchSuppliers,
       suppliers,
+      isLoading,
+      errorMessage,
       updateSupplier,
     ],
   );

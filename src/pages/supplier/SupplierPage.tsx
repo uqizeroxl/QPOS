@@ -2,6 +2,7 @@ import { Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
+import LoadError from "../../components/ui/LoadError";
 import { Input } from "../../components/ui/Input";
 import { useActivityLog } from "../../hooks/useActivityLog";
 import { useSuppliers } from "../../hooks/useSuppliers";
@@ -17,6 +18,8 @@ const rowsPerPage = DEFAULT_PAGE_SIZE;
 export default function SupplierPage() {
   const {
     suppliers,
+    isLoading,
+    errorMessage,
     fetchSuppliers,
     addSupplier,
     updateSupplier,
@@ -190,6 +193,7 @@ export default function SupplierPage() {
             />
           </label>
         </Card>
+        {errorMessage ? <LoadError message={errorMessage} onRetry={fetchSuppliers} isRetrying={isLoading} /> : null}
 
         <SupplierTable
           suppliers={paginatedSuppliers}

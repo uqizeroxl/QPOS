@@ -836,3 +836,30 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - Jika suatu endpoint perlu dipanggil tanpa interceptor (misalnya untuk alur auth), gunakan pola yang sama: `axios.post(url, payload, { headers, timeout })`.
 - Backend handler `logout` harus selalu return 200 dalam kondisi apapun; frontend bertanggung jawab membersihkan state lokal.
 
+## 2026-07-30 — Stability & Reliability
+
+**Root cause:**
+- Request 401 paralel berbagi antrean refresh, tetapi request antrean belum ditandai sudah pernah dicoba sebelum replay. Endpoint refresh juga memakai instance Axios ber-interceptor yang sama, sehingga kegagalan auth dapat masuk kembali ke flow refresh.
+- Beberapa provider menelan error tanpa mengekspos status gagal. Request produk yang tumpang tindih juga dapat menulis respons lama setelah filter berubah.
+
+**Perbaikan auth flow:**
+- Refresh memakai client Axios terpisah dengan timeout 15 detik dan tidak melewati interceptor aplikasi.
+- Setiap request hanya direplay satu kali; request 401 paralel memakai satu refresh aktif. Refresh token kedaluwarsa, refresh gagal, atau replay tetap 401 membersihkan token, user, state auth, cache, dan antrean mutasi lalu redirect ke Login.
+- Bootstrap auth selalu mengakhiri loading melalui `finally`; event pembersihan auth menyinkronkan React state dengan localStorage. Hook OAuth kini selalu dipanggil dalam urutan stabil.
+
+**Standarisasi loading/error handling:**
+- Menambahkan komponen `LoadError` dengan tombol **Muat Ulang**.
+- Dashboard, Produk, Kategori, Supplier, Laporan, Transaksi, Riwayat Stok, dan Manajemen Peran memakai error state yang dapat dicoba ulang. Provider Kategori/Supplier mengekspos `isLoading` dan `errorMessage` serta selalu menghentikan loading di `finally`.
+- Timeout global API tetap 15 detik agar backend mati tidak mempertahankan skeleton tanpa batas.
+
+**Pencegahan infinite loading/retry:**
+- Flag `_retry` dipasang sebelum antrean/replay; endpoint auth publik tidak memicu refresh; tidak ada recursive refresh.
+- Hanya request produk terbaru yang boleh mengubah data, error, dan loading.
+- Logout/session expiry membersihkan cache IndexedDB dan pending mutation sesi lama.
+
+**Hasil testing:**
+- `npm run build` berhasil.
+- `npm run lint` berhasil tanpa error/warning.
+- `git diff --check` berhasil.
+- Audit jalur kode memverifikasi token valid, satu refresh untuk access token expired, logout otomatis saat refresh token gagal, timeout menjadi error state, dan tidak ada refresh berulang.
+

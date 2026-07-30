@@ -10,6 +10,7 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
+import LoadError from "../../components/ui/LoadError";
 import StatCard from "../../components/ui/StatCard";
 import {
   Table,
@@ -151,11 +152,7 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        {errorMessage ? (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-            {errorMessage}
-          </p>
-        ) : null}
+        {errorMessage ? <LoadError message={errorMessage} onRetry={fetchDashboard} isRetrying={isLoading} /> : null}
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           {stats.map((stat) => (

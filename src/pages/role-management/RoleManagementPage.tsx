@@ -1,7 +1,8 @@
 import { Loader2, Plus, Search, Trash2, UserRound, Users, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
+import LoadError from "../../components/ui/LoadError";
 import { Input } from "../../components/ui/Input";
 import MainLayout from "../../layouts/MainLayout";
 import { useToast } from "../../hooks/useToast";
@@ -18,21 +19,24 @@ export default function RoleManagementPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage("");
     try {
       const data = await memberService.listMembers();
       setMembers(data);
     } catch {
-      showToast("Gagal memuat daftar anggota.", "error");
+      setErrorMessage("Gagal memuat daftar anggota.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void fetchMembers();
-  }, []);
+  }, [fetchMembers]);
 
   const handleRoleChange = async (memberId: string, role: StoreRole) => {
     setUpdatingId(memberId);
@@ -119,7 +123,9 @@ export default function RoleManagementPage() {
             </Button>
           </div>
 
-          {isLoading ? (
+          {errorMessage ? (
+            <div className="mt-5"><LoadError message={errorMessage} onRetry={fetchMembers} isRetrying={isLoading} /></div>
+          ) : isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
             </div>

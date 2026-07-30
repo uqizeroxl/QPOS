@@ -10,6 +10,8 @@ export type SupplierResult =
 
 export type SupplierContextValue = {
   suppliers: Supplier[];
+  isLoading: boolean;
+  errorMessage: string;
   fetchSuppliers: (search?: string) => Promise<void>;
   addSupplier: (values: SupplierFormValues) => Promise<SupplierResult>;
   updateSupplier: (

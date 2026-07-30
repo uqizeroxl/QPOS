@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ProductApiError, productService } from "../services/productService";
 import { ProductContext } from "./productContextValue";
@@ -14,25 +14,27 @@ export function ProductProvider({ children }: ProductProviderProps) {
   const [totalProducts, setTotalProducts] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const fetchRequestId = useRef(0);
 
   const fetchProducts = useCallback(async (
     params: Parameters<typeof productService.getProducts>[0] = {},
   ) => {
+    const requestId = ++fetchRequestId.current;
     setIsLoading(true);
     setErrorMessage("");
 
     try {
       const result = await productService.getProducts(params);
-      setProducts(result.products);
-      setTotalProducts(result.total);
+      if (requestId === fetchRequestId.current) {
+        setProducts(result.products);
+        setTotalProducts(result.total);
+      }
     } catch (error) {
-      setErrorMessage(
-        error instanceof ProductApiError
-          ? error.message
-          : "Terjadi kesalahan pada server.",
-      );
+      if (requestId === fetchRequestId.current) {
+        setErrorMessage(error instanceof ProductApiError ? error.message : "Terjadi kesalahan pada server.");
+      }
     } finally {
-      setIsLoading(false);
+      if (requestId === fetchRequestId.current) setIsLoading(false);
     }
   }, []);
 

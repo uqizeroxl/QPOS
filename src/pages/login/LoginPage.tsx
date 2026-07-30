@@ -47,10 +47,6 @@ export default function LoginPage() {
     }
   }, [showToast]);
 
-  if (isAuthenticated) {
-    return <Navigate to={ROUTES.dashboard} replace />;
-  }
-
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (credentialResponse) => {
       if (!credentialResponse.access_token) return;
@@ -83,6 +79,10 @@ export default function LoginPage() {
     },
     flow: "implicit",
   });
+
+  if (isAuthenticated) {
+    return <Navigate to={ROUTES.dashboard} replace />;
+  }
 
   const handleTikTokLogin = async () => {
     setErrorMessage("");

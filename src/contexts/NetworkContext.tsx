@@ -10,6 +10,7 @@ async function requestPersistentStorage() {
       await navigator.storage.persist();
     }
   } catch {
+    // Persistence is optional and may be denied by the browser.
   }
 }
 
@@ -18,6 +19,7 @@ type NetworkContextValue = {
   pendingCount: number;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const NetworkContext = createContext<NetworkContextValue>({
   isOnline: true,
   pendingCount: 0,
