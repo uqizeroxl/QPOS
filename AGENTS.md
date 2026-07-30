@@ -890,6 +890,13 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - Seluruh flow cetak struk membaca konfigurasi pengguna untuk page size, preview, dan akhir print job; tinggi tetap mengikuti konten tanpa halaman kosong.
 - Memisahkan adapter print browser dan menyiapkan TODO integrasi ESC/POS `GS V` untuk aplikasi desktop; browser tetap bergantung pada dukungan driver/printer.
 
+## 2026-07-30 — Thermal Paper Profiles
+
+- Menambahkan enam paper profile thermal untuk kombinasi lebar 57/58/80mm dan diameter rol 30/40/50/80mm.
+- Konfigurasi kini disimpan sebagai ID profile; preview dan CSS print mengambil lebar dari metadata profile aktif, sedangkan diameter rol disimpan sebagai informasi untuk pengembangan berikutnya.
+- Konfigurasi lama 58mm otomatis dipetakan ke `58x30` dan 80mm ke profile default `80x80`, baik pada migrasi database maupun cache localStorage/API lama.
+- Registry profile bertipe data terpusat sehingga profile baru dapat ditambahkan tanpa mengubah flow cetak atau komponen dropdown.
+
 ## 2026-07-30 — UI-002 padding kartu perangkat
 
 **Tujuan:**

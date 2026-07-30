@@ -28,6 +28,7 @@ export const getReceiptFooter = async (
 export const updateReceiptFooter = async (
   req: Request<unknown, unknown, {
     receiptFooter?: unknown;
+    thermalPaperProfile?: unknown;
     thermalPaperWidth?: unknown;
     receiptAutoCut?: unknown;
   }>,
@@ -38,6 +39,7 @@ export const updateReceiptFooter = async (
     const settings = await updateTenantReceiptFooter(
       req.tenant.prisma,
       req.body.receiptFooter,
+      req.body.thermalPaperProfile,
       req.body.thermalPaperWidth,
       req.body.receiptAutoCut
     );

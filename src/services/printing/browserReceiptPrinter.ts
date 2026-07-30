@@ -1,15 +1,15 @@
-import type { ThermalPaperWidth } from "../../types/settings";
+import { getThermalPaperProfile, type ThermalPaperProfileId } from "../../types/settings";
 
 const RECEIPT_PAGE_STYLE_ID = "qpos-receipt-page-style";
 const RECEIPT_WIDTH_PROPERTY = "--receipt-paper-width";
 
 export type ReceiptPrinterConfig = {
-  paperWidth: ThermalPaperWidth;
+  paperProfile: ThermalPaperProfileId;
   autoCut: boolean;
 };
 
 export function beginBrowserReceiptPrint(config: ReceiptPrinterConfig) {
-  const width = `${config.paperWidth}mm`;
+  const width = `${getThermalPaperProfile(config.paperProfile).widthMm}mm`;
   document.documentElement.style.setProperty(RECEIPT_WIDTH_PROPERTY, width);
   document.body.style.setProperty(RECEIPT_WIDTH_PROPERTY, width);
   document.body.classList.add("receipt-printing");

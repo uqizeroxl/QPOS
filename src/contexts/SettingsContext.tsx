@@ -26,7 +26,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       address: nextSettings.address.trim(),
       receiptFooter:
         nextSettings.receiptFooter.trim() || defaultSettings.receiptFooter,
-      thermalPaperWidth: nextSettings.thermalPaperWidth,
+      thermalPaperProfile: nextSettings.thermalPaperProfile,
       receiptAutoCut: nextSettings.receiptAutoCut,
     };
 

@@ -36,14 +36,14 @@ export function useReceiptPrinter(onAfterPrint?: () => void) {
 
   const printReceipt = useCallback((transaction: SalesTransaction) => {
     const config: ReceiptPrinterConfig = {
-      paperWidth: settings.thermalPaperWidth,
+      paperProfile: settings.thermalPaperProfile,
       autoCut: settings.receiptAutoCut,
     };
     activeConfigRef.current = config;
     beginBrowserReceiptPrint(config);
     setReceiptPrintTransaction(transaction);
     window.setTimeout(() => window.print(), 100);
-  }, [settings.receiptAutoCut, settings.thermalPaperWidth]);
+  }, [settings.receiptAutoCut, settings.thermalPaperProfile]);
 
   return {
     receiptPrintTransaction,

@@ -10,6 +10,14 @@ const DEFAULT_RECEIPT_FOOTER = "Terima kasih";
 const MAX_RECEIPT_FOOTER_LENGTH = 250;
 const MAX_RECEIPT_FOOTER_LINES = 5;
 const THERMAL_PAPER_WIDTHS = [58, 80] as const;
+const THERMAL_PAPER_PROFILES = {
+  "57x30": 57,
+  "58x30": 58,
+  "58x40": 58,
+  "58x50": 58,
+  "80x50": 80,
+  "80x80": 80
+} as const;
 
 export class ReceiptFooterValidationError extends Error {}
 
@@ -19,6 +27,19 @@ const normalizeThermalPaperWidth = (value: unknown) => {
   }
   return value;
 };
+
+const normalizeThermalPaperProfile = (value: unknown) => {
+  if (
+    typeof value !== "string" ||
+    !Object.prototype.hasOwnProperty.call(THERMAL_PAPER_PROFILES, value)
+  ) {
+    throw new ReceiptFooterValidationError("Profil ukuran kertas tidak valid.");
+  }
+  return value as keyof typeof THERMAL_PAPER_PROFILES;
+};
+
+const migrateLegacyThermalPaperWidth = (value: unknown) =>
+  normalizeThermalPaperWidth(value) === 58 ? "58x30" as const : "80x80" as const;
 
 const normalizeReceiptAutoCut = (value: unknown) => {
   if (typeof value !== "boolean") {
@@ -54,7 +75,12 @@ export const getReceiptFooter = async (prisma: PrismaClient) => {
     where: { key: "default" },
     create: { key: "default" },
     update: {},
-    select: { receiptFooter: true, thermalPaperWidth: true, receiptAutoCut: true }
+    select: {
+      receiptFooter: true,
+      thermalPaperProfile: true,
+      thermalPaperWidth: true,
+      receiptAutoCut: true
+    }
   });
 
   return settings;
@@ -63,13 +89,19 @@ export const getReceiptFooter = async (prisma: PrismaClient) => {
 export const updateReceiptFooter = async (
   prisma: PrismaClient,
   value: unknown,
+  thermalPaperProfileValue: unknown,
   thermalPaperWidthValue: unknown,
   receiptAutoCutValue: unknown
 ) => {
   const receiptFooter = normalizeReceiptFooter(value);
-  const thermalPaperWidth = thermalPaperWidthValue === undefined
+  const thermalPaperProfile = thermalPaperProfileValue === undefined
+    ? thermalPaperWidthValue === undefined
+      ? undefined
+      : migrateLegacyThermalPaperWidth(thermalPaperWidthValue)
+    : normalizeThermalPaperProfile(thermalPaperProfileValue);
+  const thermalPaperWidth = thermalPaperProfile === undefined
     ? undefined
-    : normalizeThermalPaperWidth(thermalPaperWidthValue);
+    : THERMAL_PAPER_PROFILES[thermalPaperProfile];
   const receiptAutoCut = receiptAutoCutValue === undefined
     ? undefined
     : normalizeReceiptAutoCut(receiptAutoCutValue);
@@ -80,14 +112,21 @@ export const updateReceiptFooter = async (
       key: "default",
       receiptFooter,
       ...(thermalPaperWidth === undefined ? {} : { thermalPaperWidth }),
+      ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
       ...(receiptAutoCut === undefined ? {} : { receiptAutoCut })
     },
     update: {
       receiptFooter,
       ...(thermalPaperWidth === undefined ? {} : { thermalPaperWidth }),
+      ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
       ...(receiptAutoCut === undefined ? {} : { receiptAutoCut })
     },
-    select: { receiptFooter: true, thermalPaperWidth: true, receiptAutoCut: true }
+    select: {
+      receiptFooter: true,
+      thermalPaperProfile: true,
+      thermalPaperWidth: true,
+      receiptAutoCut: true
+    }
   });
 };
 

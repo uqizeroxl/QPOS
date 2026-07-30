@@ -45,6 +45,6 @@ export type ProductDatasetResetResult = {
 
 export type ReceiptFooterSettings = {
   receiptFooter: string;
-  thermalPaperWidth: import("./settings").ThermalPaperWidth;
+  thermalPaperProfile: import("./settings").ThermalPaperProfileId;
   receiptAutoCut: boolean;
 };

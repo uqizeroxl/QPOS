@@ -26,7 +26,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { useToast } from "../../hooks/useToast";
 import MainLayout from "../../layouts/MainLayout";
 import type { ThemePreference } from "../../contexts/themeContextValue";
-import type { ThermalPaperWidth } from "../../types/settings";
+import type { ThermalPaperProfileId } from "../../types/settings";
 import {
   ProductApiError,
   productService,
@@ -79,7 +79,7 @@ export default function SettingPage() {
     settings.receiptFooter,
   );
   const [isSavingReceiptFooter, setIsSavingReceiptFooter] = useState(false);
-  const [thermalPaperWidth, setThermalPaperWidth] = useState<ThermalPaperWidth>(settings.thermalPaperWidth);
+  const [thermalPaperProfile, setThermalPaperProfile] = useState<ThermalPaperProfileId>(settings.thermalPaperProfile);
   const [receiptAutoCut, setReceiptAutoCut] = useState(settings.receiptAutoCut);
   const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
   const [changeOwnerEmail, setChangeOwnerEmail] = useState("");
@@ -97,15 +97,15 @@ export default function SettingPage() {
 
   useEffect(() => {
     setReceiptFooterInput(settings.receiptFooter);
-    setThermalPaperWidth(settings.thermalPaperWidth);
+    setThermalPaperProfile(settings.thermalPaperProfile);
     setReceiptAutoCut(settings.receiptAutoCut);
-  }, [settings.receiptAutoCut, settings.receiptFooter, settings.thermalPaperWidth]);
+  }, [settings.receiptAutoCut, settings.receiptFooter, settings.thermalPaperProfile]);
 
   const handleSave = () => {
     saveSettings({
       ...storeInfo,
       receiptFooter: settings.receiptFooter,
-      thermalPaperWidth: settings.thermalPaperWidth,
+      thermalPaperProfile: settings.thermalPaperProfile,
       receiptAutoCut: settings.receiptAutoCut,
     });
     showToast("Pengaturan toko berhasil disimpan.");
@@ -121,7 +121,7 @@ export default function SettingPage() {
     try {
       const result = await settingsService.updateReceiptFooter({
         receiptFooter,
-        thermalPaperWidth,
+        thermalPaperProfile,
         receiptAutoCut,
       });
       setReceiptFooterInput(result.receiptFooter);
@@ -658,11 +658,11 @@ export default function SettingPage() {
           <SystemSettingsTab
             receiptFooter={receiptFooter}
             isSavingReceiptFooter={isSavingReceiptFooter}
-            thermalPaperWidth={thermalPaperWidth}
+            thermalPaperProfile={thermalPaperProfile}
             receiptAutoCut={receiptAutoCut}
             onReceiptFooterChange={setReceiptFooterInput}
             onSaveReceiptFooter={handleSaveReceiptFooter}
-            onThermalPaperWidthChange={setThermalPaperWidth}
+            onThermalPaperProfileChange={setThermalPaperProfile}
             onReceiptAutoCutChange={setReceiptAutoCut}
           />
         ) : null}

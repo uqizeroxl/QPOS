@@ -2,18 +2,37 @@ import axios from "axios";
 
 import { apiService } from "./api/apiService";
 import type { ProductDatasetResetResult, ReceiptFooterSettings } from "../types/report";
+import {
+  isThermalPaperProfileId,
+  migrateLegacyPaperWidth,
+} from "../types/settings";
 
 export type { ProductDatasetResetResult, ReceiptFooterSettings };
 
 export class SettingsApiError extends Error {}
 
+type ReceiptSettingsApiResponse = Partial<ReceiptFooterSettings> & {
+  receiptFooter: string;
+  thermalPaperWidth?: unknown;
+};
+
+const normalizeReceiptSettings = (
+  settings: ReceiptSettingsApiResponse,
+): ReceiptFooterSettings => ({
+  receiptFooter: settings.receiptFooter,
+  thermalPaperProfile: isThermalPaperProfileId(settings.thermalPaperProfile)
+    ? settings.thermalPaperProfile
+    : migrateLegacyPaperWidth(settings.thermalPaperWidth),
+  receiptAutoCut: settings.receiptAutoCut ?? true,
+});
+
 export const settingsService = {
   getReceiptFooter: async () => {
     try {
-      const response = await apiService.get<ReceiptFooterSettings>(
+      const response = await apiService.get<ReceiptSettingsApiResponse>(
         "/settings/receipt-footer",
       );
-      return response.data;
+      return normalizeReceiptSettings(response.data);
     } catch (error) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         throw new SettingsApiError(
@@ -26,10 +45,10 @@ export const settingsService = {
   updateReceiptFooter: async (settings: ReceiptFooterSettings) => {
     try {
       const response = await apiService.put<
-        ReceiptFooterSettings,
+        ReceiptSettingsApiResponse,
         ReceiptFooterSettings
       >("/settings/receipt-footer", settings);
-      return response.data;
+      return normalizeReceiptSettings(response.data);
     } catch (error) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         throw new SettingsApiError(

@@ -2,27 +2,27 @@ import { Save } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Select, Textarea } from "../../components/ui/Input";
-import { THERMAL_PAPER_WIDTHS, type ThermalPaperWidth } from "../../types/settings";
+import { THERMAL_PAPER_PROFILES, type ThermalPaperProfileId } from "../../types/settings";
 
 type SystemSettingsTabProps = {
   receiptFooter: string;
   isSavingReceiptFooter: boolean;
-  thermalPaperWidth: ThermalPaperWidth;
+  thermalPaperProfile: ThermalPaperProfileId;
   receiptAutoCut: boolean;
   onReceiptFooterChange: (value: string) => void;
   onSaveReceiptFooter: () => void | Promise<void>;
-  onThermalPaperWidthChange: (value: ThermalPaperWidth) => void;
+  onThermalPaperProfileChange: (value: ThermalPaperProfileId) => void;
   onReceiptAutoCutChange: (value: boolean) => void;
 };
 
 export default function SystemSettingsTab({
   receiptFooter,
   isSavingReceiptFooter,
-  thermalPaperWidth,
+  thermalPaperProfile,
   receiptAutoCut,
   onReceiptFooterChange,
   onSaveReceiptFooter,
-  onThermalPaperWidthChange,
+  onThermalPaperProfileChange,
   onReceiptAutoCutChange,
 }: SystemSettingsTabProps) {
   return (
@@ -43,13 +43,13 @@ export default function SystemSettingsTab({
               Ukuran Kertas
             </span>
             <Select
-              value={thermalPaperWidth}
+              value={thermalPaperProfile}
               onChange={(event) =>
-                onThermalPaperWidthChange(Number(event.target.value) as ThermalPaperWidth)
+                onThermalPaperProfileChange(event.target.value as ThermalPaperProfileId)
               }
             >
-              {THERMAL_PAPER_WIDTHS.map((width) => (
-                <option key={width} value={width}>{width} mm</option>
+              {THERMAL_PAPER_PROFILES.map((profile) => (
+                <option key={profile.id} value={profile.id}>{profile.label}</option>
               ))}
             </Select>
           </label>

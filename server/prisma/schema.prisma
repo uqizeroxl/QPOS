@@ -239,6 +239,7 @@ model Settings {
   address       String   @default("") @db.Text
   receiptFooter String   @default("Terima kasih") @db.VarChar(250)
   thermalPaperWidth Int  @default(80)
+  thermalPaperProfile String @default("80x80") @db.VarChar(20)
   receiptAutoCut Boolean @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
