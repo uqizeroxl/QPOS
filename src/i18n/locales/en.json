@@ -57,6 +57,7 @@
       "help": "Help & Shortcuts",
       "backToStore": "Back to Store",
       "accountSettings": "Account Settings",
+      "deviceManagement": "Devices",
       "storeManagement": "Store Management",
       "roleManagement": "Staff Management"
     }

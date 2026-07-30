@@ -51,6 +51,7 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  DeviceSession: 'DeviceSession',
   Account: 'Account',
   Store: 'Store',
   StoreMember: 'StoreMember',
@@ -72,6 +73,22 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+export const DeviceSessionScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  deviceName: 'deviceName',
+  deviceType: 'deviceType',
+  browser: 'browser',
+  os: 'os',
+  ipAddress: 'ipAddress',
+  tokenVersion: 'tokenVersion',
+  lastActiveAt: 'lastActiveAt',
+  createdAt: 'createdAt'
+} as const
+
+export type DeviceSessionScalarFieldEnum = (typeof DeviceSessionScalarFieldEnum)[keyof typeof DeviceSessionScalarFieldEnum]
 
 
 export const AccountScalarFieldEnum = {

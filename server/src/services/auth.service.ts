@@ -2,9 +2,11 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 import { InvitationStatus, StoreRole } from "../generated/master-prisma/client";
-import { UserRole } from "../generated/prisma/client";
+import { NotificationCategory, NotificationType, UserRole } from "../generated/prisma/client";
 import { appConfig } from "../config/app.config";
 import { masterPrisma } from "../utils/master-prisma";
+import { getStorePrisma } from "../utils/store-prisma";
+import * as deviceService from "./device.service";
 import {
   verifyGoogleToken,
   verifyAppleToken,
@@ -18,6 +20,7 @@ export type AuthUser = {
   name: string;
   role: UserRole;
   storeId: string;
+  deviceId?: string;
 };
 
 type JwtPayload = {
@@ -25,6 +28,8 @@ type JwtPayload = {
   storeId: string;
   role: StoreRole;
   tokenVersion: number;
+  deviceId: string;
+  deviceTokenVersion: number;
 };
 
 type RefreshJwtPayload = {
@@ -32,6 +37,8 @@ type RefreshJwtPayload = {
   storeId: string;
   type: "refresh";
   tokenVersion: number;
+  deviceId: string;
+  deviceTokenVersion: number;
 };
 
 export class InvalidCredentialsError extends Error {
@@ -76,20 +83,23 @@ const mapStoreRoleToLegacyRole = (role: StoreRole) => {
   return UserRole.ADMIN;
 };
 
-const sanitizeUser = (user: AuthUser) => ({
+const sanitizeUser = (user: AuthUser, deviceId?: string) => ({
   id: user.id,
   username: user.username,
   name: user.name,
   role: user.role,
-  storeId: user.storeId
+  storeId: user.storeId,
+  ...(deviceId ? { deviceId } : {})
 });
 
-const signAccessToken = (user: AuthUser, role: StoreRole, tokenVersion: number) =>
+const signAccessToken = (user: AuthUser, role: StoreRole, tokenVersion: number, deviceId: string, deviceTokenVersion: number) =>
   jwt.sign(
     {
       storeId: user.storeId,
       role,
-      tokenVersion
+      tokenVersion,
+      deviceId,
+      deviceTokenVersion
     },
     appConfig.jwtSecret,
     {
@@ -98,13 +108,15 @@ const signAccessToken = (user: AuthUser, role: StoreRole, tokenVersion: number) 
     }
   );
 
-const signRefreshToken = (user: AuthUser, tokenVersion: number) =>
+const signRefreshToken = (user: AuthUser, tokenVersion: number, deviceId: string, deviceTokenVersion: number) =>
   jwt.sign(
     {
       sub: user.id,
       storeId: user.storeId,
       type: "refresh",
-      tokenVersion
+      tokenVersion,
+      deviceId,
+      deviceTokenVersion
     },
     appConfig.jwtSecret,
     {
@@ -112,17 +124,19 @@ const signRefreshToken = (user: AuthUser, tokenVersion: number) =>
     }
   );
 
-const issueTokens = async (user: AuthUser, role: StoreRole) => {
+const issueTokens = async (user: AuthUser, role: StoreRole, deviceId?: string, deviceTokenVersion?: number) => {
   const account = await masterPrisma.account.findUnique({
     where: { id: user.id },
     select: { tokenVersion: true }
   });
 
   const tokenVersion = account?.tokenVersion ?? 0;
+  const devId = deviceId ?? "";
+  const devTokenVer = deviceTokenVersion ?? 0;
 
   return {
-    token: signAccessToken(user, role, tokenVersion),
-    refreshToken: signRefreshToken(user, tokenVersion),
+    token: signAccessToken(user, role, tokenVersion, devId, devTokenVer),
+    refreshToken: signRefreshToken(user, tokenVersion, devId, devTokenVer),
     user
   };
 };
@@ -164,7 +178,7 @@ export const listStores = async (accountId: string) => {
   }));
 };
 
-export const switchStore = async (accountId: string, storeId: string) => {
+export const switchStore = async (accountId: string, storeId: string, deviceId?: string) => {
   const membership = await masterPrisma.storeMember.findFirst({
     where: {
       accountId,
@@ -205,12 +219,34 @@ export const switchStore = async (accountId: string, storeId: string) => {
     name: membership.account.name,
     role: mapStoreRoleToLegacyRole(membership.role),
     storeId: membership.storeId
-  });
+  }, deviceId);
 
-  return issueTokens(authUser, membership.role);
+  const device = deviceId ? await masterPrisma.deviceSession.findUnique({ where: { id: deviceId } }) : null;
+
+  return issueTokens(authUser, membership.role, deviceId, device?.tokenVersion);
 };
 
-export const login = async (username: string, password: string) => {
+const notifyOtherDevices = async (accountId: string, storeId: string, deviceName: string) => {
+  const activeCount = await deviceService.countActiveDevices(accountId);
+  if (activeCount <= 1) return;
+
+  try {
+    const prisma = await getStorePrisma(storeId);
+    await prisma.notification.create({
+      data: {
+        title: "Perangkat Baru Terdeteksi",
+        description: `Akun Anda digunakan di perangkat: ${deviceName}`,
+        message: `Akun Anda digunakan di perangkat: ${deviceName}`,
+        type: NotificationType.INFO,
+        category: NotificationCategory.ANNOUNCEMENT,
+      },
+    });
+  } catch {
+    // Silently fail if notification creation fails
+  }
+};
+
+export const login = async (username: string, password: string, deviceInfo?: { userAgent: string; ipAddress: string }) => {
   const account = await masterPrisma.account.findUnique({
     where: {
       username
@@ -267,13 +303,28 @@ export const login = async (username: string, password: string) => {
     throw new StoreInactiveError();
   }
 
+  let deviceId: string | undefined;
+  let deviceTokenVersion: number | undefined;
+
+  if (deviceInfo) {
+    const session = await deviceService.createDeviceSession({
+      accountId: account.id,
+      userAgent: deviceInfo.userAgent,
+      ipAddress: deviceInfo.ipAddress,
+    });
+    deviceId = session.id;
+    deviceTokenVersion = session.tokenVersion;
+
+    notifyOtherDevices(account.id, membership.storeId, session.deviceName ?? "");
+  }
+
   const authUser = sanitizeUser({
     id: account.id,
     username: account.username,
     name: account.name,
     role: mapStoreRoleToLegacyRole(membership.role),
     storeId: membership.storeId
-  });
+  }, deviceId);
 
   const stores = account.memberships.map((m) => ({
     id: m.store.id,
@@ -281,7 +332,7 @@ export const login = async (username: string, password: string) => {
     role: m.role
   }));
 
-  const tokens = await issueTokens(authUser, membership.role);
+  const tokens = await issueTokens(authUser, membership.role, deviceId, deviceTokenVersion);
 
   return {
     ...tokens,
@@ -338,7 +389,10 @@ const findOrCreateOAuthAccount = async (params: {
   });
 };
 
-const loginWithOAuthAccount = async (account: { id: string; username: string; name: string }) => {
+const loginWithOAuthAccount = async (
+  account: { id: string; username: string; name: string },
+  deviceInfo?: { userAgent: string; ipAddress: string },
+) => {
   const membership = await masterPrisma.storeMember.findFirst({
     where: {
       accountId: account.id,
@@ -358,13 +412,28 @@ const loginWithOAuthAccount = async (account: { id: string; username: string; na
     throw new StoreInactiveError();
   }
 
+  let deviceId: string | undefined;
+  let deviceTokenVersion: number | undefined;
+
+  if (deviceInfo) {
+    const session = await deviceService.createDeviceSession({
+      accountId: account.id,
+      userAgent: deviceInfo.userAgent,
+      ipAddress: deviceInfo.ipAddress,
+    });
+    deviceId = session.id;
+    deviceTokenVersion = session.tokenVersion;
+
+    notifyOtherDevices(account.id, membership.storeId, session.deviceName ?? "");
+  }
+
   const authUser = sanitizeUser({
     id: account.id,
     username: account.username,
     name: account.name,
     role: mapStoreRoleToLegacyRole(membership.role),
     storeId: membership.storeId,
-  });
+  }, deviceId);
 
   const memberships = await masterPrisma.storeMember.findMany({
     where: { accountId: account.id, store: { isActive: true } },
@@ -382,7 +451,7 @@ const loginWithOAuthAccount = async (account: { id: string; username: string; na
     role: m.role,
   }));
 
-  const tokens = await issueTokens(authUser, membership.role);
+  const tokens = await issueTokens(authUser, membership.role, deviceId, deviceTokenVersion);
 
   return {
     ...tokens,
@@ -397,7 +466,7 @@ const signRegistrationToken = (accountId: string) =>
     { expiresIn: "15m" }
   );
 
-export const loginWithGoogle = async (accessToken: string) => {
+export const loginWithGoogle = async (accessToken: string, deviceInfo?: { userAgent: string; ipAddress: string }) => {
   const googlePayload = await verifyGoogleToken(accessToken);
 
   const account = await findOrCreateOAuthAccount({
@@ -412,7 +481,7 @@ export const loginWithGoogle = async (accessToken: string) => {
     throw new UserInactiveError();
   }
 
-  const result = await loginWithOAuthAccount(account);
+  const result = await loginWithOAuthAccount(account, deviceInfo);
 
   if (!result) {
     const registrationToken = signRegistrationToken(account.id);
@@ -430,7 +499,7 @@ export const loginWithGoogle = async (accessToken: string) => {
   return result;
 };
 
-export const loginWithTikTok = async (authorizationCode: string) => {
+export const loginWithTikTok = async (authorizationCode: string, deviceInfo?: { userAgent: string; ipAddress: string }) => {
   const tiktokPayload = await verifyTikTokToken(authorizationCode);
 
   const account = await findOrCreateOAuthAccount({
@@ -445,7 +514,7 @@ export const loginWithTikTok = async (authorizationCode: string) => {
     throw new UserInactiveError();
   }
 
-  const result = await loginWithOAuthAccount(account);
+  const result = await loginWithOAuthAccount(account, deviceInfo);
 
   if (!result) {
     const registrationToken = signRegistrationToken(account.id);
@@ -463,7 +532,7 @@ export const loginWithTikTok = async (authorizationCode: string) => {
   return result;
 };
 
-export const loginWithApple = async (authorizationCode: string) => {
+export const loginWithApple = async (authorizationCode: string, deviceInfo?: { userAgent: string; ipAddress: string }) => {
   const applePayload = await verifyAppleToken(authorizationCode);
 
   const account = await findOrCreateOAuthAccount({
@@ -477,7 +546,7 @@ export const loginWithApple = async (authorizationCode: string) => {
     throw new UserInactiveError();
   }
 
-  const result = await loginWithOAuthAccount(account);
+  const result = await loginWithOAuthAccount(account, deviceInfo);
 
   if (!result) {
     const registrationToken = signRegistrationToken(account.id);
@@ -495,10 +564,13 @@ export const loginWithApple = async (authorizationCode: string) => {
   return result;
 };
 
-export const completeOAuthRegistration = async (params: {
-  registrationToken: string;
-  storeName: string;
-}) => {
+export const completeOAuthRegistration = async (
+  params: {
+    registrationToken: string;
+    storeName: string;
+  },
+  deviceInfo?: { userAgent: string; ipAddress: string },
+) => {
   const payload = jwt.verify(params.registrationToken, appConfig.jwtSecret) as {
     sub: string;
     purpose: string;
@@ -520,16 +592,33 @@ export const completeOAuthRegistration = async (params: {
     where: { accountId: account.id },
   });
 
+  let deviceId: string | undefined;
+  let deviceTokenVersion: number | undefined;
+
+  const createDeviceSessionIfNeeded = async (storeId: string) => {
+    if (deviceInfo) {
+      const session = await deviceService.createDeviceSession({
+        accountId: account.id,
+        userAgent: deviceInfo.userAgent,
+        ipAddress: deviceInfo.ipAddress,
+      });
+      deviceId = session.id;
+      deviceTokenVersion = session.tokenVersion;
+      notifyOtherDevices(account.id, storeId, session.deviceName ?? "");
+    }
+  };
+
   if (existingMembership) {
+    await createDeviceSessionIfNeeded(existingMembership.storeId);
     const authUser = sanitizeUser({
       id: account.id,
       username: account.username,
       name: account.name,
       role: mapStoreRoleToLegacyRole(existingMembership.role),
       storeId: existingMembership.storeId,
-    });
+    }, deviceId);
 
-    return issueTokens(authUser, existingMembership.role);
+    return issueTokens(authUser, existingMembership.role, deviceId, deviceTokenVersion);
   }
 
   const store = await masterPrisma.store.create({
@@ -546,15 +635,17 @@ export const completeOAuthRegistration = async (params: {
     },
   });
 
+  await createDeviceSessionIfNeeded(membership.storeId);
+
   const authUser = sanitizeUser({
     id: account.id,
     username: account.username,
     name: account.name,
     role: mapStoreRoleToLegacyRole(membership.role),
     storeId: membership.storeId,
-  });
+  }, deviceId);
 
-  return issueTokens(authUser, membership.role);
+  return issueTokens(authUser, membership.role, deviceId, deviceTokenVersion);
 };
 
 export const verifyToken = async (token: string) => {
@@ -598,13 +689,21 @@ export const verifyToken = async (token: string) => {
       throw new AuthTokenInvalidError();
     }
 
+    if (payload.deviceId) {
+      const validDevice = await deviceService.verifyDeviceToken(payload.deviceId, payload.deviceTokenVersion);
+      if (!validDevice) {
+        throw new AuthTokenInvalidError();
+      }
+      deviceService.touchDeviceSession(payload.deviceId);
+    }
+
     return sanitizeUser({
       id: membership.account.id,
       username: membership.account.username,
       name: membership.account.name,
       role: mapStoreRoleToLegacyRole(membership.role),
       storeId: membership.storeId
-    });
+    }, payload.deviceId);
   } catch (error) {
     if (error instanceof AuthTokenInvalidError) {
       throw error;
@@ -651,6 +750,14 @@ export const refreshToken = async (refreshTokenValue: string) => {
       throw new AuthTokenInvalidError();
     }
 
+    if (payload.deviceId) {
+      const validDevice = await deviceService.verifyDeviceToken(payload.deviceId, payload.deviceTokenVersion);
+      if (!validDevice) {
+        throw new AuthTokenInvalidError();
+      }
+      deviceService.touchDeviceSession(payload.deviceId);
+    }
+
     const membership = account.memberships[0];
 
     const authUser = sanitizeUser({
@@ -659,9 +766,9 @@ export const refreshToken = async (refreshTokenValue: string) => {
       name: account.name,
       role: mapStoreRoleToLegacyRole(membership.role),
       storeId: membership.storeId
-    });
+    }, payload.deviceId);
 
-    return issueTokens(authUser, membership.role);
+    return issueTokens(authUser, membership.role, payload.deviceId, payload.deviceTokenVersion);
   } catch (error) {
     if (error instanceof AuthTokenInvalidError) {
       throw error;
@@ -762,13 +869,17 @@ export const bindTikTokAccount = async (
   return { name: tiktokPayload.name };
 };
 
-export const logout = async (accountId: string) => {
-  await masterPrisma.account.update({
-    where: { id: accountId },
-    data: {
-      tokenVersion: { increment: 1 }
-    }
-  });
+export const logout = async (accountId: string, deviceId?: string) => {
+  if (deviceId) {
+    await deviceService.logoutDevice(deviceId, accountId);
+  } else {
+    await masterPrisma.account.update({
+      where: { id: accountId },
+      data: {
+        tokenVersion: { increment: 1 }
+      }
+    });
+  }
 };
 
 export class InvitationNotFoundError extends Error {

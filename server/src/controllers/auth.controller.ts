@@ -44,7 +44,12 @@ export const login = async (
       return;
     }
 
-    const auth = await authService.login(username, password);
+    const deviceInfo = {
+      userAgent: req.headers["user-agent"] ?? "",
+      ipAddress: req.ip ?? req.socket.remoteAddress ?? "",
+    };
+
+    const auth = await authService.login(username, password, deviceInfo);
 
     res.status(200).json({
       success: true,
@@ -87,7 +92,8 @@ export const logout = async (
   next: NextFunction
 ) => {
   try {
-    await authService.logout(req.user.id);
+    const deviceId = req.body.deviceId?.trim() || undefined;
+    await authService.logout(req.user.id, deviceId);
 
     res.status(200).json({
       success: true,
@@ -150,7 +156,12 @@ export const googleLogin = async (
       return;
     }
 
-    const auth = await authService.loginWithGoogle(accessToken);
+    const deviceInfo = {
+      userAgent: req.headers["user-agent"] ?? "",
+      ipAddress: req.ip ?? req.socket.remoteAddress ?? "",
+    };
+
+    const auth = await authService.loginWithGoogle(accessToken, deviceInfo);
 
     if (auth && "needsRegistration" in auth && auth.needsRegistration) {
       res.status(200).json({
@@ -209,7 +220,12 @@ export const tiktokLogin = async (
       return;
     }
 
-    const auth = await authService.loginWithTikTok(authorizationCode);
+    const deviceInfo = {
+      userAgent: req.headers["user-agent"] ?? "",
+      ipAddress: req.ip ?? req.socket.remoteAddress ?? "",
+    };
+
+    const auth = await authService.loginWithTikTok(authorizationCode, deviceInfo);
 
     if (auth && "needsRegistration" in auth && auth.needsRegistration) {
       res.status(200).json({
@@ -268,7 +284,12 @@ export const appleLogin = async (
       return;
     }
 
-    const auth = await authService.loginWithApple(authorizationCode);
+    const deviceInfo = {
+      userAgent: req.headers["user-agent"] ?? "",
+      ipAddress: req.ip ?? req.socket.remoteAddress ?? "",
+    };
+
+    const auth = await authService.loginWithApple(authorizationCode, deviceInfo);
 
     if (auth && "needsRegistration" in auth && auth.needsRegistration) {
       res.status(200).json({
@@ -328,10 +349,15 @@ export const completeRegistration = async (
       return;
     }
 
+    const deviceInfo = {
+      userAgent: req.headers["user-agent"] ?? "",
+      ipAddress: req.ip ?? req.socket.remoteAddress ?? "",
+    };
+
     const auth = await authService.completeOAuthRegistration({
       registrationToken,
       storeName,
-    });
+    }, deviceInfo);
 
     res.status(200).json({
       success: true,
@@ -386,7 +412,7 @@ export const switchStore = async (
       return;
     }
 
-    const auth = await authService.switchStore(req.user.id, storeId);
+    const auth = await authService.switchStore(req.user.id, storeId, req.user.deviceId);
 
     res.status(200).json({
       success: true,

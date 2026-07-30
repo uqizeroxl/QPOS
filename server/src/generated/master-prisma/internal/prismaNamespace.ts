@@ -80,11 +80,11 @@ export type PrismaVersion = {
 }
 
 /**
- * Prisma Client JS version: 7.9.0
+ * Prisma Client JS version: 7.9.1
  * Query Engine version: e922089b7d7502aff4249d5da3420f6fa55fc6ad
  */
 export const prismaVersion: PrismaVersion = {
-  client: "7.9.0",
+  client: "7.9.1",
   engine: "e922089b7d7502aff4249d5da3420f6fa55fc6ad"
 }
 
@@ -397,6 +397,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
+  DeviceSession: 'DeviceSession',
   Account: 'Account',
   Store: 'Store',
   StoreMember: 'StoreMember',
@@ -417,10 +418,84 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "account" | "store" | "storeMember" | "tenantDatabaseRegistry" | "storeInvitation"
+    modelProps: "deviceSession" | "account" | "store" | "storeMember" | "tenantDatabaseRegistry" | "storeInvitation"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
+    DeviceSession: {
+      payload: Prisma.$DeviceSessionPayload<ExtArgs>
+      fields: Prisma.DeviceSessionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.DeviceSessionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeviceSessionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.DeviceSessionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeviceSessionPayload>
+        }
+        findFirst: {
+          args: Prisma.DeviceSessionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeviceSessionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.DeviceSessionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeviceSessionPayload>
+        }
+        findMany: {
+          args: Prisma.DeviceSessionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeviceSessionPayload>[]
+        }
+        create: {
+          args: Prisma.DeviceSessionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeviceSessionPayload>
+        }
+        createMany: {
+          args: Prisma.DeviceSessionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.DeviceSessionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeviceSessionPayload>[]
+        }
+        delete: {
+          args: Prisma.DeviceSessionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeviceSessionPayload>
+        }
+        update: {
+          args: Prisma.DeviceSessionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeviceSessionPayload>
+        }
+        deleteMany: {
+          args: Prisma.DeviceSessionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.DeviceSessionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.DeviceSessionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeviceSessionPayload>[]
+        }
+        upsert: {
+          args: Prisma.DeviceSessionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$DeviceSessionPayload>
+        }
+        aggregate: {
+          args: Prisma.DeviceSessionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateDeviceSession>
+        }
+        groupBy: {
+          args: Prisma.DeviceSessionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DeviceSessionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.DeviceSessionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.DeviceSessionCountAggregateOutputType> | number
+        }
+      }
+    }
     Account: {
       payload: Prisma.$AccountPayload<ExtArgs>
       fields: Prisma.AccountFieldRefs
@@ -830,6 +905,22 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const DeviceSessionScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  deviceName: 'deviceName',
+  deviceType: 'deviceType',
+  browser: 'browser',
+  os: 'os',
+  ipAddress: 'ipAddress',
+  tokenVersion: 'tokenVersion',
+  lastActiveAt: 'lastActiveAt',
+  createdAt: 'createdAt'
+} as const
+
+export type DeviceSessionScalarFieldEnum = (typeof DeviceSessionScalarFieldEnum)[keyof typeof DeviceSessionScalarFieldEnum]
+
+
 export const AccountScalarFieldEnum = {
   id: 'id',
   username: 'username',
@@ -945,13 +1036,6 @@ export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaMod
 
 
 /**
- * Reference to a field of type 'Boolean'
- */
-export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
-    
-
-
-/**
  * Reference to a field of type 'Int'
  */
 export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
@@ -976,6 +1060,13 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'DateTime[]'
  */
 export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Boolean'
+ */
+export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
     
 
 
@@ -1185,6 +1276,7 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
  */
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
+  deviceSession?: Prisma.DeviceSessionOmit
   account?: Prisma.AccountOmit
   store?: Prisma.StoreOmit
   storeMember?: Prisma.StoreMemberOmit

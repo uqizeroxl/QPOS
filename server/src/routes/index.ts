@@ -3,6 +3,7 @@ import { Router } from "express";
 import authRoutes from "./auth.routes";
 import categoryRoutes from "./category.routes";
 import dashboardRoutes from "./dashboard.routes";
+import deviceRoutes from "./device.routes";
 import healthRoutes from "./health.routes";
 import memberRoutes from "./member.routes";
 import productRoutes from "./product.routes";
@@ -25,6 +26,7 @@ const allRoles = [
 
 router.use("/", healthRoutes);
 router.use("/api/auth", authRoutes);
+router.use("/api/devices", deviceRoutes);
 router.use("/api/categories", authenticate, authorize(ownerAdminWarehouse), categoryRoutes);
 router.use("/api/dashboard", authenticate, authorize(allRoles), dashboardRoutes);
 router.use("/api/products", authenticate, productRoutes);

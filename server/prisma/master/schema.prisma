@@ -26,6 +26,24 @@ enum TenantMigrationStatus {
   FAILED
 }
 
+model DeviceSession {
+  id             String   @id @default(cuid())
+  accountId      String
+  deviceName     String?  @db.VarChar(200)
+  deviceType     String?  @db.VarChar(50)
+  browser        String?  @db.VarChar(100)
+  os             String?  @db.VarChar(100)
+  ipAddress      String?  @db.VarChar(50)
+  tokenVersion   Int      @default(1)
+  lastActiveAt   DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  account        Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("device_sessions")
+}
+
 model Account {
   id           String        @id @default(cuid())
   username     String        @unique @db.VarChar(80)
@@ -38,9 +56,10 @@ model Account {
   avatarUrl    String?       @db.Text
   isActive     Boolean       @default(true)
   tokenVersion Int           @default(0)
-  memberships  StoreMember[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  memberships    StoreMember[]
+  deviceSessions DeviceSession[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([username])
   @@index([email])

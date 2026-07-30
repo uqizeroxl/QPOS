@@ -17,6 +17,7 @@ export const ROUTES = {
   userSettings: "/user-settings",
   storeManagement: "/store-management",
   roleManagement: "/role-management",
+  deviceManagement: "/devices",
   helpShortcut: "/help",
   notifications: "/notifications",
   acceptOwnership: "/accept-ownership",

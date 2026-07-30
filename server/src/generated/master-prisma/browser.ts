@@ -18,6 +18,11 @@ export { Prisma }
 export * as $Enums from './enums'
 export * from './enums';
 /**
+ * Model DeviceSession
+ * 
+ */
+export type DeviceSession = Prisma.DeviceSessionModel
+/**
  * Model Account
  * 
  */

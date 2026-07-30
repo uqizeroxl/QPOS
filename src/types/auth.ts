@@ -8,6 +8,7 @@ export type AuthUser = {
   name: string;
   role: UserRole;
   storeId: string;
+  deviceId?: string;
 };
 
 export type StoreInfo = {

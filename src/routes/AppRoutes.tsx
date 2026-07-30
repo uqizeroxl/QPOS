@@ -40,6 +40,9 @@ const StoreManagementPage = lazy(
 const RoleManagementPage = lazy(
   () => import("../pages/role-management/RoleManagementPage"),
 );
+const DeviceManagementPage = lazy(
+  () => import("../pages/device-management/DeviceManagementPage"),
+);
 const HelpShortcutPage = lazy(() => import("../pages/help/HelpShortcutPage"));
 const NotificationsPage = lazy(
   () => import("../pages/notifications/NotificationsPage"),
@@ -86,6 +89,10 @@ export default function AppRoutes() {
             <Route
               path={ROUTES.roleManagement}
               element={<RoleManagementPage />}
+            />
+            <Route
+              path={ROUTES.deviceManagement}
+              element={<DeviceManagementPage />}
             />
             <Route path={ROUTES.helpShortcut} element={<HelpShortcutPage />} />
             <Route

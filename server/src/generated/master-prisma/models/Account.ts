@@ -281,6 +281,7 @@ export type AccountWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   memberships?: Prisma.StoreMemberListRelationFilter
+  deviceSessions?: Prisma.DeviceSessionListRelationFilter
 }
 
 export type AccountOrderByWithRelationInput = {
@@ -298,6 +299,7 @@ export type AccountOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   memberships?: Prisma.StoreMemberOrderByRelationAggregateInput
+  deviceSessions?: Prisma.DeviceSessionOrderByRelationAggregateInput
 }
 
 export type AccountWhereUniqueInput = Prisma.AtLeast<{
@@ -318,6 +320,7 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Account"> | Date | string
   memberships?: Prisma.StoreMemberListRelationFilter
+  deviceSessions?: Prisma.DeviceSessionListRelationFilter
 }, "id" | "username" | "email" | "googleId" | "appleId" | "tiktokId">
 
 export type AccountOrderByWithAggregationInput = {
@@ -375,6 +378,7 @@ export type AccountCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.StoreMemberCreateNestedManyWithoutAccountInput
+  deviceSessions?: Prisma.DeviceSessionCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateInput = {
@@ -392,6 +396,7 @@ export type AccountUncheckedCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.StoreMemberUncheckedCreateNestedManyWithoutAccountInput
+  deviceSessions?: Prisma.DeviceSessionUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUpdateInput = {
@@ -409,6 +414,7 @@ export type AccountUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.StoreMemberUpdateManyWithoutAccountNestedInput
+  deviceSessions?: Prisma.DeviceSessionUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateInput = {
@@ -426,6 +432,7 @@ export type AccountUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.StoreMemberUncheckedUpdateManyWithoutAccountNestedInput
+  deviceSessions?: Prisma.DeviceSessionUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountCreateManyInput = {
@@ -474,6 +481,11 @@ export type AccountUncheckedUpdateManyInput = {
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type AccountScalarRelationFilter = {
+  is?: Prisma.AccountWhereInput
+  isNot?: Prisma.AccountWhereInput
 }
 
 export type AccountCountOrderByAggregateInput = {
@@ -532,33 +544,22 @@ export type AccountSumOrderByAggregateInput = {
   tokenVersion?: Prisma.SortOrder
 }
 
-export type AccountScalarRelationFilter = {
-  is?: Prisma.AccountWhereInput
-  isNot?: Prisma.AccountWhereInput
+export type AccountCreateNestedOneWithoutDeviceSessionsInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutDeviceSessionsInput, Prisma.AccountUncheckedCreateWithoutDeviceSessionsInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutDeviceSessionsInput
+  connect?: Prisma.AccountWhereUniqueInput
 }
 
-export type StringFieldUpdateOperationsInput = {
-  set?: string
-}
-
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
+export type AccountUpdateOneRequiredWithoutDeviceSessionsNestedInput = {
+  create?: Prisma.XOR<Prisma.AccountCreateWithoutDeviceSessionsInput, Prisma.AccountUncheckedCreateWithoutDeviceSessionsInput>
+  connectOrCreate?: Prisma.AccountCreateOrConnectWithoutDeviceSessionsInput
+  upsert?: Prisma.AccountUpsertWithoutDeviceSessionsInput
+  connect?: Prisma.AccountWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutDeviceSessionsInput, Prisma.AccountUpdateWithoutDeviceSessionsInput>, Prisma.AccountUncheckedUpdateWithoutDeviceSessionsInput>
 }
 
 export type BoolFieldUpdateOperationsInput = {
   set?: boolean
-}
-
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
 }
 
 export type AccountCreateNestedOneWithoutMembershipsInput = {
@@ -575,6 +576,90 @@ export type AccountUpdateOneRequiredWithoutMembershipsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.AccountUpdateToOneWithWhereWithoutMembershipsInput, Prisma.AccountUpdateWithoutMembershipsInput>, Prisma.AccountUncheckedUpdateWithoutMembershipsInput>
 }
 
+export type AccountCreateWithoutDeviceSessionsInput = {
+  id?: string
+  username: string
+  name: string
+  passwordHash?: string
+  email?: string | null
+  googleId?: string | null
+  appleId?: string | null
+  tiktokId?: string | null
+  avatarUrl?: string | null
+  isActive?: boolean
+  tokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  memberships?: Prisma.StoreMemberCreateNestedManyWithoutAccountInput
+}
+
+export type AccountUncheckedCreateWithoutDeviceSessionsInput = {
+  id?: string
+  username: string
+  name: string
+  passwordHash?: string
+  email?: string | null
+  googleId?: string | null
+  appleId?: string | null
+  tiktokId?: string | null
+  avatarUrl?: string | null
+  isActive?: boolean
+  tokenVersion?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  memberships?: Prisma.StoreMemberUncheckedCreateNestedManyWithoutAccountInput
+}
+
+export type AccountCreateOrConnectWithoutDeviceSessionsInput = {
+  where: Prisma.AccountWhereUniqueInput
+  create: Prisma.XOR<Prisma.AccountCreateWithoutDeviceSessionsInput, Prisma.AccountUncheckedCreateWithoutDeviceSessionsInput>
+}
+
+export type AccountUpsertWithoutDeviceSessionsInput = {
+  update: Prisma.XOR<Prisma.AccountUpdateWithoutDeviceSessionsInput, Prisma.AccountUncheckedUpdateWithoutDeviceSessionsInput>
+  create: Prisma.XOR<Prisma.AccountCreateWithoutDeviceSessionsInput, Prisma.AccountUncheckedCreateWithoutDeviceSessionsInput>
+  where?: Prisma.AccountWhereInput
+}
+
+export type AccountUpdateToOneWithWhereWithoutDeviceSessionsInput = {
+  where?: Prisma.AccountWhereInput
+  data: Prisma.XOR<Prisma.AccountUpdateWithoutDeviceSessionsInput, Prisma.AccountUncheckedUpdateWithoutDeviceSessionsInput>
+}
+
+export type AccountUpdateWithoutDeviceSessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tiktokId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  memberships?: Prisma.StoreMemberUpdateManyWithoutAccountNestedInput
+}
+
+export type AccountUncheckedUpdateWithoutDeviceSessionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  googleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  appleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  tiktokId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  memberships?: Prisma.StoreMemberUncheckedUpdateManyWithoutAccountNestedInput
+}
+
 export type AccountCreateWithoutMembershipsInput = {
   id?: string
   username: string
@@ -589,6 +674,7 @@ export type AccountCreateWithoutMembershipsInput = {
   tokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
+  deviceSessions?: Prisma.DeviceSessionCreateNestedManyWithoutAccountInput
 }
 
 export type AccountUncheckedCreateWithoutMembershipsInput = {
@@ -605,6 +691,7 @@ export type AccountUncheckedCreateWithoutMembershipsInput = {
   tokenVersion?: number
   createdAt?: Date | string
   updatedAt?: Date | string
+  deviceSessions?: Prisma.DeviceSessionUncheckedCreateNestedManyWithoutAccountInput
 }
 
 export type AccountCreateOrConnectWithoutMembershipsInput = {
@@ -637,6 +724,7 @@ export type AccountUpdateWithoutMembershipsInput = {
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deviceSessions?: Prisma.DeviceSessionUpdateManyWithoutAccountNestedInput
 }
 
 export type AccountUncheckedUpdateWithoutMembershipsInput = {
@@ -653,6 +741,7 @@ export type AccountUncheckedUpdateWithoutMembershipsInput = {
   tokenVersion?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deviceSessions?: Prisma.DeviceSessionUncheckedUpdateManyWithoutAccountNestedInput
 }
 
 
@@ -662,10 +751,12 @@ export type AccountUncheckedUpdateWithoutMembershipsInput = {
 
 export type AccountCountOutputType = {
   memberships: number
+  deviceSessions: number
 }
 
 export type AccountCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   memberships?: boolean | AccountCountOutputTypeCountMembershipsArgs
+  deviceSessions?: boolean | AccountCountOutputTypeCountDeviceSessionsArgs
 }
 
 /**
@@ -685,6 +776,13 @@ export type AccountCountOutputTypeCountMembershipsArgs<ExtArgs extends runtime.T
   where?: Prisma.StoreMemberWhereInput
 }
 
+/**
+ * AccountCountOutputType without action
+ */
+export type AccountCountOutputTypeCountDeviceSessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DeviceSessionWhereInput
+}
+
 
 export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -701,6 +799,7 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   createdAt?: boolean
   updatedAt?: boolean
   memberships?: boolean | Prisma.Account$membershipsArgs<ExtArgs>
+  deviceSessions?: boolean | Prisma.Account$deviceSessionsArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["account"]>
 
@@ -755,6 +854,7 @@ export type AccountSelectScalar = {
 export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "username" | "name" | "passwordHash" | "email" | "googleId" | "appleId" | "tiktokId" | "avatarUrl" | "isActive" | "tokenVersion" | "createdAt" | "updatedAt", ExtArgs["result"]["account"]>
 export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   memberships?: boolean | Prisma.Account$membershipsArgs<ExtArgs>
+  deviceSessions?: boolean | Prisma.Account$deviceSessionsArgs<ExtArgs>
   _count?: boolean | Prisma.AccountCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type AccountIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -764,6 +864,7 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
   name: "Account"
   objects: {
     memberships: Prisma.$StoreMemberPayload<ExtArgs>[]
+    deviceSessions: Prisma.$DeviceSessionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1174,6 +1275,7 @@ readonly fields: AccountFieldRefs;
 export interface Prisma__AccountClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   memberships<T extends Prisma.Account$membershipsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$membershipsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$StoreMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  deviceSessions<T extends Prisma.Account$deviceSessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Account$deviceSessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DeviceSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1630,6 +1732,30 @@ export type Account$membershipsArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.StoreMemberScalarFieldEnum | Prisma.StoreMemberScalarFieldEnum[]
+}
+
+/**
+ * Account.deviceSessions
+ */
+export type Account$deviceSessionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the DeviceSession
+   */
+  select?: Prisma.DeviceSessionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the DeviceSession
+   */
+  omit?: Prisma.DeviceSessionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DeviceSessionInclude<ExtArgs> | null
+  where?: Prisma.DeviceSessionWhereInput
+  orderBy?: Prisma.DeviceSessionOrderByWithRelationInput | Prisma.DeviceSessionOrderByWithRelationInput[]
+  cursor?: Prisma.DeviceSessionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DeviceSessionScalarFieldEnum | Prisma.DeviceSessionScalarFieldEnum[]
 }
 
 /**

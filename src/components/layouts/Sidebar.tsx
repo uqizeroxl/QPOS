@@ -5,6 +5,7 @@ import {
   Building2,
   CircleHelp,
   LayoutDashboard,
+  Monitor,
   Package,
   PackagePlus,
   ReceiptText,
@@ -73,6 +74,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 
 const accountSettingsItems = [
   { labelKey: "sidebar.menu.accountSettings", path: ROUTES.userSettings, icon: UserRound },
+  { labelKey: "sidebar.menu.deviceManagement", path: ROUTES.deviceManagement, icon: Monitor },
   { labelKey: "sidebar.menu.storeManagement", path: ROUTES.storeManagement, icon: Building2 },
 ];
 
@@ -83,7 +85,8 @@ const SidebarContent = memo(function SidebarContent({ onClose }: Pick<SidebarPro
   const navigate = useNavigate();
   const isAccountSettings =
     location.pathname === ROUTES.userSettings ||
-    location.pathname === ROUTES.storeManagement;
+    location.pathname === ROUTES.storeManagement ||
+    location.pathname === ROUTES.deviceManagement;
   const visibleMenuItems = menuItems.filter(
     (item) => user && item.roles.includes(user.role),
   );
