@@ -24,6 +24,15 @@ export default class ErrorBoundary extends Component<
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Application error:", error, errorInfo);
+
+    window.dispatchEvent(
+      new CustomEvent("app:toast", {
+        detail: {
+          message: "Terjadi kesalahan pada aplikasi.",
+          type: "error",
+        },
+      }),
+    );
   }
 
   render() {

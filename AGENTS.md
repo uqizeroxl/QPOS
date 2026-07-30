@@ -849,7 +849,7 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 
 **Standarisasi loading/error handling:**
 - Menambahkan komponen `LoadError` dengan tombol **Muat Ulang**.
-- Dashboard, Produk, Kategori, Supplier, Laporan, Transaksi, Riwayat Stok, dan Manajemen Peran memakai error state yang dapat dicoba ulang. Provider Kategori/Supplier mengekspos `isLoading` dan `errorMessage` serta selalu menghentikan loading di `finally`.
+- Dashboard, Produk, Kategori, Supplier, Laporan, Transaksi, Riwayat Stok, dan Manajemen Peran memakai error state yang dapat dicoba ulang. Provider Kategori/Supplier mengekspor `isLoading` dan `errorMessage` serta selalu menghentikan loading di `finally`.
 - Timeout global API tetap 15 detik agar backend mati tidak mempertahankan skeleton tanpa batas.
 
 **Pencegahan infinite loading/retry:**
@@ -883,3 +883,60 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - Menghilangkan spacer bawah dan page break yang tidak diperlukan sehingga tidak ada ruang kosong berlebih.
 - Output berakhir normal setelah konten/garis potong agar kompatibel dengan fitur auto cut printer atau driver yang mendukungnya.
 
+## 2026-07-30 — UI-002 padding kartu perangkat
+
+**Tujuan:**
+- Menyeragamkan padding kartu perangkat di halaman Manajemen Perangkat agar konsisten dengan Card di halaman lain.
+
+**Root Cause:**
+- Card di `DeviceManagementPage.tsx` tidak memiliki class `p-4`/`p-5`, sehingga konten menempel ke tepi border card. Semua Card lain di codebase menggunakan padding eksplisit.
+
+**File diubah:**
+- `src/pages/device-management/DeviceManagementPage.tsx`
+- `AGENTS.md`
+
+**Perubahan:**
+- Menambahkan `className="p-5"` ke tiga Card: loading state, empty state (`Tidak ada perangkat terdaftar.`), dan setiap kartu perangkat dalam daftar.
+
+**Testing:**
+- `npm run build` berhasil.
+
+## 2026-07-30 — BUG-007 preemptive token refresh + error boundary toast
+
+**Tujuan:**
+- Menghilangkan 401 pada request pertama setelah access token expired dengan melakukan refresh token secara preemptive di request interceptor.
+- Memastikan runtime error menampilkan toast + halaman error (bukan white blank page).
+
+**File diubah:**
+- `src/services/api/axiosInstance.ts`
+- `src/components/ErrorBoundary.tsx`
+- `src/App.tsx`
+- `src/contexts/AppProviders.tsx`
+- `AGENTS.md`
+
+**Perubahan:**
+
+*`src/services/api/axiosInstance.ts`:*
+- Request interceptor diubah jadi `async`.
+- Jika access token expired tapi refresh token valid:
+  - Langsung refresh token sebelum request dikirim.
+  - Jika refresh sedang berjalan (`isRefreshing`), antri via `failedQueue`.
+  - Token baru dipasang di `Authorization` header.
+  - Tidak perlu lagi menunggu 401 di response interceptor.
+- Jika refresh token juga expired: `clearAuthAndRedirect()` langsung.
+- Response interceptor tetap ada sebagai fallback untuk kasus token expired di perjalanan atau multi-tab race condition.
+
+*`src/App.tsx` + `src/contexts/AppProviders.tsx`:*
+- `ToastProvider` + `ToastEventListener` dipindah ke **luar** `ErrorBoundary` (di `App.tsx`).
+- Inner providers (Notification, Product, Category, dll) tetap di `AppProviders`.
+
+*`src/components/ErrorBoundary.tsx`:*
+- `componentDidCatch` sekarang dispatch `app:toast` dengan `"Terjadi kesalahan pada aplikasi."`.
+
+**Testing:**
+- `npm run build` frontend berhasil.
+- `npm run build --prefix server` backend berhasil.
+
+**Catatan developer berikutnya:**
+- Preemptive refresh di request interceptor menghilangkan satu siklus 401→refresh→retry, sehingga response lebih cepat dan tidak ada 401 yang terlihat di console.
+- Stack provider: Toast harus selalu di luar ErrorBoundary agar event `app:toast` tetap diterima saat error boundary aktif.

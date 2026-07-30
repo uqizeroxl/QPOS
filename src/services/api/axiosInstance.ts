@@ -4,6 +4,7 @@ import { API_BASE_URL, API_TIMEOUT } from "../../constants/api";
 import { STORAGE_KEYS } from "../../constants/app";
 import type { ApiResponse, AuthPayload } from "../../types";
 import { isTokenExpired } from "../../utils/token";
+import { authService } from "../authService";
 import { cacheService } from "../storage/cache.service";
 import { db } from "../storage/db";
 import { syncService } from "../storage/sync.service";
@@ -114,7 +115,7 @@ const axiosInstance = axios.create({
   },
 });
 
-axiosInstance.interceptors.request.use((config) => {
+axiosInstance.interceptors.request.use(async (config) => {
   const token = localStorage.getItem(STORAGE_KEYS.authToken);
 
   if (token && !isTokenExpired(token)) {
@@ -125,10 +126,39 @@ axiosInstance.interceptors.request.use((config) => {
   if (token && isTokenExpired(token)) {
     const refreshToken = localStorage.getItem(STORAGE_KEYS.authRefreshToken);
 
-    if (refreshToken && isTokenExpired(refreshToken)) {
-          clearAuthAndRedirect("Sesi Anda telah berakhir. Silakan login kembali.");
-          return Promise.reject(new axios.Cancel("Sesi telah berakhir. Silakan login ulang."));
+    if (!refreshToken || isTokenExpired(refreshToken)) {
+      clearAuthAndRedirect("Sesi Anda telah berakhir. Silakan login kembali.");
+      return Promise.reject(new axios.Cancel("Sesi Anda telah berakhir. Silakan login ulang."));
     }
+
+    if (isRefreshing) {
+      await new Promise<void>((resolve, reject) => {
+        failedQueue.push({ resolve: () => resolve(), reject });
+      });
+      const newToken = localStorage.getItem(STORAGE_KEYS.authToken);
+      if (newToken) {
+        config.headers.Authorization = `Bearer ${newToken}`;
+      }
+      return config;
+    }
+
+    isRefreshing = true;
+
+    try {
+      const data = await authService.refreshToken(refreshToken);
+      localStorage.setItem(STORAGE_KEYS.authToken, data.token);
+      localStorage.setItem(STORAGE_KEYS.authRefreshToken, data.refreshToken);
+      localStorage.setItem(STORAGE_KEYS.authUser, JSON.stringify(data.user));
+      config.headers.Authorization = `Bearer ${data.token}`;
+    } catch {
+      clearAuthAndRedirect("Sesi Anda telah berakhir. Silakan login kembali.");
+      return Promise.reject(new axios.Cancel("Sesi Anda telah berakhir. Silakan login ulang."));
+    } finally {
+      processQueue(null);
+      isRefreshing = false;
+    }
+
+    return config;
   }
 
   return config;

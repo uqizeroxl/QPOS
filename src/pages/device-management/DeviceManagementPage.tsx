@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Globe, LogOut, Monitor, RefreshCw, Smartphone, Tablet, Trash2 } from "lucide-react";
+import { CircleCheck, Globe, LogOut, Monitor, RefreshCw, Smartphone, Tablet } from "lucide-react";
 import MainLayout from "../../layouts/MainLayout";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -85,11 +85,13 @@ export default function DeviceManagementPage() {
 
   return (
     <MainLayout>
-      <div className="mx-auto max-w-2xl space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="mx-auto max-w-3xl space-y-8">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Perangkat Terhubung</h1>
-            <p className="mt-1 text-sm text-gray-500">
+            <h1 className="qpos-brand-type text-2xl font-bold text-gray-900">
+              Perangkat Terhubung
+            </h1>
+            <p className="mt-1.5 text-sm text-gray-500">
               Perangkat yang sedang atau pernah mengakses akun Anda.
             </p>
           </div>
@@ -100,46 +102,72 @@ export default function DeviceManagementPage() {
         </div>
 
         {loading ? (
-          <Card>
-            <div className="flex items-center justify-center py-8">
+          <Card className="p-6">
+            <div className="flex items-center justify-center py-10">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
             </div>
           </Card>
         ) : devices.length === 0 ? (
-          <Card>
-            <p className="py-8 text-center text-gray-500">Tidak ada perangkat terdaftar.</p>
+          <Card className="p-6">
+            <p className="py-10 text-center text-gray-500">Tidak ada perangkat terdaftar.</p>
           </Card>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {devices.map((device) => {
               const Icon = deviceIcons[device.deviceType ?? "desktop"] ?? Monitor;
 
               return (
-                <Card key={device.id}>
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100">
-                      <Icon className="h-5 w-5 text-gray-600" />
+                <Card
+                  key={device.id}
+                  className={[
+                    "p-6",
+                    "border-l-4",
+                    device.isCurrent
+                      ? "border-l-emerald-600"
+                      : "border-l-transparent",
+                    "transition-shadow hover:shadow-md",
+                  ].join(" ")}
+                >
+                  <div className="flex items-start gap-5">
+                    <div
+                      className={[
+                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+                        device.isCurrent ? "bg-emerald-50" : "bg-gray-100",
+                      ].join(" ")}
+                    >
+                      <Icon
+                        className={[
+                          "h-5 w-5",
+                          device.isCurrent ? "text-emerald-700" : "text-gray-500",
+                        ].join(" ")}
+                      />
                     </div>
+
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                        <p className="qpos-brand-type truncate text-base font-bold text-gray-900">
                           {device.deviceName ?? "Perangkat Tidak Dikenal"}
                         </p>
                         {device.isCurrent ? (
-                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3 py-0.5 text-xs font-semibold text-white">
+                            <CircleCheck className="h-3 w-3" />
                             Perangkat Saat Ini
                           </span>
                         ) : null}
                       </div>
+
                       {device.browser && device.os ? (
                         <p className="mt-0.5 text-sm text-gray-500">
                           {device.browser} &middot; {device.os}
                         </p>
                       ) : null}
-                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400">
+
+                      <hr className="my-3 border-gray-200" />
+
+                      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-gray-400">
                         {device.ipAddress ? (
-                          <span className="inline-flex items-center gap-1">
-                            <Globe className="h-3 w-3" />
+                          <span className="inline-flex items-center gap-1.5">
+                            <Globe className="h-3 w-3 text-gray-400" />
                             {device.ipAddress}
                           </span>
                         ) : null}
@@ -147,12 +175,10 @@ export default function DeviceManagementPage() {
                         <span>Terdaftar: {formatDate(device.createdAt)}</span>
                       </div>
                     </div>
-                    <div className="shrink-0">
+
+                    <div className="shrink-0 self-start pt-0.5">
                       {device.isCurrent ? (
-                        <Button
-                          variant="danger"
-                          onClick={handleLogoutCurrentDevice}
-                        >
+                        <Button variant="danger" onClick={handleLogoutCurrentDevice}>
                           <LogOut className="h-4 w-4" />
                           Logout
                         </Button>
@@ -162,7 +188,7 @@ export default function DeviceManagementPage() {
                           onClick={() => handleLogoutDevice(device.id)}
                           disabled={loggingOut === device.id}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <LogOut className="h-4 w-4" />
                           {loggingOut === device.id ? "..." : "Logout"}
                         </Button>
                       )}
