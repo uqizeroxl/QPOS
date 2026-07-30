@@ -863,3 +863,10 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 - `git diff --check` berhasil.
 - Audit jalur kode memverifikasi token valid, satu refresh untuk access token expired, logout otomatis saat refresh token gagal, timeout menjadi error state, dan tidak ada refresh berulang.
 
+## 2026-07-30 — Placeholder Pengaturan Sistem
+
+- Menambahkan tab baru **Sistem** di sebelah tab **Keamanan** pada halaman Pengaturan tanpa mengubah urutan tab yang sudah ada.
+- Tab Sistem belum memiliki fitur dan hanya menampilkan placeholder kosong.
+- Placeholder dipisahkan ke komponen `SystemSettingsTab` agar siap dikembangkan pada sprint berikutnya.
+- Tidak mengubah fitur, UI, atau behavior Informasi Toko, Dataset Produk, dan Keamanan.
+

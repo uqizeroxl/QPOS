@@ -37,15 +37,17 @@ import {
   settingsService,
   type ProductDatasetResetResult,
 } from "../../services/settingsService";
+import SystemSettingsTab from "./SystemSettingsTab";
 
 const resetConfirmationText = "HAPUS SEMUA";
 
-type Tab = "store" | "dataset" | "security";
+type Tab = "store" | "dataset" | "security" | "system";
 
 const tabs: { key: Tab; label: string; icon: typeof Store; ownerOnly: boolean }[] = [
   { key: "store", label: "Informasi Toko", icon: Store, ownerOnly: false },
   { key: "dataset", label: "Dataset Produk", icon: HardDrive, ownerOnly: false },
   { key: "security", label: "Keamanan", icon: Shield, ownerOnly: true },
+  { key: "system", label: "Sistem", icon: Settings, ownerOnly: false },
 ];
 
 export default function SettingPage() {
@@ -691,6 +693,8 @@ export default function SettingPage() {
             </div>
           </Card>
         ) : null}
+
+        {activeTab === "system" ? <SystemSettingsTab /> : null}
 
         {isResetDialogOpen ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4">
