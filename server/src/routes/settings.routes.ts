@@ -4,8 +4,9 @@ import {
   changeStoreOwnerHandler,
   deleteStoreHandler,
   inviteOwnerHandler,
-  getReceiptFooter,
+  getSettings,
   resetProductDataset,
+  updateSettings,
   updateReceiptFooter
 } from "../controllers/settings.controller";
 import { UserRole } from "../generated/prisma/client";
@@ -13,7 +14,9 @@ import { authorize } from "../middleware/auth.middleware";
 
 const router = Router();
 
-router.get("/receipt-footer", getReceiptFooter);
+router.get("/", getSettings);
+router.put("/", authorize([UserRole.OWNER]), updateSettings);
+router.get("/receipt-footer", getSettings);
 router.put("/receipt-footer", authorize([UserRole.OWNER]), updateReceiptFooter);
 router.post(
   "/product-dataset/reset",

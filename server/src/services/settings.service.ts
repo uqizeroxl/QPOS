@@ -7,6 +7,7 @@ import { masterPrisma } from "../utils/master-prisma";
 import { stripHtml } from "../utils/escape";
 
 const DEFAULT_RECEIPT_FOOTER = "Terima kasih";
+const DEFAULT_STORE_NAME = "Toko Saya";
 const MAX_RECEIPT_FOOTER_LENGTH = 250;
 const MAX_RECEIPT_FOOTER_LINES = 5;
 const THERMAL_PAPER_WIDTHS = [58, 80] as const;
@@ -70,20 +71,123 @@ const normalizeReceiptFooter = (value: unknown) => {
   return footer || DEFAULT_RECEIPT_FOOTER;
 };
 
-export const getReceiptFooter = async (prisma: PrismaClient) => {
+const normalizeStoreName = (value: unknown) => {
+  if (typeof value !== "string") {
+    throw new ReceiptFooterValidationError("Nama toko harus berupa teks.");
+  }
+
+  const storeName = stripHtml(value).trim();
+
+  if (!storeName) {
+    return DEFAULT_STORE_NAME;
+  }
+
+  if (storeName.length > 150) {
+    throw new ReceiptFooterValidationError("Nama toko maksimal 150 karakter.");
+  }
+
+  return storeName;
+};
+
+const normalizePhone = (value: unknown) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "string") {
+    throw new ReceiptFooterValidationError("Nomor telepon harus berupa teks.");
+  }
+
+  const phone = stripHtml(value).trim();
+  if (phone.length > 30) {
+    throw new ReceiptFooterValidationError("Nomor telepon maksimal 30 karakter.");
+  }
+
+  return phone;
+};
+
+const normalizeAddress = (value: unknown) => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "string") {
+    throw new ReceiptFooterValidationError("Alamat harus berupa teks.");
+  }
+
+  return stripHtml(value).replace(/\r\n?/g, "\n").trim();
+};
+
+export const getSettings = async (prisma: PrismaClient) => {
   const settings = await prisma.settings.upsert({
     where: { key: "default" },
     create: { key: "default" },
     update: {},
     select: {
-      receiptFooter: true,
-      thermalPaperProfile: true,
-      thermalPaperWidth: true,
-      receiptAutoCut: true
+      storeName: true,
+      phone: true,
+      address: true,
+      receiptFooter: true
     }
   });
 
   return settings;
+};
+
+export const updateSettings = async (
+  prisma: PrismaClient,
+  storeNameValue: unknown,
+  receiptFooterValue: unknown,
+  phoneValue: unknown,
+  addressValue: unknown,
+  thermalPaperProfileValue: unknown,
+  thermalPaperWidthValue: unknown,
+  receiptAutoCutValue: unknown
+) => {
+  const storeName = normalizeStoreName(storeNameValue);
+  const phone = normalizePhone(phoneValue);
+  const address = normalizeAddress(addressValue);
+  const receiptFooter = normalizeReceiptFooter(receiptFooterValue);
+  const thermalPaperProfile = thermalPaperProfileValue === undefined
+    ? thermalPaperWidthValue === undefined
+      ? undefined
+      : migrateLegacyThermalPaperWidth(thermalPaperWidthValue)
+    : normalizeThermalPaperProfile(thermalPaperProfileValue);
+  const thermalPaperWidth = thermalPaperProfile === undefined
+    ? undefined
+    : THERMAL_PAPER_PROFILES[thermalPaperProfile];
+  const receiptAutoCut = receiptAutoCutValue === undefined
+    ? undefined
+    : normalizeReceiptAutoCut(receiptAutoCutValue);
+
+  return prisma.settings.upsert({
+    where: { key: "default" },
+    create: {
+      key: "default",
+      storeName,
+      ...(phone === undefined ? {} : { phone }),
+      ...(address === undefined ? {} : { address }),
+      receiptFooter,
+      ...(thermalPaperWidth === undefined ? {} : { thermalPaperWidth }),
+      ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
+      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut })
+    },
+    update: {
+      storeName,
+      ...(phone === undefined ? {} : { phone }),
+      ...(address === undefined ? {} : { address }),
+      receiptFooter,
+      ...(thermalPaperWidth === undefined ? {} : { thermalPaperWidth }),
+      ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
+      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut })
+    },
+    select: {
+      storeName: true,
+      phone: true,
+      address: true,
+      receiptFooter: true
+    }
+  });
 };
 
 export const updateReceiptFooter = async (
@@ -122,10 +226,7 @@ export const updateReceiptFooter = async (
       ...(receiptAutoCut === undefined ? {} : { receiptAutoCut })
     },
     select: {
-      receiptFooter: true,
-      thermalPaperProfile: true,
-      thermalPaperWidth: true,
-      receiptAutoCut: true
+      receiptFooter: true
     }
   });
 };

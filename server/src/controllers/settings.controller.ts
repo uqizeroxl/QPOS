@@ -6,21 +6,60 @@ import {
   changeStoreOwner as changeServiceStoreOwner,
   createOwnerInvitation as createServiceOwnerInvitation,
   deleteStore as deleteServiceStore,
-  getReceiptFooter as getTenantReceiptFooter,
+  getSettings as getTenantSettings,
   ReceiptFooterValidationError,
   resetProductDataset as resetTenantProductDataset,
+  updateSettings as updateTenantSettings,
   updateReceiptFooter as updateTenantReceiptFooter
 } from "../services/settings.service";
 
-export const getReceiptFooter = async (
+export const getSettings = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const settings = await getTenantReceiptFooter(req.tenant.prisma);
+    const settings = await getTenantSettings(req.tenant.prisma);
     res.status(200).json({ success: true, data: settings });
   } catch (error) {
+    next(error);
+  }
+};
+
+export const updateSettings = async (
+  req: Request<unknown, unknown, {
+    storeName?: unknown;
+    receiptFooter?: unknown;
+    phone?: unknown;
+    address?: unknown;
+    thermalPaperProfile?: unknown;
+    thermalPaperWidth?: unknown;
+    receiptAutoCut?: unknown;
+  }>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const settings = await updateTenantSettings(
+      req.tenant.prisma,
+      req.body.storeName,
+      req.body.receiptFooter,
+      req.body.phone,
+      req.body.address,
+      req.body.thermalPaperProfile,
+      req.body.thermalPaperWidth,
+      req.body.receiptAutoCut
+    );
+    res.status(200).json({
+      success: true,
+      message: "Pengaturan toko berhasil disimpan.",
+      data: settings
+    });
+  } catch (error) {
+    if (error instanceof ReceiptFooterValidationError) {
+      res.status(400).json({ success: false, message: error.message });
+      return;
+    }
     next(error);
   }
 };

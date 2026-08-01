@@ -6,7 +6,7 @@ export type { AppSettings } from "../types/settings";
 
 export type SettingsContextValue = {
   settings: AppSettings;
-  saveSettings: (settings: AppSettings) => void;
+  saveSettings: (settings: AppSettings) => Promise<void>;
   setReceiptFooter: (receiptFooter: string) => void;
   setReceiptSettings: (settings: ReceiptFooterSettings) => void;
 };

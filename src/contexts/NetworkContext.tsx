@@ -49,7 +49,17 @@ export function NetworkProvider({ children }: NetworkProviderProps) {
     const unsubscribe = networkService.subscribe(async (online) => {
       setIsOnline(online);
       if (online) {
-        await syncService.processQueue();
+        const result = await syncService.processQueue();
+        if (result.succeeded > 0) {
+          window.dispatchEvent(
+            new CustomEvent("app:toast", {
+              detail: {
+                message: `Sinkronisasi selesai untuk ${result.succeeded} perubahan.`,
+                type: "success",
+              },
+            }),
+          );
+        }
       }
       await refreshPending();
     });
@@ -63,7 +73,17 @@ export function NetworkProvider({ children }: NetworkProviderProps) {
   useEffect(() => {
     const interval = setInterval(async () => {
       if (networkService.isOnline()) {
-        await syncService.processQueue();
+        const result = await syncService.processQueue();
+        if (result.succeeded > 0) {
+          window.dispatchEvent(
+            new CustomEvent("app:toast", {
+              detail: {
+                message: `Sinkronisasi selesai untuk ${result.succeeded} perubahan.`,
+                type: "success",
+              },
+            }),
+          );
+        }
       }
       await refreshPending();
     }, 60_000);

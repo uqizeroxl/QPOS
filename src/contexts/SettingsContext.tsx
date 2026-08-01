@@ -5,9 +5,11 @@ import {
   SettingsContext,
 } from "./settingsContextValue";
 import type { AppSettings } from "./settingsContextValue";
-import { getStoredSettings, storeSettings } from "../utils/settingsStorage";
 import { settingsService } from "../services/settingsService";
 import { useAuth } from "../hooks/useAuth";
+import { cacheService } from "../services/storage/cache.service";
+
+const SETTINGS_CACHE_KEY = "/settings";
 
 type SettingsProviderProps = {
   children: ReactNode;
@@ -15,11 +17,10 @@ type SettingsProviderProps = {
 
 export function SettingsProvider({ children }: SettingsProviderProps) {
   const { user } = useAuth();
-  const [settings, setSettings] = useState<AppSettings>(() =>
-    getStoredSettings(defaultSettings),
-  );
+  const [settings, setSettings] = useState<AppSettings>(defaultSettings);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  const saveSettings = useCallback((nextSettings: AppSettings) => {
+  const saveSettings = useCallback(async (nextSettings: AppSettings) => {
     const safeSettings: AppSettings = {
       storeName: nextSettings.storeName.trim() || defaultSettings.storeName,
       phone: nextSettings.phone.trim(),
@@ -31,13 +32,15 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     };
 
     setSettings(safeSettings);
-    storeSettings(safeSettings);
+    await cacheService.set(SETTINGS_CACHE_KEY, safeSettings);
+    const stored = await settingsService.updateSettings(safeSettings);
+    setSettings(stored);
+    await cacheService.set(SETTINGS_CACHE_KEY, stored);
   }, []);
 
   const setReceiptFooter = useCallback((receiptFooter: string) => {
     setSettings((currentSettings) => {
       const nextSettings = { ...currentSettings, receiptFooter };
-      storeSettings(nextSettings);
       return nextSettings;
     });
   }, []);
@@ -45,7 +48,6 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
   const setReceiptSettings = useCallback((receiptSettings: Parameters<typeof settingsService.updateReceiptFooter>[0]) => {
     setSettings((currentSettings) => {
       const nextSettings = { ...currentSettings, ...receiptSettings };
-      storeSettings(nextSettings);
       return nextSettings;
     });
   }, []);
@@ -54,16 +56,27 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     if (!user) return;
 
     let isMounted = true;
-    void settingsService.getReceiptFooter().then((result) => {
-      if (isMounted) setReceiptSettings(result);
-    }).catch(() => {
-      // Keep the cached/default footer while the API is unavailable.
+    void settingsService.getSettings().then((result) => {
+      if (!isMounted) return;
+      setSettings(result);
+      setIsLoaded(true);
+    }).catch(async () => {
+      const cached = await cacheService.get<AppSettings>(SETTINGS_CACHE_KEY);
+      if (isMounted && cached) {
+        setSettings(cached);
+      }
+      if (isMounted) setIsLoaded(true);
     });
 
     return () => {
       isMounted = false;
     };
   }, [setReceiptSettings, user]);
+
+  useEffect(() => {
+    if (!isLoaded || !user) return;
+    void cacheService.set(SETTINGS_CACHE_KEY, settings);
+  }, [isLoaded, settings, user]);
 
   const value = useMemo(
     () => ({ settings, saveSettings, setReceiptFooter, setReceiptSettings }),

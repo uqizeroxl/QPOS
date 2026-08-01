@@ -1,7 +1,9 @@
 import axios from "axios";
 
 import { apiService } from "./api/apiService";
+import { cacheService } from "./storage/cache.service";
 import type { ProductDatasetResetResult, ReceiptFooterSettings } from "../types/report";
+import type { AppSettings } from "../types/settings";
 import {
   isThermalPaperProfileId,
   migrateLegacyPaperWidth,
@@ -12,13 +14,21 @@ export type { ProductDatasetResetResult, ReceiptFooterSettings };
 export class SettingsApiError extends Error {}
 
 type ReceiptSettingsApiResponse = Partial<ReceiptFooterSettings> & {
+  storeName: string;
+  phone: string;
+  address: string;
   receiptFooter: string;
   thermalPaperWidth?: unknown;
 };
 
+const SETTINGS_CACHE_KEY = "/settings";
+
 const normalizeReceiptSettings = (
   settings: ReceiptSettingsApiResponse,
-): ReceiptFooterSettings => ({
+): AppSettings => ({
+  storeName: settings.storeName,
+  phone: settings.phone ?? "",
+  address: settings.address ?? "",
   receiptFooter: settings.receiptFooter,
   thermalPaperProfile: isThermalPaperProfileId(settings.thermalPaperProfile)
     ? settings.thermalPaperProfile
@@ -27,12 +37,51 @@ const normalizeReceiptSettings = (
 });
 
 export const settingsService = {
-  getReceiptFooter: async () => {
+  getSettings: async () => {
     try {
       const response = await apiService.get<ReceiptSettingsApiResponse>(
-        "/settings/receipt-footer",
+        SETTINGS_CACHE_KEY,
       );
-      return normalizeReceiptSettings(response.data);
+      const settings = normalizeReceiptSettings(response.data);
+      await cacheService.set(SETTINGS_CACHE_KEY, settings);
+      return settings;
+    } catch (error) {
+      const cached = await cacheService.get<AppSettings>(SETTINGS_CACHE_KEY);
+      if (cached) return cached;
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        throw new SettingsApiError(
+          error.response?.data?.message ?? "Pengaturan gagal dimuat.",
+        );
+      }
+      throw error;
+    }
+  },
+  updateSettings: async (settings: AppSettings) => {
+    try {
+      const response = await apiService.put<
+        ReceiptSettingsApiResponse,
+        AppSettings
+      >(SETTINGS_CACHE_KEY, settings);
+      const normalized = normalizeReceiptSettings(response.data);
+      await cacheService.set(SETTINGS_CACHE_KEY, normalized);
+      return normalized;
+    } catch (error) {
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        throw new SettingsApiError(
+          error.response?.data?.message ?? "Pengaturan gagal disimpan.",
+        );
+      }
+      throw error;
+    }
+  },
+  getReceiptFooter: async () => {
+    try {
+      const settings = await settingsService.getSettings();
+      return {
+        receiptFooter: settings.receiptFooter,
+        thermalPaperProfile: settings.thermalPaperProfile,
+        receiptAutoCut: settings.receiptAutoCut,
+      };
     } catch (error) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         throw new SettingsApiError(
@@ -44,11 +93,16 @@ export const settingsService = {
   },
   updateReceiptFooter: async (settings: ReceiptFooterSettings) => {
     try {
-      const response = await apiService.put<
-        ReceiptSettingsApiResponse,
-        ReceiptFooterSettings
-      >("/settings/receipt-footer", settings);
-      return normalizeReceiptSettings(response.data);
+      const current = await settingsService.getSettings();
+      const updated = await settingsService.updateSettings({
+        ...current,
+        ...settings,
+      });
+      return {
+        receiptFooter: updated.receiptFooter,
+        thermalPaperProfile: updated.thermalPaperProfile,
+        receiptAutoCut: updated.receiptAutoCut,
+      };
     } catch (error) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
         throw new SettingsApiError(

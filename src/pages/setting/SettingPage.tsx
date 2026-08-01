@@ -12,7 +12,7 @@ import {
   Upload,
   Users,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
@@ -20,6 +20,7 @@ import { Input, Select, Textarea } from "../../components/ui/Input";
 import { useProducts } from "../../hooks/useProducts";
 import { useAuth } from "../../hooks/useAuth";
 import { useCategories } from "../../hooks/useCategories";
+import { NetworkContext } from "../../contexts/NetworkContext";
 import { useSettings } from "../../hooks/useSettings";
 import { useSuppliers } from "../../hooks/useSuppliers";
 import { useTheme } from "../../hooks/useTheme";
@@ -54,6 +55,7 @@ const tabs: { key: Tab; label: string; icon: typeof Store; ownerOnly: boolean }[
 export default function SettingPage() {
   const { settings, saveSettings, setReceiptSettings } = useSettings();
   const { user } = useAuth();
+  const { isOnline, pendingCount } = useContext(NetworkContext);
   const { theme, setTheme } = useTheme();
   const { fetchProducts } = useProducts();
   const { fetchCategories } = useCategories();
@@ -96,19 +98,31 @@ export default function SettingPage() {
   const [isDeletingCompany, setIsDeletingCompany] = useState(false);
 
   useEffect(() => {
+    setStoreInfo(settings);
     setReceiptFooterInput(settings.receiptFooter);
     setThermalPaperProfile(settings.thermalPaperProfile);
     setReceiptAutoCut(settings.receiptAutoCut);
-  }, [settings.receiptAutoCut, settings.receiptFooter, settings.thermalPaperProfile]);
+  }, [
+    settings.address,
+    settings.phone,
+    settings.receiptAutoCut,
+    settings.receiptFooter,
+    settings.storeName,
+    settings.thermalPaperProfile,
+  ]);
 
-  const handleSave = () => {
-    saveSettings({
-      ...storeInfo,
-      receiptFooter: settings.receiptFooter,
-      thermalPaperProfile: settings.thermalPaperProfile,
-      receiptAutoCut: settings.receiptAutoCut,
-    });
-    showToast("Pengaturan toko berhasil disimpan.");
+  const handleSave = async () => {
+    try {
+      await saveSettings({
+        ...storeInfo,
+        receiptFooter: settings.receiptFooter,
+        thermalPaperProfile: settings.thermalPaperProfile,
+        receiptAutoCut: settings.receiptAutoCut,
+      });
+      showToast("Pengaturan toko berhasil disimpan.");
+    } catch {
+      showToast("Pengaturan toko gagal disimpan.", "error");
+    }
   };
 
   const handleBackup = () => {
@@ -346,11 +360,17 @@ export default function SettingPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 rounded-lg bg-blue-50 px-4 py-3 text-blue-700">
+          <div className={`flex items-center gap-3 rounded-lg px-4 py-3 ${isOnline ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-800"}`}>
             <Settings className="h-5 w-5" />
             <div>
               <p className="text-sm font-semibold">{settings.storeName}</p>
-              <p className="text-xs">Pengaturan lokal</p>
+              <p className="text-xs">
+                {isOnline
+                  ? pendingCount > 0
+                    ? `Menyinkronkan ${pendingCount} perubahan`
+                    : "Tersimpan di server"
+                  : `Offline, ${pendingCount} perubahan menunggu`}
+              </p>
             </div>
           </div>
         </Card>
@@ -382,13 +402,18 @@ export default function SettingPage() {
         {activeTab === "store" ? (
           <div className="space-y-6">
             <Card as="section" className="p-5">
-              <div className="border-b border-gray-200 pb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Informasi Toko
-                </h2>
-                <p className="mt-1 text-sm text-gray-500">
-                  Data ini digunakan sebagai identitas toko pada aplikasi POS.
-                </p>
+              <div className="flex flex-col gap-3 border-b border-gray-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Informasi Toko
+                  </h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Data ini digunakan sebagai identitas toko pada aplikasi POS.
+                  </p>
+                </div>
+                <span className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${isOnline ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                  {isOnline ? (pendingCount > 0 ? "Belum sinkron penuh" : "Server aktif") : "Offline"}
+                </span>
               </div>
 
               <div className="mt-5 grid gap-4">
