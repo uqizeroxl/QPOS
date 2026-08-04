@@ -40,7 +40,11 @@ export function useReceiptPrinter(onAfterPrint?: () => void) {
 
   const printReceipt = useCallback((
     transaction: SalesTransaction,
-    overrides?: { printerBackend?: PrinterBackend; paperProfile?: ThermalPaperProfileId },
+    overrides?: {
+      printerBackend?: PrinterBackend;
+      paperProfile?: ThermalPaperProfileId;
+      printerName?: string;
+    },
   ) => {
     const printerBackend = overrides?.printerBackend ?? settings.printerBackend;
     const paperProfile = overrides?.paperProfile ?? settings.thermalPaperProfile;
@@ -63,7 +67,9 @@ export function useReceiptPrinter(onAfterPrint?: () => void) {
         window.alert("Area struk tidak tersedia untuk dicetak.");
         return;
       }
-      void printReceiptWithQzTray(receiptElement, paperProfile)
+      void printReceiptWithQzTray(receiptElement, paperProfile, {
+        printerName: overrides?.printerName ?? settings.selectedPrinterName,
+      })
         .catch((error: unknown) => {
           window.alert(error instanceof Error ? error.message : "Gagal mencetak melalui QZ Tray.");
         })
@@ -72,7 +78,7 @@ export function useReceiptPrinter(onAfterPrint?: () => void) {
           onAfterPrint?.();
         });
     }, RECEIPT_RENDER_DELAY_MS);
-  }, [onAfterPrint, settings.printerBackend, settings.receiptAutoCut, settings.thermalPaperProfile]);
+  }, [onAfterPrint, settings.printerBackend, settings.receiptAutoCut, settings.selectedPrinterName, settings.thermalPaperProfile]);
 
   return {
     receiptPrintTransaction,

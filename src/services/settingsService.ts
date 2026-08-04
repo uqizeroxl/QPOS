@@ -38,6 +38,9 @@ const normalizeReceiptSettings = (
   printerBackend: isPrinterBackend(settings.printerBackend)
     ? settings.printerBackend
     : "BROWSER",
+  selectedPrinterName: typeof settings.selectedPrinterName === "string"
+    ? settings.selectedPrinterName
+    : "",
 });
 
 export const settingsService = {
@@ -86,6 +89,7 @@ export const settingsService = {
         thermalPaperProfile: settings.thermalPaperProfile,
         receiptAutoCut: settings.receiptAutoCut,
         printerBackend: settings.printerBackend,
+        selectedPrinterName: settings.selectedPrinterName,
       };
     } catch (error) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
@@ -108,6 +112,7 @@ export const settingsService = {
         thermalPaperProfile: updated.thermalPaperProfile,
         receiptAutoCut: updated.receiptAutoCut,
         printerBackend: updated.printerBackend,
+        selectedPrinterName: updated.selectedPrinterName,
       };
     } catch (error) {
       if (axios.isAxiosError<{ message?: string }>(error)) {

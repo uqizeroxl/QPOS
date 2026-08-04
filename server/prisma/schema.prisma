@@ -242,6 +242,7 @@ model Settings {
   thermalPaperProfile String @default("80x80") @db.VarChar(20)
   receiptAutoCut Boolean @default(true)
   printerBackend String @default("BROWSER") @db.VarChar(20)
+  selectedPrinterName String @default("") @db.VarChar(255)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

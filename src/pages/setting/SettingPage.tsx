@@ -32,7 +32,7 @@ import type { PrinterBackend } from "../../types/settings";
 import type { SalesTransaction } from "../../types/cashier";
 import ReceiptPrintArea from "../cashier/ReceiptPrintArea";
 import { useReceiptPrinter } from "../../hooks/useReceiptPrinter";
-import { testQzTrayConnection } from "../../services/printing/qzTrayPrinter";
+import { refreshPrinters, testQzTrayConnection } from "../../services/printing/qzTrayPrinter";
 import {
   ProductApiError,
   productService,
@@ -90,6 +90,9 @@ export default function SettingPage() {
   const [receiptAutoCut, setReceiptAutoCut] = useState(settings.receiptAutoCut);
   const [printerBackend, setPrinterBackend] = useState<PrinterBackend>(settings.printerBackend);
   const [isTestingQz, setIsTestingQz] = useState(false);
+  const [selectedPrinterName, setSelectedPrinterName] = useState(settings.selectedPrinterName);
+  const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
+  const [isRefreshingPrinters, setIsRefreshingPrinters] = useState(false);
   const { receiptPrintTransaction, printReceipt } = useReceiptPrinter();
   const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
   const [changeOwnerEmail, setChangeOwnerEmail] = useState("");
@@ -111,12 +114,14 @@ export default function SettingPage() {
     setThermalPaperProfile(settings.thermalPaperProfile);
     setReceiptAutoCut(settings.receiptAutoCut);
     setPrinterBackend(settings.printerBackend);
+    setSelectedPrinterName(settings.selectedPrinterName);
   }, [
     settings.address,
     settings.phone,
     settings.receiptAutoCut,
     settings.receiptFooter,
     settings.printerBackend,
+    settings.selectedPrinterName,
     settings.storeName,
     settings.thermalPaperProfile,
   ]);
@@ -129,6 +134,7 @@ export default function SettingPage() {
         thermalPaperProfile: settings.thermalPaperProfile,
         receiptAutoCut: settings.receiptAutoCut,
         printerBackend: settings.printerBackend,
+        selectedPrinterName: settings.selectedPrinterName,
       });
       showToast("Pengaturan toko berhasil disimpan.");
     } catch {
@@ -149,6 +155,7 @@ export default function SettingPage() {
         thermalPaperProfile,
         receiptAutoCut,
         printerBackend,
+        selectedPrinterName,
       });
       setReceiptFooterInput(result.receiptFooter);
       setReceiptSettings(result);
@@ -169,6 +176,7 @@ export default function SettingPage() {
     setIsTestingQz(true);
     try {
       const result = await testQzTrayConnection();
+      setAvailablePrinters(result.printers);
       const printerSummary = result.printers.length > 0
         ? `${result.printers.length} printer terdeteksi.`
         : "Tidak ada printer terdeteksi.";
@@ -177,6 +185,19 @@ export default function SettingPage() {
       showToast(error instanceof Error ? error.message : "Koneksi QZ Tray gagal.", "error");
     } finally {
       setIsTestingQz(false);
+    }
+  };
+
+  const handleRefreshPrinters = async () => {
+    setIsRefreshingPrinters(true);
+    try {
+      const printers = await refreshPrinters();
+      setAvailablePrinters(printers);
+      showToast(`${printers.length} printer berhasil dimuat.`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Daftar printer gagal dimuat.", "error");
+    } finally {
+      setIsRefreshingPrinters(false);
     }
   };
 
@@ -197,6 +218,7 @@ export default function SettingPage() {
     printReceipt(testTransaction, {
       printerBackend,
       paperProfile: thermalPaperProfile,
+      printerName: selectedPrinterName,
     });
   };
 
@@ -734,6 +756,9 @@ export default function SettingPage() {
             receiptAutoCut={receiptAutoCut}
             printerBackend={printerBackend}
             isTestingQz={isTestingQz}
+            selectedPrinterName={selectedPrinterName}
+            availablePrinters={availablePrinters}
+            isRefreshingPrinters={isRefreshingPrinters}
             onReceiptFooterChange={setReceiptFooterInput}
             onSaveReceiptFooter={handleSaveReceiptFooter}
             onThermalPaperProfileChange={setThermalPaperProfile}
@@ -741,6 +766,8 @@ export default function SettingPage() {
             onPrinterBackendChange={setPrinterBackend}
             onTestQz={handleTestQzConnection}
             onTestPrint={handleTestPrint}
+            onSelectedPrinterNameChange={setSelectedPrinterName}
+            onRefreshPrinters={handleRefreshPrinters}
           />
         ) : null}
 

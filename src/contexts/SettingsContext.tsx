@@ -30,6 +30,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       thermalPaperProfile: nextSettings.thermalPaperProfile,
       receiptAutoCut: nextSettings.receiptAutoCut,
       printerBackend: nextSettings.printerBackend,
+      selectedPrinterName: nextSettings.selectedPrinterName.trim(),
     };
 
     setSettings(safeSettings);

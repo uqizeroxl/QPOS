@@ -36,6 +36,7 @@ export const updateSettings = async (
     thermalPaperWidth?: unknown;
     receiptAutoCut?: unknown;
     printerBackend?: unknown;
+    selectedPrinterName?: unknown;
   }>,
   res: Response,
   next: NextFunction
@@ -50,7 +51,8 @@ export const updateSettings = async (
       req.body.thermalPaperProfile,
       req.body.thermalPaperWidth,
       req.body.receiptAutoCut,
-      req.body.printerBackend
+      req.body.printerBackend,
+      req.body.selectedPrinterName
     );
     res.status(200).json({
       success: true,
@@ -73,6 +75,7 @@ export const updateReceiptFooter = async (
     thermalPaperWidth?: unknown;
     receiptAutoCut?: unknown;
     printerBackend?: unknown;
+    selectedPrinterName?: unknown;
   }>,
   res: Response,
   next: NextFunction
@@ -84,7 +87,8 @@ export const updateReceiptFooter = async (
       req.body.thermalPaperProfile,
       req.body.thermalPaperWidth,
       req.body.receiptAutoCut,
-      req.body.printerBackend
+      req.body.printerBackend,
+      req.body.selectedPrinterName
     );
     res.status(200).json({
       success: true,

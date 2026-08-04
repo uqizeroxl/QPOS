@@ -1,4 +1,4 @@
-import { PlugZap, Printer, Save } from "lucide-react";
+import { PlugZap, Printer, RefreshCw, Save } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Select, Textarea } from "../../components/ui/Input";
@@ -11,6 +11,9 @@ type SystemSettingsTabProps = {
   receiptAutoCut: boolean;
   printerBackend: PrinterBackend;
   isTestingQz: boolean;
+  selectedPrinterName: string;
+  availablePrinters: string[];
+  isRefreshingPrinters: boolean;
   onReceiptFooterChange: (value: string) => void;
   onSaveReceiptFooter: () => void | Promise<void>;
   onThermalPaperProfileChange: (value: ThermalPaperProfileId) => void;
@@ -18,6 +21,8 @@ type SystemSettingsTabProps = {
   onPrinterBackendChange: (value: PrinterBackend) => void;
   onTestQz: () => void | Promise<void>;
   onTestPrint: () => void;
+  onSelectedPrinterNameChange: (value: string) => void;
+  onRefreshPrinters: () => void | Promise<void>;
 };
 
 export default function SystemSettingsTab({
@@ -27,6 +32,9 @@ export default function SystemSettingsTab({
   receiptAutoCut,
   printerBackend,
   isTestingQz,
+  selectedPrinterName,
+  availablePrinters,
+  isRefreshingPrinters,
   onReceiptFooterChange,
   onSaveReceiptFooter,
   onThermalPaperProfileChange,
@@ -34,6 +42,8 @@ export default function SystemSettingsTab({
   onPrinterBackendChange,
   onTestQz,
   onTestPrint,
+  onSelectedPrinterNameChange,
+  onRefreshPrinters,
 }: SystemSettingsTabProps) {
   return (
     <div className="space-y-6">
@@ -61,6 +71,34 @@ export default function SystemSettingsTab({
               QZ Tray mencetak langsung ke printer default tanpa dialog browser.
             </span>
           </label>
+
+          {printerBackend === "QZ_TRAY" ? (
+            <div className="space-y-2">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-700">Printer QZ Tray</span>
+                <Select
+                  value={selectedPrinterName}
+                  onChange={(event) => onSelectedPrinterNameChange(event.target.value)}
+                >
+                  <option value="">Otomatis (printer default)</option>
+                  {selectedPrinterName && !availablePrinters.includes(selectedPrinterName) ? (
+                    <option value={selectedPrinterName}>{selectedPrinterName} (tidak terdeteksi)</option>
+                  ) : null}
+                  {availablePrinters.map((printer) => (
+                    <option key={printer} value={printer}>{printer}</option>
+                  ))}
+                </Select>
+              </label>
+              <Button
+                variant="secondary"
+                onClick={() => void onRefreshPrinters()}
+                disabled={isRefreshingPrinters}
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshingPrinters ? "animate-spin" : ""}`} />
+                {isRefreshingPrinters ? "Memuat Printer..." : "Refresh Printers"}
+              </Button>
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap gap-3">
             <Button variant="secondary" onClick={() => void onTestQz()} disabled={isTestingQz}>

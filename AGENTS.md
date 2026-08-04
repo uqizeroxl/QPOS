@@ -993,3 +993,44 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 **Catatan developer berikutnya:**
 - Migration tenant dijalankan otomatis oleh entrypoint Docker saat deployment.
 - QZ Tray harus terinstal dan aktif di komputer kasir; printer default sistem diprioritaskan, lalu printer pertama yang terdeteksi.
+
+## 2026-08-04 — QZ Tray reliability hardening
+
+**Tujuan:**
+- Meningkatkan reliabilitas dan performa QZ Tray tanpa mengubah Browser Print, layout receipt, atau alur transaksi.
+
+**Root Cause:**
+- Implementasi awal membuka dan menutup websocket untuk setiap job, menemukan ulang printer dan men-serialize seluruh stylesheet pada setiap print, tidak memiliki timeout/retry, serta belum dapat menyimpan printer pilihan.
+
+**File diubah:**
+- `src/services/printing/qzTrayPrinter.ts`
+- `src/hooks/useReceiptPrinter.ts`
+- `src/pages/setting/SettingPage.tsx`
+- `src/pages/setting/SystemSettingsTab.tsx`
+- `src/types/settings.ts`, `src/types/report.ts`
+- `src/services/settingsService.ts`, `src/contexts/SettingsContext.tsx`
+- `server/prisma/schema.prisma`
+- `server/prisma/migrations/20260804010000_add_selected_printer_name/migration.sql`
+- `server/src/services/settings.service.ts`, `server/src/controllers/settings.controller.ts`
+- `AGENTS.md`
+
+**Perubahan:**
+- Menambahkan connection manager yang menggabungkan concurrent connect, memakai koneksi aktif, disconnect setelah 2 menit idle, dan cleanup saat `pagehide`/`beforeunload`.
+- Menambahkan cache printer dan `refreshPrinters()` untuk discovery eksplisit; print biasa tidak lagi memanggil `qz.printers.find()` berulang.
+- Menyimpan `selectedPrinterName` pada settings tenant dan menerapkan fallback: selected → default → printer pertama.
+- Menambahkan timeout configurable dengan default 5 detik untuk connect, discovery, dan print serta pesan timeout yang spesifik.
+- Print di-retry tepat satu kali saat koneksi hilang; error printer-not-found tidak di-retry.
+- Cache CSS receipt dibuat satu kali dan dipakai ulang untuk print berikutnya.
+- Debug logging hanya berjalan ketika `import.meta.env.DEV`; production tidak menghasilkan console log QZ.
+- Menambahkan pilihan printer dan tombol `Refresh Printers` pada pengaturan Sistem.
+
+**Testing:**
+- `npm run prisma:generate` berhasil.
+- `npm run build` berhasil.
+- `npm run build --prefix server` berhasil.
+- Lint terarah tidak menghasilkan error; satu warning hook pre-existing tetap ada di `SettingPage.tsx`.
+- `git diff --check` berhasil.
+
+**Catatan developer berikutnya:**
+- Migration `20260804010000_add_selected_printer_name` dijalankan otomatis oleh entrypoint Docker.
+- Timeout QZ dapat dioverride melalui argumen fungsi publik; default tetap 5 detik.

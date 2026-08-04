@@ -38,6 +38,7 @@ export type AppSettings = {
   thermalPaperProfile: ThermalPaperProfileId;
   receiptAutoCut: boolean;
   printerBackend: PrinterBackend;
+  selectedPrinterName: string;
 };
 
 export const defaultSettings: AppSettings = {
@@ -48,4 +49,5 @@ export const defaultSettings: AppSettings = {
   thermalPaperProfile: DEFAULT_THERMAL_PAPER_PROFILE,
   receiptAutoCut: true,
   printerBackend: "BROWSER",
+  selectedPrinterName: "",
 };
