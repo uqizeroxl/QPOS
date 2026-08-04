@@ -954,3 +954,42 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 **Catatan developer berikutnya:**
 - Preemptive refresh di request interceptor menghilangkan satu siklus 401→refresh→retry, sehingga response lebih cepat dan tidak ada 401 yang terlihat di console.
 - Stack provider: Toast harus selalu di luar ErrorBoundary agar event `app:toast` tetap diterima saat error boundary aktif.
+
+## 2026-08-04 — Optional QZ Tray receipt printing
+
+**Tujuan:**
+- Menambahkan backend cetak receipt opsional yang dapat mencetak langsung ke printer POS tanpa dialog print browser.
+
+**Root Cause:**
+- Seluruh cetak receipt sebelumnya selalu memanggil `window.print()`, sehingga browser print dialog tidak dapat dilewati dan tidak ada koneksi ke printer lokal melalui QZ Tray.
+
+**File utama diubah:**
+- `src/services/printing/qzTrayPrinter.ts`
+- `src/hooks/useReceiptPrinter.ts`
+- `src/pages/setting/SettingPage.tsx`
+- `src/pages/setting/SystemSettingsTab.tsx`
+- `src/types/settings.ts`, `src/types/report.ts`
+- `src/services/settingsService.ts`, `src/contexts/SettingsContext.tsx`
+- `server/prisma/schema.prisma`
+- `server/prisma/migrations/20260804000000_add_printer_backend/migration.sql`
+- `server/src/services/settings.service.ts`, `server/src/controllers/settings.controller.ts`
+- `package.json`, `package-lock.json`
+
+**Perubahan:**
+- Menambahkan pilihan `Browser Print` (default/fallback) dan `QZ Tray` pada pengaturan Sistem serta menyimpannya di database tenant.
+- Menambahkan koneksi QZ Tray, deteksi printer, pemilihan default/first available printer, silent HTML receipt printing, dan cleanup koneksi pada semua jalur hasil.
+- QZ Tray mencetak elemen `ReceiptPrintArea` yang sama beserta stylesheet print aplikasi; markup layout receipt dan alur transaksi tidak diubah.
+- Menambahkan pesan khusus untuk QZ Tray tidak terpasang/tidak berjalan, koneksi gagal, printer tidak ditemukan, dan print job gagal.
+- Menambahkan tombol `Test QZ Tray Connection` dan `Test Print`; test print memakai backend yang sedang dipilih pada form.
+- Browser Print tetap memakai implementasi `window.print()` yang sudah ada.
+
+**Testing:**
+- `npm run prisma:generate` berhasil.
+- `npm run build` frontend berhasil.
+- `npm run build --prefix server` berhasil.
+- Lint terarah file frontend yang diubah tidak menghasilkan error (satu warning hook pre-existing pada `SettingPage.tsx`).
+- `git diff --check` berhasil.
+
+**Catatan developer berikutnya:**
+- Migration tenant dijalankan otomatis oleh entrypoint Docker saat deployment.
+- QZ Tray harus terinstal dan aktif di komputer kasir; printer default sistem diprioritaskan, lalu printer pertama yang terdeteksi.

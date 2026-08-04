@@ -6,6 +6,10 @@ import {
   completeBrowserReceiptPrint,
   type ReceiptPrinterConfig,
 } from "../services/printing/browserReceiptPrinter";
+import { printReceiptWithQzTray } from "../services/printing/qzTrayPrinter";
+import type { PrinterBackend, ThermalPaperProfileId } from "../types/settings";
+
+const RECEIPT_RENDER_DELAY_MS = 100;
 
 export function useReceiptPrinter(onAfterPrint?: () => void) {
   const { settings } = useSettings();
@@ -34,16 +38,41 @@ export function useReceiptPrinter(onAfterPrint?: () => void) {
     };
   }, [onAfterPrint]);
 
-  const printReceipt = useCallback((transaction: SalesTransaction) => {
+  const printReceipt = useCallback((
+    transaction: SalesTransaction,
+    overrides?: { printerBackend?: PrinterBackend; paperProfile?: ThermalPaperProfileId },
+  ) => {
+    const printerBackend = overrides?.printerBackend ?? settings.printerBackend;
+    const paperProfile = overrides?.paperProfile ?? settings.thermalPaperProfile;
     const config: ReceiptPrinterConfig = {
-      paperProfile: settings.thermalPaperProfile,
+      paperProfile,
       autoCut: settings.receiptAutoCut,
     };
-    activeConfigRef.current = config;
-    beginBrowserReceiptPrint(config);
     setReceiptPrintTransaction(transaction);
-    window.setTimeout(() => window.print(), 100);
-  }, [settings.receiptAutoCut, settings.thermalPaperProfile]);
+    if (printerBackend === "BROWSER") {
+      activeConfigRef.current = config;
+      beginBrowserReceiptPrint(config);
+      window.setTimeout(() => window.print(), RECEIPT_RENDER_DELAY_MS);
+      return;
+    }
+
+    window.setTimeout(() => {
+      const receiptElement = document.querySelector<HTMLElement>(".receipt-print-root");
+      if (!receiptElement) {
+        setReceiptPrintTransaction(null);
+        window.alert("Area struk tidak tersedia untuk dicetak.");
+        return;
+      }
+      void printReceiptWithQzTray(receiptElement, paperProfile)
+        .catch((error: unknown) => {
+          window.alert(error instanceof Error ? error.message : "Gagal mencetak melalui QZ Tray.");
+        })
+        .finally(() => {
+          setReceiptPrintTransaction(null);
+          onAfterPrint?.();
+        });
+    }, RECEIPT_RENDER_DELAY_MS);
+  }, [onAfterPrint, settings.printerBackend, settings.receiptAutoCut, settings.thermalPaperProfile]);
 
   return {
     receiptPrintTransaction,

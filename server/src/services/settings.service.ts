@@ -19,6 +19,7 @@ const THERMAL_PAPER_PROFILES = {
   "80x50": 80,
   "80x80": 80
 } as const;
+const PRINTER_BACKENDS = ["BROWSER", "QZ_TRAY"] as const;
 
 export class ReceiptFooterValidationError extends Error {}
 
@@ -45,6 +46,16 @@ const migrateLegacyThermalPaperWidth = (value: unknown) =>
 const normalizeReceiptAutoCut = (value: unknown) => {
   if (typeof value !== "boolean") {
     throw new ReceiptFooterValidationError("Auto Cut harus berupa ON atau OFF.");
+  }
+  return value;
+};
+
+const normalizePrinterBackend = (value: unknown) => {
+  if (
+    typeof value !== "string" ||
+    !PRINTER_BACKENDS.includes(value as (typeof PRINTER_BACKENDS)[number])
+  ) {
+    throw new ReceiptFooterValidationError("Backend printer tidak valid.");
   }
   return value;
 };
@@ -127,7 +138,10 @@ export const getSettings = async (prisma: PrismaClient) => {
       storeName: true,
       phone: true,
       address: true,
-      receiptFooter: true
+      receiptFooter: true,
+      thermalPaperProfile: true,
+      receiptAutoCut: true,
+      printerBackend: true
     }
   });
 
@@ -142,7 +156,8 @@ export const updateSettings = async (
   addressValue: unknown,
   thermalPaperProfileValue: unknown,
   thermalPaperWidthValue: unknown,
-  receiptAutoCutValue: unknown
+  receiptAutoCutValue: unknown,
+  printerBackendValue: unknown
 ) => {
   const storeName = normalizeStoreName(storeNameValue);
   const phone = normalizePhone(phoneValue);
@@ -159,6 +174,9 @@ export const updateSettings = async (
   const receiptAutoCut = receiptAutoCutValue === undefined
     ? undefined
     : normalizeReceiptAutoCut(receiptAutoCutValue);
+  const printerBackend = printerBackendValue === undefined
+    ? undefined
+    : normalizePrinterBackend(printerBackendValue);
 
   return prisma.settings.upsert({
     where: { key: "default" },
@@ -170,7 +188,8 @@ export const updateSettings = async (
       receiptFooter,
       ...(thermalPaperWidth === undefined ? {} : { thermalPaperWidth }),
       ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
-      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut })
+      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut }),
+      ...(printerBackend === undefined ? {} : { printerBackend })
     },
     update: {
       storeName,
@@ -179,13 +198,17 @@ export const updateSettings = async (
       receiptFooter,
       ...(thermalPaperWidth === undefined ? {} : { thermalPaperWidth }),
       ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
-      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut })
+      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut }),
+      ...(printerBackend === undefined ? {} : { printerBackend })
     },
     select: {
       storeName: true,
       phone: true,
       address: true,
-      receiptFooter: true
+      receiptFooter: true,
+      thermalPaperProfile: true,
+      receiptAutoCut: true,
+      printerBackend: true
     }
   });
 };
@@ -195,7 +218,8 @@ export const updateReceiptFooter = async (
   value: unknown,
   thermalPaperProfileValue: unknown,
   thermalPaperWidthValue: unknown,
-  receiptAutoCutValue: unknown
+  receiptAutoCutValue: unknown,
+  printerBackendValue: unknown
 ) => {
   const receiptFooter = normalizeReceiptFooter(value);
   const thermalPaperProfile = thermalPaperProfileValue === undefined
@@ -209,6 +233,9 @@ export const updateReceiptFooter = async (
   const receiptAutoCut = receiptAutoCutValue === undefined
     ? undefined
     : normalizeReceiptAutoCut(receiptAutoCutValue);
+  const printerBackend = printerBackendValue === undefined
+    ? undefined
+    : normalizePrinterBackend(printerBackendValue);
 
   return prisma.settings.upsert({
     where: { key: "default" },
@@ -217,16 +244,21 @@ export const updateReceiptFooter = async (
       receiptFooter,
       ...(thermalPaperWidth === undefined ? {} : { thermalPaperWidth }),
       ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
-      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut })
+      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut }),
+      ...(printerBackend === undefined ? {} : { printerBackend })
     },
     update: {
       receiptFooter,
       ...(thermalPaperWidth === undefined ? {} : { thermalPaperWidth }),
       ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
-      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut })
+      ...(receiptAutoCut === undefined ? {} : { receiptAutoCut }),
+      ...(printerBackend === undefined ? {} : { printerBackend })
     },
     select: {
-      receiptFooter: true
+      receiptFooter: true,
+      thermalPaperProfile: true,
+      receiptAutoCut: true,
+      printerBackend: true
     }
   });
 };

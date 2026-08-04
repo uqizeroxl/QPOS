@@ -47,4 +47,5 @@ export type ReceiptFooterSettings = {
   receiptFooter: string;
   thermalPaperProfile: import("./settings").ThermalPaperProfileId;
   receiptAutoCut: boolean;
+  printerBackend: import("./settings").PrinterBackend;
 };

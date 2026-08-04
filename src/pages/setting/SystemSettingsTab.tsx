@@ -1,18 +1,23 @@
-import { Save } from "lucide-react";
+import { PlugZap, Printer, Save } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import { Select, Textarea } from "../../components/ui/Input";
-import { THERMAL_PAPER_PROFILES, type ThermalPaperProfileId } from "../../types/settings";
+import { THERMAL_PAPER_PROFILES, type PrinterBackend, type ThermalPaperProfileId } from "../../types/settings";
 
 type SystemSettingsTabProps = {
   receiptFooter: string;
   isSavingReceiptFooter: boolean;
   thermalPaperProfile: ThermalPaperProfileId;
   receiptAutoCut: boolean;
+  printerBackend: PrinterBackend;
+  isTestingQz: boolean;
   onReceiptFooterChange: (value: string) => void;
   onSaveReceiptFooter: () => void | Promise<void>;
   onThermalPaperProfileChange: (value: ThermalPaperProfileId) => void;
   onReceiptAutoCutChange: (value: boolean) => void;
+  onPrinterBackendChange: (value: PrinterBackend) => void;
+  onTestQz: () => void | Promise<void>;
+  onTestPrint: () => void;
 };
 
 export default function SystemSettingsTab({
@@ -20,10 +25,15 @@ export default function SystemSettingsTab({
   isSavingReceiptFooter,
   thermalPaperProfile,
   receiptAutoCut,
+  printerBackend,
+  isTestingQz,
   onReceiptFooterChange,
   onSaveReceiptFooter,
   onThermalPaperProfileChange,
   onReceiptAutoCutChange,
+  onPrinterBackendChange,
+  onTestQz,
+  onTestPrint,
 }: SystemSettingsTabProps) {
   return (
     <div className="space-y-6">
@@ -38,6 +48,30 @@ export default function SystemSettingsTab({
         </div>
 
         <div className="mt-5 space-y-4">
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-gray-700">Printer Backend</span>
+            <Select
+              value={printerBackend}
+              onChange={(event) => onPrinterBackendChange(event.target.value as PrinterBackend)}
+            >
+              <option value="BROWSER">Browser Print</option>
+              <option value="QZ_TRAY">QZ Tray</option>
+            </Select>
+            <span className="block text-xs text-gray-500">
+              QZ Tray mencetak langsung ke printer default tanpa dialog browser.
+            </span>
+          </label>
+
+          <div className="flex flex-wrap gap-3">
+            <Button variant="secondary" onClick={() => void onTestQz()} disabled={isTestingQz}>
+              <PlugZap className="h-4 w-4" />
+              {isTestingQz ? "Menguji..." : "Test QZ Tray Connection"}
+            </Button>
+            <Button variant="secondary" onClick={onTestPrint}>
+              <Printer className="h-4 w-4" /> Test Print
+            </Button>
+          </div>
+
           <label className="block space-y-2">
             <span className="text-sm font-medium text-gray-700">
               Ukuran Kertas

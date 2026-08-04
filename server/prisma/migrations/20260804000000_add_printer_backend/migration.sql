@@ -1,0 +1,2 @@
+ALTER TABLE "settings"
+ADD COLUMN "printerBackend" VARCHAR(20) NOT NULL DEFAULT 'BROWSER';

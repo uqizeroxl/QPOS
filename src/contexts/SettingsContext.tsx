@@ -29,6 +29,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         nextSettings.receiptFooter.trim() || defaultSettings.receiptFooter,
       thermalPaperProfile: nextSettings.thermalPaperProfile,
       receiptAutoCut: nextSettings.receiptAutoCut,
+      printerBackend: nextSettings.printerBackend,
     };
 
     setSettings(safeSettings);

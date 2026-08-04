@@ -23,6 +23,13 @@ export function migrateLegacyPaperWidth(value: unknown): ThermalPaperProfileId {
   return value === 58 ? "58x30" : DEFAULT_THERMAL_PAPER_PROFILE;
 }
 
+export const PRINTER_BACKENDS = ["BROWSER", "QZ_TRAY"] as const;
+export type PrinterBackend = (typeof PRINTER_BACKENDS)[number];
+
+export function isPrinterBackend(value: unknown): value is PrinterBackend {
+  return PRINTER_BACKENDS.includes(value as PrinterBackend);
+}
+
 export type AppSettings = {
   storeName: string;
   phone: string;
@@ -30,6 +37,7 @@ export type AppSettings = {
   receiptFooter: string;
   thermalPaperProfile: ThermalPaperProfileId;
   receiptAutoCut: boolean;
+  printerBackend: PrinterBackend;
 };
 
 export const defaultSettings: AppSettings = {
@@ -39,4 +47,5 @@ export const defaultSettings: AppSettings = {
   receiptFooter: "Terima kasih",
   thermalPaperProfile: DEFAULT_THERMAL_PAPER_PROFILE,
   receiptAutoCut: true,
+  printerBackend: "BROWSER",
 };

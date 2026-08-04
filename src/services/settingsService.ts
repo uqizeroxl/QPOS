@@ -6,6 +6,7 @@ import type { ProductDatasetResetResult, ReceiptFooterSettings } from "../types/
 import type { AppSettings } from "../types/settings";
 import {
   isThermalPaperProfileId,
+  isPrinterBackend,
   migrateLegacyPaperWidth,
 } from "../types/settings";
 
@@ -34,6 +35,9 @@ const normalizeReceiptSettings = (
     ? settings.thermalPaperProfile
     : migrateLegacyPaperWidth(settings.thermalPaperWidth),
   receiptAutoCut: settings.receiptAutoCut ?? true,
+  printerBackend: isPrinterBackend(settings.printerBackend)
+    ? settings.printerBackend
+    : "BROWSER",
 });
 
 export const settingsService = {
@@ -81,6 +85,7 @@ export const settingsService = {
         receiptFooter: settings.receiptFooter,
         thermalPaperProfile: settings.thermalPaperProfile,
         receiptAutoCut: settings.receiptAutoCut,
+        printerBackend: settings.printerBackend,
       };
     } catch (error) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
@@ -102,6 +107,7 @@ export const settingsService = {
         receiptFooter: updated.receiptFooter,
         thermalPaperProfile: updated.thermalPaperProfile,
         receiptAutoCut: updated.receiptAutoCut,
+        printerBackend: updated.printerBackend,
       };
     } catch (error) {
       if (axios.isAxiosError<{ message?: string }>(error)) {

@@ -28,6 +28,11 @@ import { useToast } from "../../hooks/useToast";
 import MainLayout from "../../layouts/MainLayout";
 import type { ThemePreference } from "../../contexts/themeContextValue";
 import type { ThermalPaperProfileId } from "../../types/settings";
+import type { PrinterBackend } from "../../types/settings";
+import type { SalesTransaction } from "../../types/cashier";
+import ReceiptPrintArea from "../cashier/ReceiptPrintArea";
+import { useReceiptPrinter } from "../../hooks/useReceiptPrinter";
+import { testQzTrayConnection } from "../../services/printing/qzTrayPrinter";
 import {
   ProductApiError,
   productService,
@@ -83,6 +88,9 @@ export default function SettingPage() {
   const [isSavingReceiptFooter, setIsSavingReceiptFooter] = useState(false);
   const [thermalPaperProfile, setThermalPaperProfile] = useState<ThermalPaperProfileId>(settings.thermalPaperProfile);
   const [receiptAutoCut, setReceiptAutoCut] = useState(settings.receiptAutoCut);
+  const [printerBackend, setPrinterBackend] = useState<PrinterBackend>(settings.printerBackend);
+  const [isTestingQz, setIsTestingQz] = useState(false);
+  const { receiptPrintTransaction, printReceipt } = useReceiptPrinter();
   const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
   const [changeOwnerEmail, setChangeOwnerEmail] = useState("");
   const [changeOwnerStoreName, setChangeOwnerStoreName] = useState("");
@@ -102,11 +110,13 @@ export default function SettingPage() {
     setReceiptFooterInput(settings.receiptFooter);
     setThermalPaperProfile(settings.thermalPaperProfile);
     setReceiptAutoCut(settings.receiptAutoCut);
+    setPrinterBackend(settings.printerBackend);
   }, [
     settings.address,
     settings.phone,
     settings.receiptAutoCut,
     settings.receiptFooter,
+    settings.printerBackend,
     settings.storeName,
     settings.thermalPaperProfile,
   ]);
@@ -118,6 +128,7 @@ export default function SettingPage() {
         receiptFooter: settings.receiptFooter,
         thermalPaperProfile: settings.thermalPaperProfile,
         receiptAutoCut: settings.receiptAutoCut,
+        printerBackend: settings.printerBackend,
       });
       showToast("Pengaturan toko berhasil disimpan.");
     } catch {
@@ -137,6 +148,7 @@ export default function SettingPage() {
         receiptFooter,
         thermalPaperProfile,
         receiptAutoCut,
+        printerBackend,
       });
       setReceiptFooterInput(result.receiptFooter);
       setReceiptSettings(result);
@@ -151,6 +163,41 @@ export default function SettingPage() {
     } finally {
       setIsSavingReceiptFooter(false);
     }
+  };
+
+  const handleTestQzConnection = async () => {
+    setIsTestingQz(true);
+    try {
+      const result = await testQzTrayConnection();
+      const printerSummary = result.printers.length > 0
+        ? `${result.printers.length} printer terdeteksi.`
+        : "Tidak ada printer terdeteksi.";
+      showToast(`QZ Tray ${result.version} terhubung. ${printerSummary}`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Koneksi QZ Tray gagal.", "error");
+    } finally {
+      setIsTestingQz(false);
+    }
+  };
+
+  const handleTestPrint = () => {
+    const testTransaction: SalesTransaction = {
+      id: "qz-test-print",
+      transactionNumber: "TEST-PRINT",
+      items: [{ productId: "test", barcode: "TEST", name: "Test Print QPOS", price: 1000, quantity: 1, subtotal: 1000 }],
+      subtotal: 1000,
+      discountPercent: 0,
+      discountAmount: 0,
+      grandTotal: 1000,
+      paidAmount: 1000,
+      change: 0,
+      cashierName: user?.name ?? "QPOS",
+      createdAt: new Date().toISOString(),
+    };
+    printReceipt(testTransaction, {
+      printerBackend,
+      paperProfile: thermalPaperProfile,
+    });
   };
 
   const handleExportDataset = async () => {
@@ -685,12 +732,19 @@ export default function SettingPage() {
             isSavingReceiptFooter={isSavingReceiptFooter}
             thermalPaperProfile={thermalPaperProfile}
             receiptAutoCut={receiptAutoCut}
+            printerBackend={printerBackend}
+            isTestingQz={isTestingQz}
             onReceiptFooterChange={setReceiptFooterInput}
             onSaveReceiptFooter={handleSaveReceiptFooter}
             onThermalPaperProfileChange={setThermalPaperProfile}
             onReceiptAutoCutChange={setReceiptAutoCut}
+            onPrinterBackendChange={setPrinterBackend}
+            onTestQz={handleTestQzConnection}
+            onTestPrint={handleTestPrint}
           />
         ) : null}
+
+        <ReceiptPrintArea transaction={receiptPrintTransaction} />
 
         {isResetDialogOpen ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4">
