@@ -7,7 +7,6 @@ import {
   type ReceiptPrinterConfig,
 } from "../services/printing/browserReceiptPrinter";
 import { printReceiptWithQzTray } from "../services/printing/qzTrayPrinter";
-import { thermalPrinterService } from "../services/printing/thermalPrinterService";
 import type { PrinterBackend, ThermalPaperProfileId } from "../types/settings";
 
 const RECEIPT_RENDER_DELAY_MS = 100;
@@ -62,16 +61,6 @@ export function useReceiptPrinter(onAfterPrint?: () => void) {
     }
 
     if (printerBackend === "NODE_THERMAL_PRINTER") {
-      window.setTimeout(() => {
-        void thermalPrinterService.printReceipt(transaction)
-          .catch((error: unknown) => {
-            window.alert(error instanceof Error ? error.message : "Gagal mencetak melalui printer thermal.");
-          })
-          .finally(() => {
-            setReceiptPrintTransaction(null);
-            onAfterPrint?.();
-          });
-      }, RECEIPT_RENDER_DELAY_MS);
       return;
     }
 
@@ -97,6 +86,7 @@ export function useReceiptPrinter(onAfterPrint?: () => void) {
 
   return {
     receiptPrintTransaction,
+    clearReceiptPrintTransaction: () => setReceiptPrintTransaction(null),
     printReceipt,
   };
 }

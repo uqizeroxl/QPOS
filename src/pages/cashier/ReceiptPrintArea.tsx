@@ -1,10 +1,13 @@
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 import { useSettings } from "../../hooks/useSettings";
 import { formatRupiah } from "../../utils/currency";
 import type { SalesTransaction } from "../../types/cashier";
+import Button from "../../components/ui/Button";
 
 type ReceiptPrintAreaProps = {
   transaction: SalesTransaction | null;
+  onClosePreview?: () => void;
 };
 
 function formatReceiptDate(value: string) {
@@ -16,11 +19,101 @@ function formatReceiptDate(value: string) {
 
 export default function ReceiptPrintArea({
   transaction,
+  onClosePreview,
 }: ReceiptPrintAreaProps) {
   const { settings } = useSettings();
 
   if (!transaction) {
     return null;
+  }
+
+  if (settings.printerBackend === "NODE_THERMAL_PRINTER" && onClosePreview) {
+    return createPortal(
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4">
+        <div className="w-full max-w-[420px] rounded-2xl bg-white p-4 shadow-2xl">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Preview Struk</p>
+              <p className="text-xs text-gray-500">Mode thermal printer</p>
+            </div>
+            <Button variant="secondary" onClick={onClosePreview}>
+              <X className="h-4 w-4" />
+              Tutup
+            </Button>
+          </div>
+          <div className="max-h-[75vh] overflow-auto rounded-xl border border-gray-200 bg-white p-3">
+            <div className="receipt-print-root" style={{ display: "block" }}>
+              <div className="receipt-ticket">
+                <div className="receipt-center">
+                  <p className="receipt-store-name">{settings.storeName}</p>
+                  {settings.address ? <p>{settings.address}</p> : null}
+                  {settings.phone ? <p>{settings.phone}</p> : null}
+                </div>
+
+                <div className="receipt-divider" />
+
+                <div className="receipt-row">
+                  <span>No</span>
+                  <span>{transaction.transactionNumber}</span>
+                </div>
+                <div className="receipt-row">
+                  <span>Tanggal</span>
+                  <span>{formatReceiptDate(transaction.createdAt)}</span>
+                </div>
+
+                <div className="receipt-divider" />
+
+                {transaction.items.map((item) => (
+                  <div key={`${transaction.id}-${item.productId}`} className="receipt-item">
+                    <p className="receipt-item-name">{item.name}</p>
+                    <div className="receipt-row">
+                      <span>
+                        {item.quantity} x {formatRupiah(item.price, { prefix: true })}
+                      </span>
+                      <span>{formatRupiah(item.subtotal, { prefix: true })}</span>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="receipt-divider" />
+
+                <div className="receipt-row">
+                  <span>Subtotal</span>
+                  <span>{formatRupiah(transaction.subtotal, { prefix: true })}</span>
+                </div>
+                <div className="receipt-row">
+                  <span>Diskon ({transaction.discountPercent}%)</span>
+                  <span>-{formatRupiah(transaction.discountAmount, { prefix: true })}</span>
+                </div>
+                <div className="receipt-row receipt-total">
+                  <span>Grand Total</span>
+                  <span>{formatRupiah(transaction.grandTotal, { prefix: true })}</span>
+                </div>
+                <div className="receipt-row">
+                  <span>Bayar</span>
+                  <span>{formatRupiah(transaction.paidAmount, { prefix: true })}</span>
+                </div>
+                <div className="receipt-row">
+                  <span>Kembali</span>
+                  <span>{formatRupiah(transaction.change, { prefix: true })}</span>
+                </div>
+
+                <div className="receipt-divider" />
+
+                <p className="receipt-center receipt-thanks whitespace-pre-line">
+                  {settings.receiptFooter}
+                </p>
+
+                <div className="receipt-cut-line">
+                  <span className="receipt-cut-text">--- potong disini ---</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
   }
 
   return createPortal(

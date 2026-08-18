@@ -41,4 +41,20 @@ export const thermalPrinterService = {
       throw error;
     }
   },
+  scanPrinters: async () => {
+    try {
+      const response = await apiService.get<{
+        defaultPrinter: string;
+        printers: Array<{ name: string; isDefault: boolean; status: string }>;
+      }>("/printer/scan-printers");
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError<{ message?: string }>(error)) {
+        throw new ThermalPrinterConnectionError(
+          error.response?.data?.message ?? "Gagal memindai printer sistem.",
+        );
+      }
+      throw error;
+    }
+  },
 };

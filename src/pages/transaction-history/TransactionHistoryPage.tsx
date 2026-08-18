@@ -241,7 +241,11 @@ export default function TransactionHistoryPage() {
     useState<SalesTransaction | null>(null);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const { receiptPrintTransaction, printReceipt } = useReceiptPrinter();
+  const {
+    receiptPrintTransaction,
+    clearReceiptPrintTransaction,
+    printReceipt,
+  } = useReceiptPrinter();
 
   const filteredTransactions = useMemo(() => {
     const normalizedSearch = searchTerm.toLowerCase().trim();
@@ -581,7 +585,10 @@ export default function TransactionHistoryPage() {
           onClose={() => setSelectedTransaction(null)}
           onPrint={handlePrintReceipt}
         />
-        <ReceiptPrintArea transaction={receiptPrintTransaction} />
+        <ReceiptPrintArea
+          transaction={receiptPrintTransaction}
+          onClosePreview={clearReceiptPrintTransaction}
+        />
         <ResetTransactionHistoryDialog
           isOpen={isResetDialogOpen}
           isSubmitting={isResetting}

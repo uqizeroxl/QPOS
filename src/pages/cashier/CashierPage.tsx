@@ -66,7 +66,11 @@ export default function CashierPage() {
   const requestInputFocus = useCallback(() => {
     setFocusRequestId((currentRequestId) => currentRequestId + 1);
   }, []);
-  const { receiptPrintTransaction, printReceipt: printReceiptArea } =
+  const {
+    receiptPrintTransaction,
+    clearReceiptPrintTransaction,
+    printReceipt: printReceiptArea,
+  } =
     useReceiptPrinter(requestInputFocus);
   const subtotal = useMemo(
     () =>
@@ -461,7 +465,10 @@ export default function CashierPage() {
           }}
         />
 
-        <ReceiptPrintArea transaction={receiptPrintTransaction} />
+        <ReceiptPrintArea
+          transaction={receiptPrintTransaction}
+          onClosePreview={clearReceiptPrintTransaction}
+        />
       </div>
     </MainLayout>
   );

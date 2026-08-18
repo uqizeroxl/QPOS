@@ -31,6 +31,7 @@ type SystemSettingsTabProps = {
   onSelectedPrinterNameChange: (value: string) => void;
   onThermalPrinterTypeChange: (value: ThermalPrinterType) => void;
   onOpenThermalPrinterSetup: () => void;
+  onScanThermalPrinters: () => void | Promise<void>;
   onRefreshPrinters: () => void | Promise<void>;
 };
 
@@ -55,6 +56,7 @@ export default function SystemSettingsTab({
   onSelectedPrinterNameChange,
   onThermalPrinterTypeChange,
   onOpenThermalPrinterSetup,
+  onScanThermalPrinters,
   onRefreshPrinters,
 }: SystemSettingsTabProps) {
   return (
@@ -140,6 +142,10 @@ export default function SystemSettingsTab({
               <Button variant="secondary" onClick={onOpenThermalPrinterSetup}>
                 <Printer className="h-4 w-4" />
                 Buka Panduan Setup
+              </Button>
+              <Button variant="secondary" onClick={() => void onScanThermalPrinters()}>
+                <RefreshCw className="h-4 w-4" />
+                Deteksi Printer Sistem
               </Button>
             </div>
           ) : null}

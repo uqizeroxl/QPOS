@@ -47,12 +47,21 @@ function getPrinterWidth(profile: string) {
 
 function resolvePrinterInterface(selectedPrinterName: string) {
   const printer = selectedPrinterName.trim();
-  if (!printer) {
-    throw new Error("Interface printer thermal belum diatur.");
-  }
+  if (!printer) return "printer:auto";
   return printer.startsWith("tcp://") || printer.startsWith("printer:")
     ? printer
     : `printer:${printer}`;
+}
+
+function loadSystemPrinterDriver() {
+  try {
+    return require("printer") as {
+      getPrinters?: () => Array<{ name?: string; isDefault?: boolean; status?: string }>;
+      getDefaultPrinterName?: () => string | undefined;
+    };
+  } catch (error) {
+    throw new Error("Driver printer sistem tidak tersedia di server.");
+  }
 }
 
 function formatCurrency(value: number) {
@@ -135,6 +144,23 @@ export async function testThermalPrinterConnection(prisma: PrismaClient) {
     printer: settings.selectedPrinterName,
     printerType: settings.thermalPrinterType,
     width: printerWidth,
+  };
+}
+
+export async function scanThermalPrinters() {
+  const driver = loadSystemPrinterDriver();
+  const printers = driver.getPrinters?.() ?? [];
+  const defaultPrinter = driver.getDefaultPrinterName?.() ?? printers.find((printer) => printer.isDefault)?.name ?? "";
+
+  return {
+    defaultPrinter,
+    printers: printers
+      .map((printer) => ({
+        name: printer.name ?? "",
+        isDefault: Boolean(printer.isDefault),
+        status: printer.status ?? ""
+      }))
+      .filter((printer) => printer.name),
   };
 }
 

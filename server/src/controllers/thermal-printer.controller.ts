@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import {
   printReceiptWithThermalPrinter,
+  scanThermalPrinters,
   testThermalPrinterConnection,
 } from "../services/thermal-printer.service";
 
@@ -85,6 +86,27 @@ export const testConnection = async (
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Gagal menghubungkan printer thermal.";
+    res.status(503).json({
+      success: false,
+      message
+    });
+  }
+};
+
+export const scanPrinters = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await scanThermalPrinters();
+    res.status(200).json({
+      success: true,
+      message: "Printer sistem berhasil dipindai.",
+      data: result
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Gagal memindai printer sistem.";
     res.status(503).json({
       success: false,
       message

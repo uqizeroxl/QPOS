@@ -31,7 +31,11 @@ function formatDateTime(value: string) {
 export default function TransactionDetailPage() {
   const { id } = useParams();
   const [transaction, setTransaction] = useState<SalesTransaction | null>(null);
-  const { receiptPrintTransaction, printReceipt } = useReceiptPrinter();
+  const {
+    receiptPrintTransaction,
+    clearReceiptPrintTransaction,
+    printReceipt,
+  } = useReceiptPrinter();
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -212,7 +216,10 @@ export default function TransactionDetailPage() {
           </>
         ) : null}
 
-        <ReceiptPrintArea transaction={receiptPrintTransaction} />
+        <ReceiptPrintArea
+          transaction={receiptPrintTransaction}
+          onClosePreview={clearReceiptPrintTransaction}
+        />
       </div>
     </MainLayout>
   );

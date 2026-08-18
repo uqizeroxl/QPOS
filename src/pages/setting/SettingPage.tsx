@@ -102,7 +102,11 @@ export default function SettingPage() {
   const [thermalPrinterSetupMessage, setThermalPrinterSetupMessage] = useState("");
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
   const [isRefreshingPrinters, setIsRefreshingPrinters] = useState(false);
-  const { receiptPrintTransaction, printReceipt } = useReceiptPrinter();
+  const {
+    receiptPrintTransaction,
+    clearReceiptPrintTransaction,
+    printReceipt,
+  } = useReceiptPrinter();
   const [isChangeOwnerDialogOpen, setIsChangeOwnerDialogOpen] = useState(false);
   const [changeOwnerEmail, setChangeOwnerEmail] = useState("");
   const [changeOwnerStoreName, setChangeOwnerStoreName] = useState("");
@@ -272,6 +276,38 @@ export default function SettingPage() {
       showToast(message, "error");
     } finally {
       setIsTestingThermalPrinter(false);
+    }
+  };
+
+  const handleScanThermalPrinters = async () => {
+    try {
+      const result = await thermalPrinterService.scanPrinters();
+      const chosenPrinter = result.defaultPrinter || result.printers[0]?.name || "";
+      if (chosenPrinter) {
+        setSelectedPrinterName(chosenPrinter);
+        await persistPrinterSettings({
+          printerBackend,
+          selectedPrinterName: chosenPrinter,
+          thermalPrinterType,
+        });
+      }
+      setThermalPrinterSetupMessage(
+        result.printers.length > 0
+          ? `Ditemukan ${result.printers.length} printer sistem. ${chosenPrinter ? `Default: ${chosenPrinter}.` : ""}`
+          : "Tidak ada printer sistem yang terdeteksi.",
+      );
+      showToast(
+        result.printers.length > 0
+          ? `Ditemukan ${result.printers.length} printer sistem.`
+          : "Tidak ada printer sistem yang terdeteksi.",
+      );
+    } catch (error) {
+      const message =
+        error instanceof ThermalPrinterConnectionError || error instanceof ThermalPrinterApiError
+          ? error.message
+          : "Gagal memindai printer sistem.";
+      setThermalPrinterSetupMessage(message);
+      showToast(message, "error");
     }
   };
 
@@ -847,11 +883,15 @@ export default function SettingPage() {
               setThermalPrinterSetupMessage("");
               setIsThermalPrinterSetupOpen(true);
             }}
+            onScanThermalPrinters={handleScanThermalPrinters}
             onRefreshPrinters={handleRefreshPrinters}
           />
         ) : null}
 
-        <ReceiptPrintArea transaction={receiptPrintTransaction} />
+        <ReceiptPrintArea
+          transaction={receiptPrintTransaction}
+          onClosePreview={clearReceiptPrintTransaction}
+        />
 
         {isThermalPrinterSetupOpen ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4">
