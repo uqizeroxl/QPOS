@@ -44,6 +44,11 @@ import {
   settingsService,
   type ProductDatasetResetResult,
 } from "../../services/settingsService";
+import {
+  ThermalPrinterApiError,
+  ThermalPrinterConnectionError,
+  thermalPrinterService,
+} from "../../services/printing/thermalPrinterService";
 import SystemSettingsTab from "./SystemSettingsTab";
 
 const resetConfirmationText = "HAPUS SEMUA";
@@ -92,6 +97,9 @@ export default function SettingPage() {
   const [isTestingQz, setIsTestingQz] = useState(false);
   const [selectedPrinterName, setSelectedPrinterName] = useState(settings.selectedPrinterName);
   const [thermalPrinterType, setThermalPrinterType] = useState<ThermalPrinterType>(settings.thermalPrinterType);
+  const [isThermalPrinterSetupOpen, setIsThermalPrinterSetupOpen] = useState(false);
+  const [isTestingThermalPrinter, setIsTestingThermalPrinter] = useState(false);
+  const [thermalPrinterSetupMessage, setThermalPrinterSetupMessage] = useState("");
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
   const [isRefreshingPrinters, setIsRefreshingPrinters] = useState(false);
   const { receiptPrintTransaction, printReceipt } = useReceiptPrinter();
@@ -245,6 +253,26 @@ export default function SettingPage() {
       paperProfile: thermalPaperProfile,
       printerName: selectedPrinterName,
     });
+  };
+
+  const handleTestThermalPrinterConnection = async () => {
+    setIsTestingThermalPrinter(true);
+    setThermalPrinterSetupMessage("Mencari printer thermal...");
+
+    try {
+      await thermalPrinterService.testConnection();
+      setThermalPrinterSetupMessage("Printer thermal terhubung.");
+      showToast("Printer thermal terhubung.");
+    } catch (error) {
+      const message =
+        error instanceof ThermalPrinterConnectionError || error instanceof ThermalPrinterApiError
+          ? error.message
+          : "Koneksi printer thermal gagal.";
+      setThermalPrinterSetupMessage(message);
+      showToast(message, "error");
+    } finally {
+      setIsTestingThermalPrinter(false);
+    }
   };
 
   const handleExportDataset = async () => {
@@ -815,11 +843,57 @@ export default function SettingPage() {
                 thermalPrinterType: value,
               });
             }}
+            onOpenThermalPrinterSetup={() => {
+              setThermalPrinterSetupMessage("");
+              setIsThermalPrinterSetupOpen(true);
+            }}
             onRefreshPrinters={handleRefreshPrinters}
           />
         ) : null}
 
         <ReceiptPrintArea transaction={receiptPrintTransaction} />
+
+        {isThermalPrinterSetupOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="thermal-printer-setup-title"
+              className="w-full max-w-lg rounded-lg bg-white p-5 shadow-xl"
+            >
+              <h2
+                id="thermal-printer-setup-title"
+                className="text-lg font-semibold text-gray-900"
+              >
+                Setup Printer Thermal
+              </h2>
+              <p className="mt-2 text-sm text-gray-600">
+                Gunakan panel ini untuk mengecek apakah printer thermal yang kamu set sudah bisa dihubungi oleh server.
+              </p>
+              <div className="mt-4 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                <p>1. Sambungkan printer ke jaringan atau server.</p>
+                <p>2. Isi interface printer di bawah format seperti <code>tcp://192.168.1.50:9100</code>.</p>
+                <p>3. Tekan tombol cek koneksi untuk menunggu printer siap.</p>
+              </div>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <Button
+                  onClick={() => void handleTestThermalPrinterConnection()}
+                  disabled={isTestingThermalPrinter}
+                >
+                  {isTestingThermalPrinter ? "Mengecek..." : "Tunggu Printer Terhubung"}
+                </Button>
+                <Button variant="secondary" onClick={() => setIsThermalPrinterSetupOpen(false)}>
+                  Tutup
+                </Button>
+              </div>
+              {thermalPrinterSetupMessage ? (
+                <p className="mt-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                  {thermalPrinterSetupMessage}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         {isResetDialogOpen ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4">

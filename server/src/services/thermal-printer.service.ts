@@ -90,11 +90,8 @@ function formatReceiptDate(value: string) {
   }).format(new Date(value));
 }
 
-export async function printReceiptWithThermalPrinter(
-  prisma: PrismaClient,
-  transaction: ReceiptTransactionPayload,
-) {
-  const settings = await prisma.settings.upsert({
+async function getThermalPrinterSettings(prisma: PrismaClient) {
+  return prisma.settings.upsert({
     where: { key: "default" },
     create: { key: "default" },
     update: {},
@@ -108,17 +105,45 @@ export async function printReceiptWithThermalPrinter(
       selectedPrinterName: true,
       thermalPrinterType: true,
     },
-  }) as ThermalPrinterSettings;
+  }) as unknown as ThermalPrinterSettings;
+}
 
+function createThermalPrinter(settings: ThermalPrinterSettings) {
   const printerWidth = getPrinterWidth(settings.thermalPaperProfile);
-  const printer = new ThermalPrinter({
-    type: resolvePrinterType(settings.thermalPrinterType),
+  return {
+    printerWidth,
+    printer: new ThermalPrinter({
+      type: resolvePrinterType(settings.thermalPrinterType),
+      width: printerWidth,
+      interface: resolvePrinterInterface(settings.selectedPrinterName),
+      characterSet: CharacterSet.WPC1252,
+      removeSpecialCharacters: false,
+      lineCharacter: "-",
+    }),
+  };
+}
+
+export async function testThermalPrinterConnection(prisma: PrismaClient) {
+  const settings = await getThermalPrinterSettings(prisma);
+  const { printer, printerWidth } = createThermalPrinter(settings);
+  const isConnected = await printer.isPrinterConnected();
+  if (!isConnected) {
+    throw new Error("Printer thermal tidak terhubung.");
+  }
+
+  return {
+    printer: settings.selectedPrinterName,
+    printerType: settings.thermalPrinterType,
     width: printerWidth,
-    interface: resolvePrinterInterface(settings.selectedPrinterName),
-    characterSet: CharacterSet.WPC1252,
-    removeSpecialCharacters: false,
-    lineCharacter: "-",
-  });
+  };
+}
+
+export async function printReceiptWithThermalPrinter(
+  prisma: PrismaClient,
+  transaction: ReceiptTransactionPayload,
+) {
+  const settings = await getThermalPrinterSettings(prisma);
+  const { printer, printerWidth } = createThermalPrinter(settings);
 
   printer.alignCenter();
   printer.println(settings.storeName);

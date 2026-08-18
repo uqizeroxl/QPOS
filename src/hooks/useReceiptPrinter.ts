@@ -62,14 +62,16 @@ export function useReceiptPrinter(onAfterPrint?: () => void) {
     }
 
     if (printerBackend === "NODE_THERMAL_PRINTER") {
-      void thermalPrinterService.printReceipt(transaction)
-        .catch((error: unknown) => {
-          window.alert(error instanceof Error ? error.message : "Gagal mencetak melalui printer thermal.");
-        })
-        .finally(() => {
-          setReceiptPrintTransaction(null);
-          onAfterPrint?.();
-        });
+      window.setTimeout(() => {
+        void thermalPrinterService.printReceipt(transaction)
+          .catch((error: unknown) => {
+            window.alert(error instanceof Error ? error.message : "Gagal mencetak melalui printer thermal.");
+          })
+          .finally(() => {
+            setReceiptPrintTransaction(null);
+            onAfterPrint?.();
+          });
+      }, RECEIPT_RENDER_DELAY_MS);
       return;
     }
 

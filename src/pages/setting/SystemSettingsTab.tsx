@@ -30,6 +30,7 @@ type SystemSettingsTabProps = {
   onTestPrint: () => void;
   onSelectedPrinterNameChange: (value: string) => void;
   onThermalPrinterTypeChange: (value: ThermalPrinterType) => void;
+  onOpenThermalPrinterSetup: () => void;
   onRefreshPrinters: () => void | Promise<void>;
 };
 
@@ -53,6 +54,7 @@ export default function SystemSettingsTab({
   onTestPrint,
   onSelectedPrinterNameChange,
   onThermalPrinterTypeChange,
+  onOpenThermalPrinterSetup,
   onRefreshPrinters,
 }: SystemSettingsTabProps) {
   return (
@@ -135,6 +137,10 @@ export default function SystemSettingsTab({
               <p className="text-xs text-gray-500">
                 Gunakan alamat TCP untuk printer jaringan atau nama printer sistem dengan awalan <code>printer:</code>.
               </p>
+              <Button variant="secondary" onClick={onOpenThermalPrinterSetup}>
+                <Printer className="h-4 w-4" />
+                Buka Panduan Setup
+              </Button>
             </div>
           ) : null}
 

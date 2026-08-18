@@ -1,6 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 
-import { printReceiptWithThermalPrinter } from "../services/thermal-printer.service";
+import {
+  printReceiptWithThermalPrinter,
+  testThermalPrinterConnection,
+} from "../services/thermal-printer.service";
 
 type PrintReceiptBody = {
   transactionNumber?: string;
@@ -60,6 +63,31 @@ export const printReceipt = async (
       data: result
     });
   } catch (error) {
-    next(error);
+    const message = error instanceof Error ? error.message : "Gagal mencetak struk.";
+    res.status(503).json({
+      success: false,
+      message
+    });
+  }
+};
+
+export const testConnection = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await testThermalPrinterConnection(req.tenant.prisma);
+    res.status(200).json({
+      success: true,
+      message: "Printer thermal terhubung.",
+      data: result
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Gagal menghubungkan printer thermal.";
+    res.status(503).json({
+      success: false,
+      message
+    });
   }
 };
