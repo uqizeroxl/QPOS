@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "settings"
+ALTER COLUMN "printerBackend" SET DEFAULT 'NODE_THERMAL_PRINTER';

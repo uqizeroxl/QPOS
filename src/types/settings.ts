@@ -56,7 +56,7 @@ export const defaultSettings: AppSettings = {
   receiptFooter: "Terima kasih",
   thermalPaperProfile: DEFAULT_THERMAL_PAPER_PROFILE,
   receiptAutoCut: true,
-  printerBackend: "BROWSER",
+  printerBackend: "NODE_THERMAL_PRINTER",
   selectedPrinterName: "",
   thermalPrinterType: "epson",
 };
