@@ -23,11 +23,18 @@ export function migrateLegacyPaperWidth(value: unknown): ThermalPaperProfileId {
   return value === 58 ? "58x30" : DEFAULT_THERMAL_PAPER_PROFILE;
 }
 
-export const PRINTER_BACKENDS = ["BROWSER", "QZ_TRAY"] as const;
+export const PRINTER_BACKENDS = ["BROWSER", "QZ_TRAY", "NODE_THERMAL_PRINTER"] as const;
 export type PrinterBackend = (typeof PRINTER_BACKENDS)[number];
 
 export function isPrinterBackend(value: unknown): value is PrinterBackend {
   return PRINTER_BACKENDS.includes(value as PrinterBackend);
+}
+
+export const THERMAL_PRINTER_TYPES = ["epson", "star", "tanca", "daruma", "brother", "custom"] as const;
+export type ThermalPrinterType = (typeof THERMAL_PRINTER_TYPES)[number];
+
+export function isThermalPrinterType(value: unknown): value is ThermalPrinterType {
+  return THERMAL_PRINTER_TYPES.includes(value as ThermalPrinterType);
 }
 
 export type AppSettings = {
@@ -39,6 +46,7 @@ export type AppSettings = {
   receiptAutoCut: boolean;
   printerBackend: PrinterBackend;
   selectedPrinterName: string;
+  thermalPrinterType: ThermalPrinterType;
 };
 
 export const defaultSettings: AppSettings = {
@@ -50,4 +58,5 @@ export const defaultSettings: AppSettings = {
   receiptAutoCut: true,
   printerBackend: "BROWSER",
   selectedPrinterName: "",
+  thermalPrinterType: "epson",
 };

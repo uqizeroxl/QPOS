@@ -1,8 +1,14 @@
 import { PlugZap, Printer, RefreshCw, Save } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
-import { Select, Textarea } from "../../components/ui/Input";
-import { THERMAL_PAPER_PROFILES, type PrinterBackend, type ThermalPaperProfileId } from "../../types/settings";
+import { Input, Select, Textarea } from "../../components/ui/Input";
+import {
+  THERMAL_PAPER_PROFILES,
+  THERMAL_PRINTER_TYPES,
+  type PrinterBackend,
+  type ThermalPaperProfileId,
+  type ThermalPrinterType,
+} from "../../types/settings";
 
 type SystemSettingsTabProps = {
   receiptFooter: string;
@@ -12,6 +18,7 @@ type SystemSettingsTabProps = {
   printerBackend: PrinterBackend;
   isTestingQz: boolean;
   selectedPrinterName: string;
+  thermalPrinterType: ThermalPrinterType;
   availablePrinters: string[];
   isRefreshingPrinters: boolean;
   onReceiptFooterChange: (value: string) => void;
@@ -22,6 +29,7 @@ type SystemSettingsTabProps = {
   onTestQz: () => void | Promise<void>;
   onTestPrint: () => void;
   onSelectedPrinterNameChange: (value: string) => void;
+  onThermalPrinterTypeChange: (value: ThermalPrinterType) => void;
   onRefreshPrinters: () => void | Promise<void>;
 };
 
@@ -33,6 +41,7 @@ export default function SystemSettingsTab({
   printerBackend,
   isTestingQz,
   selectedPrinterName,
+  thermalPrinterType,
   availablePrinters,
   isRefreshingPrinters,
   onReceiptFooterChange,
@@ -43,6 +52,7 @@ export default function SystemSettingsTab({
   onTestQz,
   onTestPrint,
   onSelectedPrinterNameChange,
+  onThermalPrinterTypeChange,
   onRefreshPrinters,
 }: SystemSettingsTabProps) {
   return (
@@ -66,9 +76,10 @@ export default function SystemSettingsTab({
             >
               <option value="BROWSER">Browser Print</option>
               <option value="QZ_TRAY">QZ Tray</option>
+              <option value="NODE_THERMAL_PRINTER">Node Thermal Printer</option>
             </Select>
             <span className="block text-xs text-gray-500">
-              QZ Tray mencetak langsung ke printer default tanpa dialog browser.
+              Browser Print membuka dialog cetak. QZ Tray dan Node Thermal Printer mencetak langsung dari sistem backend.
             </span>
           </label>
 
@@ -97,6 +108,33 @@ export default function SystemSettingsTab({
                 <RefreshCw className={`h-4 w-4 ${isRefreshingPrinters ? "animate-spin" : ""}`} />
                 {isRefreshingPrinters ? "Memuat Printer..." : "Refresh Printers"}
               </Button>
+            </div>
+          ) : printerBackend === "NODE_THERMAL_PRINTER" ? (
+            <div className="space-y-2">
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-700">Tipe Printer Thermal</span>
+                <Select
+                  value={thermalPrinterType}
+                  onChange={(event) => onThermalPrinterTypeChange(event.target.value as ThermalPrinterType)}
+                >
+                  {THERMAL_PRINTER_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type.toUpperCase()}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <label className="block space-y-2">
+                <span className="text-sm font-medium text-gray-700">Interface Printer</span>
+                <Input
+                  value={selectedPrinterName}
+                  onChange={(event) => onSelectedPrinterNameChange(event.target.value)}
+                  placeholder="tcp://192.168.1.50:9100 atau printer:POS-58"
+                />
+              </label>
+              <p className="text-xs text-gray-500">
+                Gunakan alamat TCP untuk printer jaringan atau nama printer sistem dengan awalan <code>printer:</code>.
+              </p>
             </div>
           ) : null}
 

@@ -7,6 +7,7 @@ import type { AppSettings } from "../types/settings";
 import {
   isThermalPaperProfileId,
   isPrinterBackend,
+  isThermalPrinterType,
   migrateLegacyPaperWidth,
 } from "../types/settings";
 
@@ -20,6 +21,7 @@ type ReceiptSettingsApiResponse = Partial<ReceiptFooterSettings> & {
   address: string;
   receiptFooter: string;
   thermalPaperWidth?: unknown;
+  thermalPrinterType?: unknown;
 };
 
 const SETTINGS_CACHE_KEY = "/settings";
@@ -41,6 +43,9 @@ const normalizeReceiptSettings = (
   selectedPrinterName: typeof settings.selectedPrinterName === "string"
     ? settings.selectedPrinterName
     : "",
+  thermalPrinterType: isThermalPrinterType(settings.thermalPrinterType)
+    ? settings.thermalPrinterType
+    : "epson",
 });
 
 export const settingsService = {
@@ -90,6 +95,7 @@ export const settingsService = {
         receiptAutoCut: settings.receiptAutoCut,
         printerBackend: settings.printerBackend,
         selectedPrinterName: settings.selectedPrinterName,
+        thermalPrinterType: settings.thermalPrinterType,
       };
     } catch (error) {
       if (axios.isAxiosError<{ message?: string }>(error)) {
@@ -113,6 +119,7 @@ export const settingsService = {
         receiptAutoCut: updated.receiptAutoCut,
         printerBackend: updated.printerBackend,
         selectedPrinterName: updated.selectedPrinterName,
+        thermalPrinterType: updated.thermalPrinterType,
       };
     } catch (error) {
       if (axios.isAxiosError<{ message?: string }>(error)) {

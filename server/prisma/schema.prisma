@@ -243,6 +243,7 @@ model Settings {
   receiptAutoCut Boolean @default(true)
   printerBackend String @default("BROWSER") @db.VarChar(20)
   selectedPrinterName String @default("") @db.VarChar(255)
+  thermalPrinterType String @default("epson") @db.VarChar(20)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

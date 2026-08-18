@@ -49,4 +49,5 @@ export type ReceiptFooterSettings = {
   receiptAutoCut: boolean;
   printerBackend: import("./settings").PrinterBackend;
   selectedPrinterName: string;
+  thermalPrinterType: import("./settings").ThermalPrinterType;
 };

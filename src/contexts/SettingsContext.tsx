@@ -31,6 +31,7 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
       receiptAutoCut: nextSettings.receiptAutoCut,
       printerBackend: nextSettings.printerBackend,
       selectedPrinterName: nextSettings.selectedPrinterName.trim(),
+      thermalPrinterType: nextSettings.thermalPrinterType,
     };
 
     setSettings(safeSettings);

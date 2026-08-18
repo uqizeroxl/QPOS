@@ -280,22 +280,25 @@ body {
 
   .receipt-print-root {
     box-sizing: border-box;
-    display: block;
+    display: inline-block;
     width: var(--receipt-paper-width);
     height: auto;
     min-height: 0;
     margin: 0;
-    padding: 3mm;
+    padding: 2mm 2mm 0;
     background: #ffffff;
     color: #111827;
     font-family: "Courier New", monospace;
     font-size: 10px;
-    line-height: 1.35;
+    line-height: 1.2;
     break-after: auto;
+    break-inside: avoid;
   }
 
   .receipt-ticket {
     width: 100%;
+    display: inline-block;
+    vertical-align: top;
   }
 
   .receipt-center {
@@ -310,7 +313,7 @@ body {
   }
 
   .receipt-divider {
-    margin: 2.5mm 0;
+    margin: 1.5mm 0;
     border-top: 1px dashed #111827;
   }
 
@@ -325,7 +328,7 @@ body {
   }
 
   .receipt-item {
-    margin-bottom: 2mm;
+    margin-bottom: 1.5mm;
   }
 
   .receipt-item-name {
@@ -348,7 +351,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 1mm 0;
+    padding: 0.5mm 0 0;
     border-top: 1px dashed #111827;
   }
 
@@ -356,6 +359,7 @@ body {
     font-size: 9px;
     letter-spacing: 1px;
     color: #6b7280;
+    line-height: 1;
   }
 
   html:has(body.receipt-printing),
@@ -373,5 +377,11 @@ body {
   body.receipt-printing .receipt-print-root,
   body.receipt-printing .receipt-print-root * {
     visibility: visible;
+  }
+
+  body.receipt-printing .receipt-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
   }
 }

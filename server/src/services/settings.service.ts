@@ -19,7 +19,8 @@ const THERMAL_PAPER_PROFILES = {
   "80x50": 80,
   "80x80": 80
 } as const;
-const PRINTER_BACKENDS = ["BROWSER", "QZ_TRAY"] as const;
+const PRINTER_BACKENDS = ["BROWSER", "QZ_TRAY", "NODE_THERMAL_PRINTER"] as const;
+const THERMAL_PRINTER_TYPES = ["epson", "star", "tanca", "daruma", "brother", "custom"] as const;
 
 export class ReceiptFooterValidationError extends Error {}
 
@@ -70,6 +71,14 @@ const normalizeSelectedPrinterName = (value: unknown) => {
     throw new ReceiptFooterValidationError("Nama printer maksimal 255 karakter.");
   }
   return name;
+};
+
+const normalizeThermalPrinterType = (value: unknown) => {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !THERMAL_PRINTER_TYPES.includes(value as typeof THERMAL_PRINTER_TYPES[number])) {
+    throw new ReceiptFooterValidationError("Tipe printer thermal tidak valid.");
+  }
+  return value as typeof THERMAL_PRINTER_TYPES[number];
 };
 
 const normalizeReceiptFooter = (value: unknown) => {
@@ -154,7 +163,8 @@ export const getSettings = async (prisma: PrismaClient) => {
       thermalPaperProfile: true,
       receiptAutoCut: true,
       printerBackend: true,
-      selectedPrinterName: true
+      selectedPrinterName: true,
+      thermalPrinterType: true
     }
   });
 
@@ -171,7 +181,8 @@ export const updateSettings = async (
   thermalPaperWidthValue: unknown,
   receiptAutoCutValue: unknown,
   printerBackendValue: unknown,
-  selectedPrinterNameValue: unknown
+  selectedPrinterNameValue: unknown,
+  thermalPrinterTypeValue: unknown
 ) => {
   const storeName = normalizeStoreName(storeNameValue);
   const phone = normalizePhone(phoneValue);
@@ -194,6 +205,7 @@ export const updateSettings = async (
   const selectedPrinterName = normalizeSelectedPrinterName(
     selectedPrinterNameValue
   );
+  const thermalPrinterType = normalizeThermalPrinterType(thermalPrinterTypeValue);
 
   return prisma.settings.upsert({
     where: { key: "default" },
@@ -207,7 +219,8 @@ export const updateSettings = async (
       ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
       ...(receiptAutoCut === undefined ? {} : { receiptAutoCut }),
       ...(printerBackend === undefined ? {} : { printerBackend }),
-      ...(selectedPrinterName === undefined ? {} : { selectedPrinterName })
+      ...(selectedPrinterName === undefined ? {} : { selectedPrinterName }),
+      ...(thermalPrinterType === undefined ? {} : { thermalPrinterType })
     },
     update: {
       storeName,
@@ -218,7 +231,8 @@ export const updateSettings = async (
       ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
       ...(receiptAutoCut === undefined ? {} : { receiptAutoCut }),
       ...(printerBackend === undefined ? {} : { printerBackend }),
-      ...(selectedPrinterName === undefined ? {} : { selectedPrinterName })
+      ...(selectedPrinterName === undefined ? {} : { selectedPrinterName }),
+      ...(thermalPrinterType === undefined ? {} : { thermalPrinterType })
     },
     select: {
       storeName: true,
@@ -228,7 +242,8 @@ export const updateSettings = async (
       thermalPaperProfile: true,
       receiptAutoCut: true,
       printerBackend: true,
-      selectedPrinterName: true
+      selectedPrinterName: true,
+      thermalPrinterType: true
     }
   });
 };
@@ -240,7 +255,8 @@ export const updateReceiptFooter = async (
   thermalPaperWidthValue: unknown,
   receiptAutoCutValue: unknown,
   printerBackendValue: unknown,
-  selectedPrinterNameValue: unknown
+  selectedPrinterNameValue: unknown,
+  thermalPrinterTypeValue: unknown
 ) => {
   const receiptFooter = normalizeReceiptFooter(value);
   const thermalPaperProfile = thermalPaperProfileValue === undefined
@@ -260,6 +276,7 @@ export const updateReceiptFooter = async (
   const selectedPrinterName = normalizeSelectedPrinterName(
     selectedPrinterNameValue
   );
+  const thermalPrinterType = normalizeThermalPrinterType(thermalPrinterTypeValue);
 
   return prisma.settings.upsert({
     where: { key: "default" },
@@ -270,7 +287,8 @@ export const updateReceiptFooter = async (
       ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
       ...(receiptAutoCut === undefined ? {} : { receiptAutoCut }),
       ...(printerBackend === undefined ? {} : { printerBackend }),
-      ...(selectedPrinterName === undefined ? {} : { selectedPrinterName })
+      ...(selectedPrinterName === undefined ? {} : { selectedPrinterName }),
+      ...(thermalPrinterType === undefined ? {} : { thermalPrinterType })
     },
     update: {
       receiptFooter,
@@ -278,14 +296,16 @@ export const updateReceiptFooter = async (
       ...(thermalPaperProfile === undefined ? {} : { thermalPaperProfile }),
       ...(receiptAutoCut === undefined ? {} : { receiptAutoCut }),
       ...(printerBackend === undefined ? {} : { printerBackend }),
-      ...(selectedPrinterName === undefined ? {} : { selectedPrinterName })
+      ...(selectedPrinterName === undefined ? {} : { selectedPrinterName }),
+      ...(thermalPrinterType === undefined ? {} : { thermalPrinterType })
     },
     select: {
       receiptFooter: true,
       thermalPaperProfile: true,
       receiptAutoCut: true,
       printerBackend: true,
-      selectedPrinterName: true
+      selectedPrinterName: true,
+      thermalPrinterType: true
     }
   });
 };

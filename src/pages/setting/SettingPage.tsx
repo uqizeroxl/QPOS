@@ -27,7 +27,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { useToast } from "../../hooks/useToast";
 import MainLayout from "../../layouts/MainLayout";
 import type { ThemePreference } from "../../contexts/themeContextValue";
-import type { ThermalPaperProfileId } from "../../types/settings";
+import type { ThermalPaperProfileId, ThermalPrinterType } from "../../types/settings";
 import type { PrinterBackend } from "../../types/settings";
 import type { SalesTransaction } from "../../types/cashier";
 import ReceiptPrintArea from "../cashier/ReceiptPrintArea";
@@ -91,6 +91,7 @@ export default function SettingPage() {
   const [printerBackend, setPrinterBackend] = useState<PrinterBackend>(settings.printerBackend);
   const [isTestingQz, setIsTestingQz] = useState(false);
   const [selectedPrinterName, setSelectedPrinterName] = useState(settings.selectedPrinterName);
+  const [thermalPrinterType, setThermalPrinterType] = useState<ThermalPrinterType>(settings.thermalPrinterType);
   const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
   const [isRefreshingPrinters, setIsRefreshingPrinters] = useState(false);
   const { receiptPrintTransaction, printReceipt } = useReceiptPrinter();
@@ -115,6 +116,7 @@ export default function SettingPage() {
     setReceiptAutoCut(settings.receiptAutoCut);
     setPrinterBackend(settings.printerBackend);
     setSelectedPrinterName(settings.selectedPrinterName);
+    setThermalPrinterType(settings.thermalPrinterType);
   }, [
     settings.address,
     settings.phone,
@@ -124,6 +126,7 @@ export default function SettingPage() {
     settings.selectedPrinterName,
     settings.storeName,
     settings.thermalPaperProfile,
+    settings.thermalPrinterType,
   ]);
 
   const handleSave = async () => {
@@ -135,6 +138,7 @@ export default function SettingPage() {
         receiptAutoCut: settings.receiptAutoCut,
         printerBackend: settings.printerBackend,
         selectedPrinterName: settings.selectedPrinterName,
+        thermalPrinterType: settings.thermalPrinterType,
       });
       showToast("Pengaturan toko berhasil disimpan.");
     } catch {
@@ -156,6 +160,7 @@ export default function SettingPage() {
         receiptAutoCut,
         printerBackend,
         selectedPrinterName,
+        thermalPrinterType,
       });
       setReceiptFooterInput(result.receiptFooter);
       setReceiptSettings(result);
@@ -169,6 +174,26 @@ export default function SettingPage() {
       );
     } finally {
       setIsSavingReceiptFooter(false);
+    }
+  };
+
+  const persistPrinterSettings = async (nextSettings: {
+    printerBackend: PrinterBackend;
+    selectedPrinterName: string;
+    thermalPrinterType: ThermalPrinterType;
+  }) => {
+    try {
+      await saveSettings({
+        ...storeInfo,
+        receiptFooter: settings.receiptFooter,
+        thermalPaperProfile: settings.thermalPaperProfile,
+        receiptAutoCut: settings.receiptAutoCut,
+        printerBackend: nextSettings.printerBackend,
+        selectedPrinterName: nextSettings.selectedPrinterName,
+        thermalPrinterType: nextSettings.thermalPrinterType,
+      });
+    } catch {
+      showToast("Pengaturan printer gagal disimpan.", "error");
     }
   };
 
@@ -757,16 +782,39 @@ export default function SettingPage() {
             printerBackend={printerBackend}
             isTestingQz={isTestingQz}
             selectedPrinterName={selectedPrinterName}
+            thermalPrinterType={thermalPrinterType}
             availablePrinters={availablePrinters}
             isRefreshingPrinters={isRefreshingPrinters}
             onReceiptFooterChange={setReceiptFooterInput}
             onSaveReceiptFooter={handleSaveReceiptFooter}
             onThermalPaperProfileChange={setThermalPaperProfile}
             onReceiptAutoCutChange={setReceiptAutoCut}
-            onPrinterBackendChange={setPrinterBackend}
+            onPrinterBackendChange={(value) => {
+              setPrinterBackend(value);
+              void persistPrinterSettings({
+                printerBackend: value,
+                selectedPrinterName,
+                thermalPrinterType,
+              });
+            }}
             onTestQz={handleTestQzConnection}
             onTestPrint={handleTestPrint}
-            onSelectedPrinterNameChange={setSelectedPrinterName}
+            onSelectedPrinterNameChange={(value) => {
+              setSelectedPrinterName(value);
+              void persistPrinterSettings({
+                printerBackend,
+                selectedPrinterName: value,
+                thermalPrinterType,
+              });
+            }}
+            onThermalPrinterTypeChange={(value) => {
+              setThermalPrinterType(value);
+              void persistPrinterSettings({
+                printerBackend,
+                selectedPrinterName,
+                thermalPrinterType: value,
+              });
+            }}
             onRefreshPrinters={handleRefreshPrinters}
           />
         ) : null}
