@@ -151,10 +151,12 @@ export default function SystemSettingsTab({
           ) : null}
 
           <div className="flex flex-wrap gap-3">
-            <Button variant="secondary" onClick={() => void onTestQz()} disabled={isTestingQz}>
-              <PlugZap className="h-4 w-4" />
-              {isTestingQz ? "Menguji..." : "Test QZ Tray Connection"}
-            </Button>
+            {printerBackend === "QZ_TRAY" ? (
+              <Button variant="secondary" onClick={() => void onTestQz()} disabled={isTestingQz}>
+                <PlugZap className="h-4 w-4" />
+                {isTestingQz ? "Menguji..." : "Test QZ Tray Connection"}
+              </Button>
+            ) : null}
             <Button variant="secondary" onClick={onTestPrint}>
               <Printer className="h-4 w-4" /> Test Print
             </Button>
