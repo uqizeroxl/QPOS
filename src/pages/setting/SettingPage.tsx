@@ -280,6 +280,10 @@ export default function SettingPage() {
   };
 
   const handleScanThermalPrinters = async () => {
+    setIsThermalPrinterSetupOpen(true);
+    setIsTestingThermalPrinter(true);
+    setThermalPrinterSetupMessage("Mencari printer sistem...");
+
     try {
       const result = await thermalPrinterService.scanPrinters();
       const chosenPrinter = result.defaultPrinter || result.printers[0]?.name || "";
@@ -317,6 +321,8 @@ export default function SettingPage() {
           : "Gagal memindai printer sistem.";
       setThermalPrinterSetupMessage(message);
       showToast(message, "error");
+    } finally {
+      setIsTestingThermalPrinter(false);
     }
   };
 
@@ -854,6 +860,7 @@ export default function SettingPage() {
             receiptAutoCut={receiptAutoCut}
             printerBackend={printerBackend}
             isTestingQz={isTestingQz}
+            isScanningThermalPrinters={isTestingThermalPrinter}
             selectedPrinterName={selectedPrinterName}
             thermalPrinterType={thermalPrinterType}
             availablePrinters={availablePrinters}

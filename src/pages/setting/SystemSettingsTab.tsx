@@ -17,6 +17,7 @@ type SystemSettingsTabProps = {
   receiptAutoCut: boolean;
   printerBackend: PrinterBackend;
   isTestingQz: boolean;
+  isScanningThermalPrinters: boolean;
   selectedPrinterName: string;
   thermalPrinterType: ThermalPrinterType;
   availablePrinters: string[];
@@ -42,6 +43,7 @@ export default function SystemSettingsTab({
   receiptAutoCut,
   printerBackend,
   isTestingQz,
+  isScanningThermalPrinters,
   selectedPrinterName,
   thermalPrinterType,
   availablePrinters,
@@ -143,9 +145,13 @@ export default function SystemSettingsTab({
                 <Printer className="h-4 w-4" />
                 Buka Panduan Setup
               </Button>
-              <Button variant="secondary" onClick={() => void onScanThermalPrinters()}>
-                <RefreshCw className="h-4 w-4" />
-                Deteksi Printer Sistem
+              <Button
+                variant="secondary"
+                onClick={() => void onScanThermalPrinters()}
+                disabled={isScanningThermalPrinters}
+              >
+                <RefreshCw className={`h-4 w-4 ${isScanningThermalPrinters ? "animate-spin" : ""}`} />
+                {isScanningThermalPrinters ? "Mendeteksi..." : "Deteksi Printer Sistem"}
               </Button>
             </div>
           ) : null}
