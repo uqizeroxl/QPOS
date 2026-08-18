@@ -10,7 +10,6 @@ import productRoutes from "./product.routes";
 import reportRoutes from "./report.routes";
 import settingsRoutes from "./settings.routes";
 import supplierRoutes from "./supplier.routes";
-import thermalPrinterRoutes from "./thermal-printer.routes";
 import transactionRoutes from "./transaction.routes";
 import { authenticate, authorize } from "../middleware/auth.middleware";
 import { UserRole } from "../generated/prisma/client";
@@ -34,7 +33,6 @@ router.use("/api/products", authenticate, productRoutes);
 router.use("/api/reports", authenticate, authorize([UserRole.OWNER, UserRole.ADMIN]), reportRoutes);
 router.use("/api/members", authenticate, memberRoutes);
 router.use("/api/settings", authenticate, settingsRoutes);
-router.use("/api/printer", authenticate, thermalPrinterRoutes);
 router.use("/api/suppliers", authenticate, authorize(ownerAdminWarehouse), supplierRoutes);
 router.use("/api/transactions", authenticate, authorize(ownerAdminCashier), transactionRoutes);
 

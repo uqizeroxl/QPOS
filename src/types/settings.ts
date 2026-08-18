@@ -23,7 +23,7 @@ export function migrateLegacyPaperWidth(value: unknown): ThermalPaperProfileId {
   return value === 58 ? "58x30" : DEFAULT_THERMAL_PAPER_PROFILE;
 }
 
-export const PRINTER_BACKENDS = ["BROWSER", "QZ_TRAY", "NODE_THERMAL_PRINTER"] as const;
+export const PRINTER_BACKENDS = ["BROWSER", "QZ_TRAY", "WEB_THERMAL"] as const;
 export type PrinterBackend = (typeof PRINTER_BACKENDS)[number];
 
 export function isPrinterBackend(value: unknown): value is PrinterBackend {
@@ -56,7 +56,7 @@ export const defaultSettings: AppSettings = {
   receiptFooter: "Terima kasih",
   thermalPaperProfile: DEFAULT_THERMAL_PAPER_PROFILE,
   receiptAutoCut: true,
-  printerBackend: "NODE_THERMAL_PRINTER",
+  printerBackend: "WEB_THERMAL",
   selectedPrinterName: "",
   thermalPrinterType: "epson",
 };

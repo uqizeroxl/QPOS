@@ -34,6 +34,14 @@ import ReceiptPrintArea from "../cashier/ReceiptPrintArea";
 import { useReceiptPrinter } from "../../hooks/useReceiptPrinter";
 import { refreshPrinters, testQzTrayConnection } from "../../services/printing/qzTrayPrinter";
 import {
+  isWebThermalSupported,
+  pairWebSerialPrinter,
+  pairWebUsbPrinter,
+  scanWebThermalPrinters,
+  testWebThermalConnection,
+  WebThermalPrinterError,
+} from "../../services/printing/webThermalPrinter";
+import {
   ProductApiError,
   productService,
   type ProductDatasetImportResult,
@@ -44,11 +52,6 @@ import {
   settingsService,
   type ProductDatasetResetResult,
 } from "../../services/settingsService";
-import {
-  ThermalPrinterApiError,
-  ThermalPrinterConnectionError,
-  thermalPrinterService,
-} from "../../services/printing/thermalPrinterService";
 import SystemSettingsTab from "./SystemSettingsTab";
 
 const resetConfirmationText = "HAPUS SEMUA";
@@ -97,10 +100,8 @@ export default function SettingPage() {
   const [isTestingQz, setIsTestingQz] = useState(false);
   const [selectedPrinterName, setSelectedPrinterName] = useState(settings.selectedPrinterName);
   const [thermalPrinterType, setThermalPrinterType] = useState<ThermalPrinterType>(settings.thermalPrinterType);
-  const [isThermalPrinterSetupOpen, setIsThermalPrinterSetupOpen] = useState(false);
   const [isTestingThermalPrinter, setIsTestingThermalPrinter] = useState(false);
-  const [thermalPrinterSetupMessage, setThermalPrinterSetupMessage] = useState("");
-  const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
+  const [printers, setPrinters] = useState<Array<{ name: string; label: string }>>([]);
   const [isRefreshingPrinters, setIsRefreshingPrinters] = useState(false);
   const {
     receiptPrintTransaction,
@@ -213,7 +214,7 @@ export default function SettingPage() {
     setIsTestingQz(true);
     try {
       const result = await testQzTrayConnection();
-      setAvailablePrinters(result.printers);
+      setPrinters(result.printers.map((name) => ({ name, label: name })));
       const printerSummary = result.printers.length > 0
         ? `${result.printers.length} printer terdeteksi.`
         : "Tidak ada printer terdeteksi.";
@@ -229,7 +230,7 @@ export default function SettingPage() {
     setIsRefreshingPrinters(true);
     try {
       const printers = await refreshPrinters();
-      setAvailablePrinters(printers);
+      setPrinters(printers.map((name) => ({ name, label: name })));
       showToast(`${printers.length} printer berhasil dimuat.`);
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Daftar printer gagal dimuat.", "error");
@@ -259,70 +260,98 @@ export default function SettingPage() {
     });
   };
 
-  const handleTestThermalPrinterConnection = async () => {
+  const handleScanThermalPrinters = async () => {
     setIsTestingThermalPrinter(true);
-    setThermalPrinterSetupMessage("Mencari printer thermal...");
 
     try {
-      await thermalPrinterService.testConnection();
-      setThermalPrinterSetupMessage("Printer thermal terhubung.");
-      showToast("Printer thermal terhubung.");
+      if (!isWebThermalSupported()) {
+        throw new WebThermalPrinterError(
+          "WebUSB/Web Serial tidak didukung di browser ini. Gunakan Chrome/Edge dengan HTTPS.",
+          "UNSUPPORTED",
+        );
+      }
+      const found = await scanWebThermalPrinters();
+      setPrinters(found.map((printer) => ({ name: printer.name, label: printer.label })));
+      showToast(
+        found.length > 0
+          ? `${found.length} printer terdeteksi di browser.`
+          : "Tidak ada printer terdeteksi. Pasangkan printer terlebih dahulu.",
+        found.length > 0 ? undefined : "error",
+      );
     } catch (error) {
-      const message =
-        error instanceof ThermalPrinterConnectionError || error instanceof ThermalPrinterApiError
-          ? error.message
-          : "Koneksi printer thermal gagal.";
-      setThermalPrinterSetupMessage(message);
+      const message = error instanceof WebThermalPrinterError || error instanceof Error
+        ? error.message
+        : "Gagal memindai printer.";
       showToast(message, "error");
     } finally {
       setIsTestingThermalPrinter(false);
     }
   };
 
-  const handleScanThermalPrinters = async () => {
-    setIsThermalPrinterSetupOpen(true);
+  const handleTestThermalPrinter = async () => {
+    if (!selectedPrinterName) {
+      showToast("Pilih printer thermal terlebih dahulu.", "error");
+      return;
+    }
     setIsTestingThermalPrinter(true);
-    setThermalPrinterSetupMessage("Mencari printer sistem...");
-
     try {
-      const result = await thermalPrinterService.scanPrinters();
-      const chosenPrinter = result.defaultPrinter || result.printers[0]?.name || "";
-      const printerList = result.printers.map((printer) => printer.name).filter(Boolean);
-      const hasDefaultPrinter = Boolean(result.defaultPrinter);
-      const printerNameMessage = chosenPrinter
-        ? `Printer aktif: ${chosenPrinter}.`
-        : "Tidak ada printer aktif yang terdeteksi.";
-
-      if (chosenPrinter) {
-        setSelectedPrinterName(chosenPrinter);
-        await persistPrinterSettings({
-          printerBackend,
-          selectedPrinterName: chosenPrinter,
-          thermalPrinterType,
-        });
-      }
-      setThermalPrinterSetupMessage(
-        result.printers.length > 0
-          ? `Ditemukan ${result.printers.length} printer sistem. ${printerNameMessage}`
-          : "Tidak ada printer sistem yang terdeteksi.",
-      );
-      showToast(
-        hasDefaultPrinter
-          ? `Default printer terdeteksi: ${result.defaultPrinter}.`
-          : printerList.length > 0
-            ? `Printer terdeteksi, tetapi tidak ada default printer. ${printerNameMessage}`
-            : "Tidak ada printer sistem yang terdeteksi.",
-        hasDefaultPrinter ? undefined : "error",
-      );
+      await testWebThermalConnection(selectedPrinterName);
+      showToast("Printer thermal terhubung.");
     } catch (error) {
-      const message =
-        error instanceof ThermalPrinterConnectionError || error instanceof ThermalPrinterApiError
-          ? error.message
-          : "Gagal memindai printer sistem.";
-      setThermalPrinterSetupMessage(message);
+      const message = error instanceof WebThermalPrinterError || error instanceof Error
+        ? error.message
+        : "Koneksi printer thermal gagal.";
       showToast(message, "error");
     } finally {
       setIsTestingThermalPrinter(false);
+    }
+  };
+
+  const handlePairWebUsb = async () => {
+    try {
+      const printer = await pairWebUsbPrinter();
+      setPrinters((current) => {
+        const exists = current.some((item) => item.name === printer.name);
+        return exists
+          ? current
+          : [...current, { name: printer.name, label: printer.label }];
+      });
+      setSelectedPrinterName(printer.name);
+      await persistPrinterSettings({
+        printerBackend,
+        selectedPrinterName: printer.name,
+        thermalPrinterType,
+      });
+      showToast(`Printer USB terpasang: ${printer.label}`);
+    } catch (error) {
+      const message = error instanceof WebThermalPrinterError || error instanceof Error
+        ? error.message
+        : "Gagal memasangkan printer USB.";
+      showToast(message, "error");
+    }
+  };
+
+  const handlePairWebSerial = async () => {
+    try {
+      const printer = await pairWebSerialPrinter();
+      setPrinters((current) => {
+        const exists = current.some((item) => item.name === printer.name);
+        return exists
+          ? current
+          : [...current, { name: printer.name, label: printer.label }];
+      });
+      setSelectedPrinterName(printer.name);
+      await persistPrinterSettings({
+        printerBackend,
+        selectedPrinterName: printer.name,
+        thermalPrinterType,
+      });
+      showToast(`Port serial terpasang: ${printer.label}`);
+    } catch (error) {
+      const message = error instanceof WebThermalPrinterError || error instanceof Error
+        ? error.message
+        : "Gagal memasangkan port serial.";
+      showToast(message, "error");
     }
   };
 
@@ -860,10 +889,10 @@ export default function SettingPage() {
             receiptAutoCut={receiptAutoCut}
             printerBackend={printerBackend}
             isTestingQz={isTestingQz}
-            isScanningThermalPrinters={isTestingThermalPrinter}
+            isTestingThermalPrinter={isTestingThermalPrinter}
             selectedPrinterName={selectedPrinterName}
             thermalPrinterType={thermalPrinterType}
-            availablePrinters={availablePrinters}
+            printers={printers}
             isRefreshingPrinters={isRefreshingPrinters}
             onReceiptFooterChange={setReceiptFooterInput}
             onSaveReceiptFooter={handleSaveReceiptFooter}
@@ -895,11 +924,10 @@ export default function SettingPage() {
                 thermalPrinterType: value,
               });
             }}
-            onOpenThermalPrinterSetup={() => {
-              setThermalPrinterSetupMessage("");
-              setIsThermalPrinterSetupOpen(true);
-            }}
+            onPairWebUsb={handlePairWebUsb}
+            onPairWebSerial={handlePairWebSerial}
             onScanThermalPrinters={handleScanThermalPrinters}
+            onTestThermalPrinter={handleTestThermalPrinter}
             onRefreshPrinters={handleRefreshPrinters}
           />
         ) : null}
@@ -908,48 +936,6 @@ export default function SettingPage() {
           transaction={receiptPrintTransaction}
           onClosePreview={clearReceiptPrintTransaction}
         />
-
-        {isThermalPrinterSetupOpen ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="thermal-printer-setup-title"
-              className="w-full max-w-lg rounded-lg bg-white p-5 shadow-xl"
-            >
-              <h2
-                id="thermal-printer-setup-title"
-                className="text-lg font-semibold text-gray-900"
-              >
-                Setup Printer Thermal
-              </h2>
-              <p className="mt-2 text-sm text-gray-600">
-                Gunakan panel ini untuk mengecek apakah printer thermal yang kamu set sudah bisa dihubungi oleh server.
-              </p>
-              <div className="mt-4 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
-                <p>1. Sambungkan printer ke jaringan atau server.</p>
-                <p>2. Isi interface printer di bawah format seperti <code>tcp://192.168.1.50:9100</code>.</p>
-                <p>3. Tekan tombol cek koneksi untuk menunggu printer siap.</p>
-              </div>
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <Button
-                  onClick={() => void handleTestThermalPrinterConnection()}
-                  disabled={isTestingThermalPrinter}
-                >
-                  {isTestingThermalPrinter ? "Mengecek..." : "Tunggu Printer Terhubung"}
-                </Button>
-                <Button variant="secondary" onClick={() => setIsThermalPrinterSetupOpen(false)}>
-                  Tutup
-                </Button>
-              </div>
-              {thermalPrinterSetupMessage ? (
-                <p className="mt-4 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
-                  {thermalPrinterSetupMessage}
-                </p>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
 
         {isResetDialogOpen ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4">

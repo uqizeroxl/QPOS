@@ -1,7 +1,7 @@
-import { PlugZap, Printer, RefreshCw, Save } from "lucide-react";
+import { PlugZap, Printer, RefreshCw, Save, Usb } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
-import { Input, Select, Textarea } from "../../components/ui/Input";
+import { Select, Textarea } from "../../components/ui/Input";
 import {
   THERMAL_PAPER_PROFILES,
   THERMAL_PRINTER_TYPES,
@@ -17,10 +17,10 @@ type SystemSettingsTabProps = {
   receiptAutoCut: boolean;
   printerBackend: PrinterBackend;
   isTestingQz: boolean;
-  isScanningThermalPrinters: boolean;
+  isTestingThermalPrinter: boolean;
   selectedPrinterName: string;
   thermalPrinterType: ThermalPrinterType;
-  availablePrinters: string[];
+  printers: Array<{ name: string; label: string }>;
   isRefreshingPrinters: boolean;
   onReceiptFooterChange: (value: string) => void;
   onSaveReceiptFooter: () => void | Promise<void>;
@@ -31,8 +31,10 @@ type SystemSettingsTabProps = {
   onTestPrint: () => void;
   onSelectedPrinterNameChange: (value: string) => void;
   onThermalPrinterTypeChange: (value: ThermalPrinterType) => void;
-  onOpenThermalPrinterSetup: () => void;
+  onPairWebUsb: () => void | Promise<void>;
+  onPairWebSerial: () => void | Promise<void>;
   onScanThermalPrinters: () => void | Promise<void>;
+  onTestThermalPrinter: () => void | Promise<void>;
   onRefreshPrinters: () => void | Promise<void>;
 };
 
@@ -43,10 +45,10 @@ export default function SystemSettingsTab({
   receiptAutoCut,
   printerBackend,
   isTestingQz,
-  isScanningThermalPrinters,
+  isTestingThermalPrinter,
   selectedPrinterName,
   thermalPrinterType,
-  availablePrinters,
+  printers,
   isRefreshingPrinters,
   onReceiptFooterChange,
   onSaveReceiptFooter,
@@ -57,8 +59,10 @@ export default function SystemSettingsTab({
   onTestPrint,
   onSelectedPrinterNameChange,
   onThermalPrinterTypeChange,
-  onOpenThermalPrinterSetup,
+  onPairWebUsb,
+  onPairWebSerial,
   onScanThermalPrinters,
+  onTestThermalPrinter,
   onRefreshPrinters,
 }: SystemSettingsTabProps) {
   return (
@@ -82,10 +86,10 @@ export default function SystemSettingsTab({
             >
               <option value="BROWSER">Browser Print</option>
               <option value="QZ_TRAY">QZ Tray</option>
-              <option value="NODE_THERMAL_PRINTER">Node Thermal Printer</option>
+              <option value="WEB_THERMAL">Thermal Printer (USB / Serial)</option>
             </Select>
             <span className="block text-xs text-gray-500">
-              Browser Print membuka dialog cetak. QZ Tray dan Node Thermal Printer mencetak langsung dari sistem backend.
+              Browser Print membuka dialog cetak. QZ Tray dan Thermal Printer mencetak langsung dari browser ke printer lokal.
             </span>
           </label>
 
@@ -98,11 +102,11 @@ export default function SystemSettingsTab({
                   onChange={(event) => onSelectedPrinterNameChange(event.target.value)}
                 >
                   <option value="">Otomatis (printer default)</option>
-                  {selectedPrinterName && !availablePrinters.includes(selectedPrinterName) ? (
+                  {selectedPrinterName && !printers.some((printer) => printer.name === selectedPrinterName) ? (
                     <option value={selectedPrinterName}>{selectedPrinterName} (tidak terdeteksi)</option>
                   ) : null}
-                  {availablePrinters.map((printer) => (
-                    <option key={printer} value={printer}>{printer}</option>
+                  {printers.map((printer) => (
+                    <option key={printer.name} value={printer.name}>{printer.label}</option>
                   ))}
                 </Select>
               </label>
@@ -115,7 +119,7 @@ export default function SystemSettingsTab({
                 {isRefreshingPrinters ? "Memuat Printer..." : "Refresh Printers"}
               </Button>
             </div>
-          ) : printerBackend === "NODE_THERMAL_PRINTER" ? (
+          ) : printerBackend === "WEB_THERMAL" ? (
             <div className="space-y-2">
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-gray-700">Tipe Printer Thermal</span>
@@ -131,28 +135,49 @@ export default function SystemSettingsTab({
                 </Select>
               </label>
               <label className="block space-y-2">
-                <span className="text-sm font-medium text-gray-700">Interface Printer</span>
-                <Input
+                <span className="text-sm font-medium text-gray-700">Printer</span>
+                <Select
                   value={selectedPrinterName}
                   onChange={(event) => onSelectedPrinterNameChange(event.target.value)}
-                  placeholder="tcp://192.168.1.50:9100 atau printer:POS-58"
-                />
+                >
+                  <option value="">Pilih printer thermal...</option>
+                  {selectedPrinterName && !printers.some((printer) => printer.name === selectedPrinterName) ? (
+                    <option value={selectedPrinterName}>{selectedPrinterName} (tidak terdeteksi)</option>
+                  ) : null}
+                  {printers.map((printer) => (
+                    <option key={printer.name} value={printer.name}>{printer.label}</option>
+                  ))}
+                </Select>
               </label>
               <p className="text-xs text-gray-500">
-                Gunakan alamat TCP untuk printer jaringan atau nama printer sistem dengan awalan <code>printer:</code>.
+                Hubungkan printer thermal langsung ke browser melalui WebUSB atau Web Serial. Gunakan Chrome/Edge dengan HTTPS.
               </p>
-              <Button variant="secondary" onClick={onOpenThermalPrinterSetup}>
-                <Printer className="h-4 w-4" />
-                Buka Panduan Setup
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => void onScanThermalPrinters()}
-                disabled={isScanningThermalPrinters}
-              >
-                <RefreshCw className={`h-4 w-4 ${isScanningThermalPrinters ? "animate-spin" : ""}`} />
-                {isScanningThermalPrinters ? "Mendeteksi..." : "Deteksi Printer Sistem"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={() => void onPairWebUsb()}>
+                  <Usb className="h-4 w-4" />
+                  Pasangkan Printer USB
+                </Button>
+                <Button variant="secondary" onClick={() => void onPairWebSerial()}>
+                  <Printer className="h-4 w-4" />
+                  Pasangkan Port Serial
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => void onScanThermalPrinters()}
+                  disabled={isTestingThermalPrinter}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isTestingThermalPrinter ? "animate-spin" : ""}`} />
+                  {isTestingThermalPrinter ? "Memindai..." : "Deteksi Printer"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => void onTestThermalPrinter()}
+                  disabled={isTestingThermalPrinter}
+                >
+                  <PlugZap className="h-4 w-4" />
+                  {isTestingThermalPrinter ? "Menguji..." : "Test Koneksi"}
+                </Button>
+              </div>
             </div>
           ) : null}
 

@@ -1034,3 +1034,49 @@ TypeScript 6.0 does not narrow `OAuthLoginResponse` (union of `AuthPayload | OAu
 **Catatan developer berikutnya:**
 - Migration `20260804010000_add_selected_printer_name` dijalankan otomatis oleh entrypoint Docker.
 - Timeout QZ dapat dioverride melalui argumen fungsi publik; default tetap 5 detik.
+
+## 2026-08-18 — BUG-008 thermal printer pindah ke browser (WebUSB/Web Serial)
+
+**Tujuan:**
+- Memindahkan seluruh fitur cetak yang membutuhkan koneksi langsung ke printer fisik ke sisi frontend. `NODE_THERMAL_PRINTER` sebelumnya mencetak ESC/POS dari server (Express + Docker di VPS) yang tidak dapat menjangkau printer lokal toko.
+
+**Root Cause:**
+- `server/src/services/thermal-printer.service.ts` mengirim byte ESC/POS ke printer fisik melalui `node-thermal-printer` dan driver OS (`printer` native addon) di dalam container VPS. `POST /api/printer/receipt`, `/test-connection`, dan `GET /scan-printers` diakses frontend namun server tidak pernah bisa menjangkau printer di jaringan toko.
+- `useReceiptPrinter.ts:63-65` mengembalikan early return untuk `NODE_THERMAL_PRINTER`, sehingga struk tidak pernah benar-benar dicetak — hanya preview modal pada `ReceiptPrintArea`.
+
+**File diubah:**
+- `src/services/printing/webThermalPrinter.ts` (baru): backend cetak thermal berbasis WebUSB + Web Serial yang menghasilkan byte ESC/POS langsung di browser.
+- `src/types/settings.ts`: `PRINTER_BACKENDS` kini `["BROWSER", "QZ_TRAY", "WEB_THERMAL"]`; default `printerBackend` = `WEB_THERMAL`.
+- `src/services/settingsService.ts`: fallback backend printer = `WEB_THERMAL`.
+- `src/hooks/useReceiptPrinter.ts`: branch `WEB_THERMAL` memanggil `printReceiptWithWebThermal`.
+- `src/pages/cashier/ReceiptPrintArea.tsx`: hapus preview modal mode server; selalu render `receipt-print-root`.
+- `src/pages/setting/SystemSettingsTab.tsx`: UI pasang printer USB/Serial, deteksi, dan test koneksi.
+- `src/pages/setting/SettingPage.tsx`: handler pairing/scan/test memakai layanan browser; hapus modal setup lama.
+- `src/services/printing/thermalPrinterService.ts` (hapus).
+- `server/src/routes/index.ts`: hapus mount `/api/printer`.
+- `server/src/routes/thermal-printer.routes.ts`, `server/src/controllers/thermal-printer.controller.ts`, `server/src/services/thermal-printer.service.ts` (hapus).
+- `server/src/services/settings.service.ts`: `PRINTER_BACKENDS` baru + mapping legacy `NODE_THERMAL_PRINTER` → `WEB_THERMAL`.
+- `server/prisma/schema.prisma`: default `printerBackend` = `WEB_THERMAL`.
+- `server/prisma/migrations/20260818020000_rename_printer_backend_web_thermal/`: UPDATE nilai legacy + default baru.
+- `server/package.json`: hapus `node-thermal-printer` dan `printer`.
+- `package.json` + `package-lock.json` + `server/package-lock.json`: tambah `@types/w3c-web-usb` dan `@types/w3c-web-serial`.
+- `tsconfig.app.json`: tambah `w3c-web-usb` dan `w3c-web-serial` ke `types`.
+
+**Perubahan:**
+- `webThermalPrinter.ts` menyediakan `scanWebThermalPrinters`, `pairWebUsbPrinter`, `pairWebSerialPrinter`, `testWebThermalConnection`, dan `printReceiptWithWebThermal`.
+- ESC/POS dibuat di browser: init `ESC @`, alignment, teks UTF-8, auto-cut `GS V`, feed akhir; lebar 58mm=32 char / 80mm=48 char sesuai profile.
+- Pairing memakai user gesture `navigator.usb.requestDevice` / `navigator.serial.requestPort`; koneksi dibuka per job dan ditutup setelah selesai.
+- Backend tidak lagi memiliki kode printer fisik; laporan PDF/Excel tetap dihasilkan server sebagai file download (bukan cetak langsung).
+- Migration tenant dijalankan otomatis oleh entrypoint Docker.
+
+**Testing:**
+- Build frontend `npm run build` berhasil.
+- Build backend `npm run build --prefix server` berhasil.
+- `npm run lint` bersih (0 error, 1 warning pre-existing `exhaustive-deps` di `SettingPage.tsx`).
+- `git diff --check` berhasil.
+- Verifikasi WebUSB/Web Serial butuh HTTPS + Chrome/Edge; fallback tetap Browser Print dan QZ Tray.
+
+**Catatan developer berikutnya:**
+- Jangan menambahkan kembali kode cetak langsung di server (`server/src/**`). Cetak langsung ke printer fisik wajib berjalan di browser.
+- `selectedPrinterName` sekarang berisi id perangkat, format `usb:vid:pid[:serial]` atau `serial:n` (indeks port yang dipasangkan).
+- Gunakan `WebThermalPrinterError` dengan `code` (`UNSUPPORTED`, `NOT_FOUND`, `CONNECTION_FAILED`, `PRINT_FAILED`, `CANCELLED`) untuk pesan error yang konsisten.

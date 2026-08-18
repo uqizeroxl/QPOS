@@ -241,7 +241,7 @@ model Settings {
   thermalPaperWidth Int  @default(80)
   thermalPaperProfile String @default("80x80") @db.VarChar(20)
   receiptAutoCut Boolean @default(true)
-  printerBackend String @default("NODE_THERMAL_PRINTER") @db.VarChar(20)
+  printerBackend String @default("WEB_THERMAL") @db.VarChar(20)
   selectedPrinterName String @default("") @db.VarChar(255)
   thermalPrinterType String @default("epson") @db.VarChar(20)
   createdAt     DateTime @default(now())

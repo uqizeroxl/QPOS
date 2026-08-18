@@ -19,7 +19,7 @@ const THERMAL_PAPER_PROFILES = {
   "80x50": 80,
   "80x80": 80
 } as const;
-const PRINTER_BACKENDS = ["BROWSER", "QZ_TRAY", "NODE_THERMAL_PRINTER"] as const;
+const PRINTER_BACKENDS = ["BROWSER", "QZ_TRAY", "WEB_THERMAL"] as const;
 const THERMAL_PRINTER_TYPES = ["epson", "star", "tanca", "daruma", "brother", "custom"] as const;
 
 export class ReceiptFooterValidationError extends Error {}
@@ -52,10 +52,13 @@ const normalizeReceiptAutoCut = (value: unknown) => {
 };
 
 const normalizePrinterBackend = (value: unknown) => {
-  if (
-    typeof value !== "string" ||
-    !PRINTER_BACKENDS.includes(value as (typeof PRINTER_BACKENDS)[number])
-  ) {
+  if (typeof value !== "string") {
+    throw new ReceiptFooterValidationError("Backend printer tidak valid.");
+  }
+  if (value === "NODE_THERMAL_PRINTER") {
+    return "WEB_THERMAL";
+  }
+  if (!PRINTER_BACKENDS.includes(value as (typeof PRINTER_BACKENDS)[number])) {
     throw new ReceiptFooterValidationError("Backend printer tidak valid.");
   }
   return value;

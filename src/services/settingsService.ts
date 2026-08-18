@@ -39,7 +39,7 @@ const normalizeReceiptSettings = (
   receiptAutoCut: settings.receiptAutoCut ?? true,
   printerBackend: isPrinterBackend(settings.printerBackend)
     ? settings.printerBackend
-    : "NODE_THERMAL_PRINTER",
+    : "WEB_THERMAL",
   selectedPrinterName: typeof settings.selectedPrinterName === "string"
     ? settings.selectedPrinterName
     : "",

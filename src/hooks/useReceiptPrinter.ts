@@ -7,6 +7,7 @@ import {
   type ReceiptPrinterConfig,
 } from "../services/printing/browserReceiptPrinter";
 import { printReceiptWithQzTray } from "../services/printing/qzTrayPrinter";
+import { printReceiptWithWebThermal } from "../services/printing/webThermalPrinter";
 import type { PrinterBackend, ThermalPaperProfileId } from "../types/settings";
 
 const RECEIPT_RENDER_DELAY_MS = 100;
@@ -60,7 +61,29 @@ export function useReceiptPrinter(onAfterPrint?: () => void) {
       return;
     }
 
-    if (printerBackend === "NODE_THERMAL_PRINTER") {
+    if (printerBackend === "WEB_THERMAL") {
+      window.setTimeout(() => {
+        void printReceiptWithWebThermal(transaction, {
+          printerName: overrides?.printerName ?? settings.selectedPrinterName,
+          storeName: settings.storeName,
+          address: settings.address,
+          phone: settings.phone,
+          receiptFooter: settings.receiptFooter,
+          paperProfile,
+          autoCut: settings.receiptAutoCut,
+        })
+          .catch((error: unknown) => {
+            window.alert(
+              error instanceof Error
+                ? error.message
+                : "Gagal mencetak melalui printer thermal.",
+            );
+          })
+          .finally(() => {
+            setReceiptPrintTransaction(null);
+            onAfterPrint?.();
+          });
+      }, RECEIPT_RENDER_DELAY_MS);
       return;
     }
 
@@ -82,7 +105,7 @@ export function useReceiptPrinter(onAfterPrint?: () => void) {
           onAfterPrint?.();
         });
     }, RECEIPT_RENDER_DELAY_MS);
-  }, [onAfterPrint, settings.printerBackend, settings.receiptAutoCut, settings.selectedPrinterName, settings.thermalPaperProfile]);
+  }, [onAfterPrint, settings.address, settings.phone, settings.printerBackend, settings.receiptAutoCut, settings.receiptFooter, settings.selectedPrinterName, settings.storeName, settings.thermalPaperProfile]);
 
   return {
     receiptPrintTransaction,
