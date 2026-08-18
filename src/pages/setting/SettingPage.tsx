@@ -283,6 +283,12 @@ export default function SettingPage() {
     try {
       const result = await thermalPrinterService.scanPrinters();
       const chosenPrinter = result.defaultPrinter || result.printers[0]?.name || "";
+      const printerList = result.printers.map((printer) => printer.name).filter(Boolean);
+      const hasDefaultPrinter = Boolean(result.defaultPrinter);
+      const printerNameMessage = chosenPrinter
+        ? `Printer aktif: ${chosenPrinter}.`
+        : "Tidak ada printer aktif yang terdeteksi.";
+
       if (chosenPrinter) {
         setSelectedPrinterName(chosenPrinter);
         await persistPrinterSettings({
@@ -293,13 +299,16 @@ export default function SettingPage() {
       }
       setThermalPrinterSetupMessage(
         result.printers.length > 0
-          ? `Ditemukan ${result.printers.length} printer sistem. ${chosenPrinter ? `Default: ${chosenPrinter}.` : ""}`
+          ? `Ditemukan ${result.printers.length} printer sistem. ${printerNameMessage}`
           : "Tidak ada printer sistem yang terdeteksi.",
       );
       showToast(
-        result.printers.length > 0
-          ? `Ditemukan ${result.printers.length} printer sistem.`
-          : "Tidak ada printer sistem yang terdeteksi.",
+        hasDefaultPrinter
+          ? `Default printer terdeteksi: ${result.defaultPrinter}.`
+          : printerList.length > 0
+            ? `Printer terdeteksi, tetapi tidak ada default printer. ${printerNameMessage}`
+            : "Tidak ada printer sistem yang terdeteksi.",
+        hasDefaultPrinter ? undefined : "error",
       );
     } catch (error) {
       const message =
